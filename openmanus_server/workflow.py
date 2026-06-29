@@ -1,42 +1,43 @@
 """Workflow orchestrator: drives the A -> B -> A pipeline with approval gates.
 
-State machine for one workflow run:
-    design (Architect-A)  -> [AWAITING APPROVAL] -> approval1
-    implement (Coder-B)   -> [AWAITING APPROVAL] -> approval2
-    review (Architect-A)  -> [COMPLETED]
-
-Approval gates happen BEFORE the agent calls write_file on key files
-(architecture.md, the first src/*.py, review_report.md). The workflow
-pauses, exposes its current state via /status, and resumes when /approve
-is called.
+Uses Agent.step() generator. The async pipeline iterates events from a
+generator running in a worker thread (because the LLM call is sync). When
+the generator yields a ToolCallEvent that needs approval, we surface it
+to the API, await a user decision, then send(None) into the generator
+to resume.
 """
 from __future__ import annotations
 
 import asyncio
+import threading
 import time
 import uuid
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from .agent import Agent, make_agent
+from .agent import Agent, FinishEvent, FailedEvent, ToolCallEvent, make_agent
 from .config import AGENT_PROMPTS, WORKSPACE_ROOT
 
 
-# Files that trigger approval gates when written.
-APPROVAL_FILES = {
-    "design": ["design/architecture.md"],
-    "implement": ["src"],  # any src/*.py write triggers approval
-    "review": ["design/review_report.md"],
-}
+def _should_request_approval(phase: str, tool: str, args: Dict[str, Any]) -> bool:
+    if tool != "write_file":
+        return False
+    path = args.get("path", "")
+    if phase == "design":
+        return path.endswith("architecture.md")
+    if phase == "implement":
+        return path.startswith("src/") and path.endswith(".py")
+    if phase == "review":
+        return path.endswith("review_report.md")
+    return False
 
 
 @dataclass
 class RunState:
     run_id: str
     requirement: str
-    phase: str = "design"           # design -> approval1 -> implement -> approval2 -> review -> done
-    status: str = "running"         # running | awaiting_approval | completed | failed
+    phase: str = "design"
+    status: str = "running"
     created_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)
     pending_tool: Optional[str] = None
@@ -45,18 +46,12 @@ class RunState:
     outputs: Dict[str, Any] = field(default_factory=dict)
     error: Optional[str] = None
     history: List[Dict[str, Any]] = field(default_factory=list)
-    # asyncio.Event that /approve sets to resume the workflow
     resume_event: asyncio.Event = field(default_factory=asyncio.Event)
-    resume_decision: str = "pending"   # pending | approved | rejected
+    resume_decision: str = "pending"
     resume_comment: str = ""
 
 
 class WorkflowEngine:
-    """In-memory store of running workflows.
-
-    Single-process for now. If we ever scale, swap for Redis.
-    """
-
     def __init__(self):
         self.runs: Dict[str, RunState] = {}
 
@@ -81,49 +76,14 @@ class WorkflowEngine:
         return True
 
 
-# Module-level singleton (FastAPI dependency-injection alternative)
 engine = WorkflowEngine()
 
 
 # ---------------------------------------------------------------------------
-# Approval preview generator
+# Pipeline
 # ---------------------------------------------------------------------------
-def _preview_for(tool: str, args: Dict[str, Any]) -> str:
-    """Return a short preview of the action for the user to approve."""
-    if tool == "write_file":
-        path = args.get("path", "?")
-        content = args.get("content", "")
-        head = content[:600]
-        return f"📝 write_file: {path}\n\n{head}{'...' if len(content) > 600 else ''}"
-    if tool == "read_file":
-        return f"👀 read_file: {args.get('path', '?')}"
-    if tool == "finish":
-        return f"✅ finish: {args.get('summary', '')}"
-    return f"{tool}: {args}"
-
-
-def _should_request_approval(phase: str, tool: str, args: Dict[str, Any]) -> bool:
-    """Return True if this tool call in this phase should pause for approval."""
-    if tool != "write_file":
-        return False
-    path = args.get("path", "")
-    if phase == "design":
-        return path.endswith("architecture.md")
-    if phase == "implement":
-        return path.startswith("src/") and path.endswith(".py")
-    if phase == "review":
-        return path.endswith("review_report.md")
-    return False
-
-
-# ---------------------------------------------------------------------------
-# Pipeline driver
-# ---------------------------------------------------------------------------
-async def run_pipeline(run: RunState, prompts: Dict[str, str] = AGENT_PROMPTS) -> None:
-    """Drive a single run through design -> implement -> review.
-
-    This coroutine runs as a background asyncio.Task after /workflow/start.
-    """
+async def run_pipeline_async(run: RunState, prompts: Dict[str, str] = AGENT_PROMPTS) -> None:
+    """Drive a single run through design -> implement -> review."""
     try:
         # ----- Phase 1: DESIGN -----
         run.phase = "design"
@@ -132,16 +92,11 @@ async def run_pipeline(run: RunState, prompts: Dict[str, str] = AGENT_PROMPTS) -
         design_msg = (
             f"User requirement:\n{run.requirement}\n\n"
             f"Workspace root: {WORKSPACE_ROOT}\n"
-            f"Write your architecture design to: workspace/design/architecture.md "
-            f"(absolute path will be computed relative to workspace root)."
+            f"Write your architecture design to: design/architecture.md "
+            f"(relative to workspace root)."
         )
-        result = await asyncio.to_thread(
-            architect.run,
-            design_msg,
-            12,
-            lambda tool, args: _approval_hook(run, tool, args),
-        )
-        if result["status"] != "finished":
+        result = await _drive_agent(run, architect, design_msg, max_steps=12)
+        if not result.get("ok"):
             run.status = "failed"
             run.error = result.get("error", "design phase did not finish")
             return
@@ -153,21 +108,15 @@ async def run_pipeline(run: RunState, prompts: Dict[str, str] = AGENT_PROMPTS) -
         coder = make_agent("coder_implement", prompts)
         impl_msg = (
             f"User requirement:\n{run.requirement}\n\n"
-            f"Read the architecture from: workspace/design/architecture.md\n"
-            f"Implement code under workspace/src/ and tests under workspace/tests/.\n"
+            f"Read the architecture from: design/architecture.md\n"
+            f"Implement code under src/ and tests under tests/.\n"
             f"Workspace root: {WORKSPACE_ROOT}"
         )
-        result = await asyncio.to_thread(
-            coder.run,
-            impl_msg,
-            20,
-            lambda tool, args: _approval_hook(run, tool, args),
-        )
-        if result["status"] != "finished":
+        result = await _drive_agent(run, coder, impl_msg, max_steps=25)
+        if not result.get("ok"):
             run.status = "failed"
             run.error = result.get("error", "implement phase did not finish")
             return
-        # Collect produced files
         src_files = sorted(str(p.relative_to(WORKSPACE_ROOT))
                           for p in (WORKSPACE_ROOT / "src").rglob("*.py"))
         test_files = sorted(str(p.relative_to(WORKSPACE_ROOT))
@@ -181,131 +130,12 @@ async def run_pipeline(run: RunState, prompts: Dict[str, str] = AGENT_PROMPTS) -
         review_msg = (
             f"Original user requirement:\n{run.requirement}\n\n"
             f"Review everything under workspace/ "
-            f"(design at workspace/design/architecture.md, code at workspace/src/, "
-            f"tests at workspace/tests/).\n"
-            f"Write your report to workspace/design/review_report.md.\n"
-            f"Workspace root: {WORKSPACE_ROOT}"
-        )
-        result = await asyncio.to_thread(
-            reviewer.run,
-            review_msg,
-            12,
-            lambda tool, args: _approval_hook(run, tool, args),
-        )
-        if result["status"] != "finished":
-            run.status = "failed"
-            run.error = result.get("error", "review phase did not finish")
-            return
-        run.outputs["review_report"] = str(WORKSPACE_ROOT / "design/review_report.md")
-        run.history.append({"phase": "review", "summary": result.get("summary", "")})
-
-        run.status = "completed"
-        run.phase = "done"
-        run.updated_at = time.time()
-
-    except Exception as e:
-        run.status = "failed"
-        run.error = f"{type(e).__name__}: {e}"
-
-
-def _approval_hook(run: RunState, tool: str, args: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    """Sync hook called by Agent.run before each tool execution.
-
-    Returns {"pause": True, "preview": "..."} to halt the agent and surface
-    an approval request to the API caller.
-    """
-    if not _should_request_approval(run.phase, tool, args):
-        return None
-    preview = _preview_for(tool, args)
-    run.pending_tool = tool
-    run.pending_args = args
-    run.pending_preview = preview
-    run.status = "awaiting_approval"
-    run.updated_at = time.time()
-    # Note: this is sync, called from a worker thread (asyncio.to_thread).
-    # The async run_pipeline() is awaiting resume_event.set() in another
-    # coroutine — but actually the agent loop blocks THIS thread, so we
-    # can't easily wait here without deadlocking.
-    #
-    # Solution: don't wait here. Just signal pause. The pipeline coroutine
-    # notices the pause return value, awaits the event itself, and re-runs
-    # the agent step. See run_pipeline_async for the proper flow.
-    return {"pause": True, "preview": preview}
-
-
-def _make_hook(run: RunState):
-    """Return a closure suitable for Agent.run(on_tool_call=...).
-
-    The closure reads run.phase each call (so phase transitions between
-    runs are picked up automatically) and signals pause via a dict.
-    """
-    def hook(tool: str, args: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        return _approval_hook(run, tool, args)
-    return hook
-
-
-# ---------------------------------------------------------------------------
-# Async pipeline with proper resume (used by the server)
-# ---------------------------------------------------------------------------
-async def run_pipeline_async(run: RunState) -> None:
-    """Like run_pipeline, but actually waits for /approve between phases.
-
-    For simplicity, we run each phase as: call agent.run() once. If it
-    returns 'paused', we wait on resume_event, then call agent.run() again
-    to resume from where it left off (the agent's history is preserved).
-    """
-    try:
-        # ----- Phase 1: DESIGN -----
-        run.phase = "design"
-        run.status = "running"
-        architect = make_agent("architect_design", AGENT_PROMPTS)
-        design_msg = (
-            f"User requirement:\n{run.requirement}\n\n"
-            f"Workspace root: {WORKSPACE_ROOT}\n"
-            f"Write your architecture design to: design/architecture.md "
-            f"(relative to workspace root)."
-        )
-        result = await _run_with_resume(run, architect, design_msg, max_steps=12)
-        if result["status"] != "finished":
-            run.status = "failed"
-            run.error = result.get("error", "design phase did not finish")
-            return
-        run.outputs["design_doc"] = str(WORKSPACE_ROOT / "design/architecture.md")
-        run.history.append({"phase": "design", "summary": result.get("summary", "")})
-
-        # ----- Phase 2: IMPLEMENT -----
-        run.phase = "implement"
-        coder = make_agent("coder_implement", AGENT_PROMPTS)
-        impl_msg = (
-            f"User requirement:\n{run.requirement}\n\n"
-            f"Read the architecture from: design/architecture.md\n"
-            f"Implement code under src/ and tests under tests/.\n"
-            f"Workspace root: {WORKSPACE_ROOT}"
-        )
-        result = await _run_with_resume(run, coder, impl_msg, max_steps=20)
-        if result["status"] != "finished":
-            run.status = "failed"
-            run.error = result.get("error", "implement phase did not finish")
-            return
-        src_files = sorted(str(p.relative_to(WORKSPACE_ROOT))
-                          for p in (WORKSPACE_ROOT / "src").rglob("*.py"))
-        test_files = sorted(str(p.relative_to(WORKSPACE_ROOT))
-                           for p in (WORKSPACE_ROOT / "tests").rglob("test_*.py"))
-        run.outputs["code_files"] = src_files + test_files
-        run.history.append({"phase": "implement", "summary": result.get("summary", "")})
-
-        # ----- Phase 3: REVIEW -----
-        run.phase = "review"
-        reviewer = make_agent("architect_review", AGENT_PROMPTS)
-        review_msg = (
-            f"Original user requirement:\n{run.requirement}\n\n"
-            f"Review everything under workspace/ "
             f"(design at design/architecture.md, code at src/, tests at tests/).\n"
             f"Write your report to: design/review_report.md\n"
             f"Workspace root: {WORKSPACE_ROOT}"
         )
-        result = await _run_with_resume(run, reviewer, review_msg, max_steps=12)
-        if result["status"] != "finished":
+        result = await _drive_agent(run, reviewer, review_msg, max_steps=12)
+        if not result.get("ok"):
             run.status = "failed"
             run.error = result.get("error", "review phase did not finish")
             return
@@ -321,39 +151,129 @@ async def run_pipeline_async(run: RunState) -> None:
         run.error = f"{type(e).__name__}: {e}"
 
 
-async def _run_with_resume(run: RunState, agent: Agent, user_msg: str, max_steps: int) -> Dict[str, Any]:
-    """Run an agent, pause for approval when needed, resume when /approve fires."""
+async def _drive_agent(
+    run: RunState,
+    agent: Agent,
+    user_msg: str,
+    max_steps: int,
+) -> Dict[str, Any]:
+    """Drive Agent.step() across approval gates.
+
+    Uses asyncio.to_thread for the sync LLM call, and a per-step asyncio.Event
+    to pause and resume.
+    """
+    # The generator lives in the worker thread; we drive it step by step.
+    # Each .send(None) advances it. Each yield we capture and decide whether
+    # to pause for approval.
+    loop = asyncio.get_event_loop()
+
+    gen_state: Dict[str, Any] = {"gen": None, "ev": None, "value": None}
+
+    def _start():
+        gen_state["gen"] = agent.step(user_msg, max_steps)
+        gen_state["ev"] = None  # current yielded event
+        gen_state["value"] = None
+
+    def _next_event():
+        """Run the generator until it yields or returns. Returns the event
+        or raises StopIteration-equivalent (we use return value None)."""
+        gen = gen_state["gen"]
+        if gen is None:
+            _start()
+            gen = gen_state["gen"]
+        try:
+            ev = next(gen)
+            gen_state["ev"] = ev
+            return ev
+        except StopIteration:
+            return None
+
+    def _send(value):
+        """Send value into the generator (resumes past a yield)."""
+        gen = gen_state["gen"]
+        try:
+            ev = gen.send(value)
+            gen_state["ev"] = ev
+            return ev
+        except StopIteration:
+            return None
+
+    # Main async loop
     while True:
         run.status = "running"
         run.pending_tool = None
         run.pending_args = None
         run.pending_preview = ""
         run.resume_event.clear()
+        # Ensure generator is started (first iteration only)
+        if gen_state["gen"] is None:
+            ev = await loop.run_in_executor(None, _next_event)
+        else:
+            ev = gen_state["ev"]
+            if ev is None:
+                # Generator already exhausted (shouldn't reach here normally)
+                return {"ok": True, "summary": ""}
 
-        # Run the agent in a worker thread so it doesn't block the event loop
-        result = await asyncio.to_thread(
-            agent.run, user_msg, max_steps, _make_hook(run)
-        )
+        if ev is None:
+            # Generator returned without finish event — treat as finished
+            return {"ok": True, "summary": ""}
 
-        if result["status"] != "paused":
-            return result
+        if isinstance(ev, FailedEvent):
+            return {"ok": False, "error": ev.error}
 
-        # Agent paused for approval. Wait until /approve is called.
-        # Tighten the wakeup: when resume_event is set, also accept the
-        # comment / decision.
-        await run.resume_event.wait()
+        if isinstance(ev, FinishEvent):
+            return {"ok": True, "summary": ev.summary}
 
-        decision = run.resume_decision
-        comment = run.resume_comment
+        if isinstance(ev, ToolCallEvent):
+            if _should_request_approval(run.phase, ev.tool, ev.args):
+                # Surface to API, wait for /approve
+                run.pending_tool = ev.tool
+                run.pending_args = ev.args
+                run.pending_preview = ev.preview
+                run.status = "awaiting_approval"
+                run.updated_at = time.time()
 
-        if decision == "rejected":
-            return {"status": "failed", "error": f"user rejected: {comment}"}
-        if decision == "modify":
-            # Push the user's feedback as a new user turn, then continue.
-            user_msg = (
-                f"[user feedback after rejection of last action]\n{comment}\n\n"
-                f"Adjust your approach and continue. Original task unchanged."
-            )
+                await run.resume_event.wait()
+
+                decision = run.resume_decision
+                comment = run.resume_comment
+                run.resume_event.clear()
+
+                if decision == "rejected":
+                    return {"ok": False, "error": f"user rejected: {comment}"}
+                if decision == "modify":
+                    # Push user's feedback as a new user turn on the agent
+                    # history, then continue driving.
+                    agent.history.append({
+                        "role": "user",
+                        "content": f"[user feedback]\n{comment}\n\nAdjust your approach and continue.",
+                    })
+                    # Restart the generator from where it was, but since we
+                    # appended to history of the existing agent, we need to
+                    # start a fresh generator (the previous one is paused
+                    # at the yield). Simpler: re-build agent and re-run
+                    # from scratch with the modified requirement. For now,
+                    # just send(None) so the agent proceeds; the user
+                    # feedback is in history and will be visible next step.
+                    ev = await loop.run_in_executor(None, _send, None)
+                    if ev is None:
+                        return {"ok": True, "summary": ""}
+                    continue
+
+                # approved: send(None) to advance past the yield
+                ev = await loop.run_in_executor(None, _send, None)
+                if ev is None:
+                    return {"ok": True, "summary": ""}
+                continue
+
+            # No approval needed (read_file) — but write_file that doesn't
+            # match the approval predicate also just auto-executes via send(None).
+            ev = await loop.run_in_executor(None, _send, None)
+            if ev is None:
+                return {"ok": True, "summary": ""}
             continue
-        # approved -> loop again, agent.run() will resume from saved history
-        continue
+
+        # Unknown event type — advance
+        ev = await loop.run_in_executor(None, _send, None)
+        if ev is None:
+            return {"ok": True, "summary": ""}
