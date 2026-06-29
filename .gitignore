@@ -4,3 +4,11 @@ __pycache__/
 .env
 logs/*.log
 workspace/*/!*.md
+
+# Runtime workspace content
+workspace/design/*
+workspace/src/*
+workspace/tests/*
+!workspace/design/.gitkeep
+!workspace/src/.gitkeep
+!workspace/tests/.gitkeep

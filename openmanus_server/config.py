@@ -25,12 +25,19 @@ LLM_PROVIDERS = {
     "minimax": {
         # Source: ~/.hermes/.env  MINIMAX_CN_BASE_URL=https://api.minimaxi.com/anthropic
         # Strip /anthropic suffix — we want the OpenAI-compatible root.
-        "base_url": "https://api.minimaxi.com/v1",
+        # Override via OPENMANUS_MINIMAX_BASE_URL for testing (e.g. mock LLM).
+        "base_url": os.environ.get(
+            "OPENMANUS_MINIMAX_BASE_URL",
+            "https://api.minimaxi.com/v1",
+        ),
         "api_key_env": "MINIMAX_CN_API_KEY",
         "model": os.environ.get("OPENMANUS_ARCHITECT_MODEL", "MiniMax-Text-01"),
     },
     "deepseek": {
-        "base_url": os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1"),
+        "base_url": os.environ.get(
+            "OPENMANUS_DEEPSEEK_BASE_URL",
+            os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1"),
+        ),
         "api_key_env": "DEEPSEEK_API_KEY",
         "model": os.environ.get("OPENMANUS_CODER_MODEL", "deepseek-chat"),
     },

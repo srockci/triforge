@@ -225,7 +225,8 @@ async def _drive_agent(
             return {"ok": True, "summary": ev.summary}
 
         if isinstance(ev, ToolCallEvent):
-            if _should_request_approval(run.phase, ev.tool, ev.args):
+            should = _should_request_approval(run.phase, ev.tool, ev.args)
+            if should:
                 # Surface to API, wait for /approve
                 run.pending_tool = ev.tool
                 run.pending_args = ev.args
