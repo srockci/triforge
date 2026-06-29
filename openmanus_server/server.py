@@ -22,6 +22,7 @@ from pydantic import BaseModel
 
 from .config import AGENT_PROMPTS, WORKSPACE_ROOT
 from .workflow import RunState, engine, run_pipeline_async
+from .board import router as board_router
 
 
 @asynccontextmanager
@@ -33,6 +34,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="OpenManus Integration", lifespan=lifespan)
+app.include_router(board_router)
 
 
 # ---------------------------------------------------------------------------

@@ -17,6 +17,8 @@ from typing import Any, Dict, List, Optional
 
 from .agent import Agent, FinishEvent, FailedEvent, ToolCallEvent, make_agent
 from .config import AGENT_PROMPTS, WORKSPACE_ROOT
+from .events import BoardEvent, bus
+from .store import store
 
 
 def _should_request_approval(phase: str, tool: str, args: Dict[str, Any]) -> bool:
@@ -84,10 +86,25 @@ engine = WorkflowEngine()
 # ---------------------------------------------------------------------------
 async def run_pipeline_async(run: RunState, prompts: Dict[str, str] = AGENT_PROMPTS) -> None:
     """Drive a single run through design -> implement -> review."""
+    # ----- Helpers (local) -----
+    def _emit(kind: str, **data: Any) -> None:
+        """Fire-and-forget event for the board. Never raises."""
+        try:
+            ev = BoardEvent(run_id=run.run_id, kind=kind, data=data)
+            store.append(ev)   # persist for board replay
+            bus.emit(ev)       # push to live subscribers
+        except Exception:
+            pass  # board events are non-critical
+
+    _emit("run_start", requirement=run.requirement)
+
     try:
         # ----- Phase 1: DESIGN -----
         run.phase = "design"
         run.status = "running"
+        store.update_snapshot(run.run_id, _snapshot_for_board(run))
+        _emit("phase_start", phase="design", agent="architect_design",
+              model=prompts.get("_minimax_model", "MiniMax"))
         architect = make_agent("architect_design", prompts)
         design_msg = (
             f"User requirement:\n{run.requirement}\n\n"
@@ -99,12 +116,17 @@ async def run_pipeline_async(run: RunState, prompts: Dict[str, str] = AGENT_PROM
         if not result.get("ok"):
             run.status = "failed"
             run.error = result.get("error", "design phase did not finish")
+            _emit("phase_end", phase="design", ok=False, error=run.error)
             return
         run.outputs["design_doc"] = str(WORKSPACE_ROOT / "design/architecture.md")
         run.history.append({"phase": "design", "summary": result.get("summary", "")})
+        _emit("phase_end", phase="design", ok=True, summary=result.get("summary", ""))
 
         # ----- Phase 2: IMPLEMENT -----
         run.phase = "implement"
+        store.update_snapshot(run.run_id, _snapshot_for_board(run))
+        _emit("phase_start", phase="implement", agent="coder_implement",
+              model=prompts.get("_deepseek_model", "DeepSeek"))
         coder = make_agent("coder_implement", prompts)
         impl_msg = (
             f"User requirement:\n{run.requirement}\n\n"
@@ -116,6 +138,7 @@ async def run_pipeline_async(run: RunState, prompts: Dict[str, str] = AGENT_PROM
         if not result.get("ok"):
             run.status = "failed"
             run.error = result.get("error", "implement phase did not finish")
+            _emit("phase_end", phase="implement", ok=False, error=run.error)
             return
         src_files = sorted(str(p.relative_to(WORKSPACE_ROOT))
                           for p in (WORKSPACE_ROOT / "src").rglob("*.py"))
@@ -123,9 +146,15 @@ async def run_pipeline_async(run: RunState, prompts: Dict[str, str] = AGENT_PROM
                            for p in (WORKSPACE_ROOT / "tests").rglob("test_*.py"))
         run.outputs["code_files"] = src_files + test_files
         run.history.append({"phase": "implement", "summary": result.get("summary", "")})
+        _emit("phase_end", phase="implement", ok=True,
+              src_files=src_files, test_files=test_files,
+              summary=result.get("summary", ""))
 
         # ----- Phase 3: REVIEW -----
         run.phase = "review"
+        store.update_snapshot(run.run_id, _snapshot_for_board(run))
+        _emit("phase_start", phase="review", agent="architect_review",
+              model=prompts.get("_minimax_model", "MiniMax"))
         reviewer = make_agent("architect_review", prompts)
         review_msg = (
             f"Original user requirement:\n{run.requirement}\n\n"
@@ -138,17 +167,47 @@ async def run_pipeline_async(run: RunState, prompts: Dict[str, str] = AGENT_PROM
         if not result.get("ok"):
             run.status = "failed"
             run.error = result.get("error", "review phase did not finish")
+            _emit("phase_end", phase="review", ok=False, error=run.error)
             return
         run.outputs["review_report"] = str(WORKSPACE_ROOT / "design/review_report.md")
         run.history.append({"phase": "review", "summary": result.get("summary", "")})
+        _emit("phase_end", phase="review", ok=True, summary=result.get("summary", ""))
 
         run.status = "completed"
         run.phase = "done"
         run.updated_at = time.time()
+        _emit("run_end", status="completed", outputs=run.outputs)
+        try:
+            store.update_snapshot(run.run_id, _snapshot_for_board(run))
+        except Exception:
+            pass
 
     except Exception as e:
         run.status = "failed"
         run.error = f"{type(e).__name__}: {e}"
+        try:
+            _emit("run_end", status="failed", error=run.error)
+            store.update_snapshot(run.run_id, _snapshot_for_board(run))
+        except Exception:
+            pass
+
+
+def _snapshot_for_board(run: RunState) -> Dict[str, Any]:
+    """Board-friendly view of a run (what the kanban needs)."""
+    phase_to_idx = {"design": 0, "implement": 1, "review": 2, "done": 3}
+    return {
+        "run_id": run.run_id,
+        "status": run.status,            # running | awaiting_approval | completed | failed
+        "phase": run.phase,
+        "phase_index": phase_to_idx.get(run.phase, 0),
+        "requirement": run.requirement,
+        "created_at": run.created_at,
+        "updated_at": run.updated_at,
+        "outputs": run.outputs,
+        "error": run.error,
+        "pending_tool": run.pending_tool,
+        "pending_args": run.pending_args,
+    }
 
 
 async def _drive_agent(
@@ -219,12 +278,33 @@ async def _drive_agent(
             return {"ok": True, "summary": ""}
 
         if isinstance(ev, FailedEvent):
+            try:
+                ev_obj = BoardEvent(run_id=run.run_id, kind="agent_error",
+                                    data={"error": ev.error, "phase": run.phase})
+                store.append(ev_obj); bus.emit(ev_obj)
+            except Exception:
+                pass
             return {"ok": False, "error": ev.error}
 
         if isinstance(ev, FinishEvent):
+            try:
+                ev_obj = BoardEvent(run_id=run.run_id, kind="agent_finish",
+                                    data={"phase": run.phase, "summary": ev.summary})
+                store.append(ev_obj); bus.emit(ev_obj)
+            except Exception:
+                pass
             return {"ok": True, "summary": ev.summary}
 
         if isinstance(ev, ToolCallEvent):
+            # Emit every tool call (visible in the live stream regardless
+            # of whether it triggers an approval gate).
+            try:
+                ev_obj = BoardEvent(run_id=run.run_id, kind="tool_call",
+                                    data={"phase": run.phase, "tool": ev.tool,
+                                          "args": ev.args, "preview": ev.preview})
+                store.append(ev_obj); bus.emit(ev_obj)
+            except Exception:
+                pass
             should = _should_request_approval(run.phase, ev.tool, ev.args)
             if should:
                 # Surface to API, wait for /approve
@@ -233,12 +313,29 @@ async def _drive_agent(
                 run.pending_preview = ev.preview
                 run.status = "awaiting_approval"
                 run.updated_at = time.time()
+                store.update_snapshot(run.run_id, _snapshot_for_board(run))
+
+                try:
+                    ev_obj = BoardEvent(run_id=run.run_id, kind="approval_requested",
+                                        data={"phase": run.phase, "tool": ev.tool,
+                                              "args": ev.args, "preview": ev.preview})
+                    store.append(ev_obj); bus.emit(ev_obj)
+                except Exception:
+                    pass
 
                 await run.resume_event.wait()
 
                 decision = run.resume_decision
                 comment = run.resume_comment
                 run.resume_event.clear()
+
+                try:
+                    ev_obj = BoardEvent(run_id=run.run_id, kind="approval_resolved",
+                                        data={"phase": run.phase, "decision": decision,
+                                              "comment": comment})
+                    store.append(ev_obj); bus.emit(ev_obj)
+                except Exception:
+                    pass
 
                 if decision == "rejected":
                     return {"ok": False, "error": f"user rejected: {comment}"}
@@ -249,19 +346,23 @@ async def _drive_agent(
                         "role": "user",
                         "content": f"[user feedback]\n{comment}\n\nAdjust your approach and continue.",
                     })
-                    # Restart the generator from where it was, but since we
-                    # appended to history of the existing agent, we need to
-                    # start a fresh generator (the previous one is paused
-                    # at the yield). Simpler: re-build agent and re-run
-                    # from scratch with the modified requirement. For now,
-                    # just send(None) so the agent proceeds; the user
-                    # feedback is in history and will be visible next step.
                     ev = await loop.run_in_executor(None, _send, None)
                     if ev is None:
                         return {"ok": True, "summary": ""}
+                    # Immediately reflect the running state so polling clients
+                    # don't see a stale "awaiting_approval" between decisions.
+                    run.status = "running"
+                    store.update_snapshot(run.run_id, _snapshot_for_board(run))
                     continue
 
                 # approved: send(None) to advance past the yield
+                # Set status back to running BEFORE _send so polling clients
+                # don't observe stale "awaiting_approval".
+                run.status = "running"
+                run.pending_tool = None
+                run.pending_args = None
+                run.pending_preview = ""
+                store.update_snapshot(run.run_id, _snapshot_for_board(run))
                 ev = await loop.run_in_executor(None, _send, None)
                 if ev is None:
                     return {"ok": True, "summary": ""}
