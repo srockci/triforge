@@ -15,9 +15,12 @@ from __future__ import annotations
 import asyncio
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from .config import AGENT_PROMPTS, WORKSPACE_ROOT
@@ -35,6 +38,15 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="OpenManus Integration", lifespan=lifespan)
 app.include_router(board_router)
+
+# Serve dashboard static files from openmanus_server/static/
+_STATIC_DIR = Path(__file__).parent / "static"
+if _STATIC_DIR.exists():
+    app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
+
+    @app.get("/", include_in_schema=False)
+    async def dashboard_index():
+        return FileResponse(str(_STATIC_DIR / "index.html"))
 
 
 # ---------------------------------------------------------------------------
