@@ -26,6 +26,7 @@ from pydantic import BaseModel
 from .config import AGENT_PROMPTS, WORKSPACE_ROOT
 from .workflow import RunState, engine, run_pipeline_async
 from .board import router as board_router
+from .store import get_store
 
 
 @asynccontextmanager
@@ -33,6 +34,21 @@ async def lifespan(app: FastAPI):
     # Ensure workspace dirs exist
     for sub in ("design", "src", "tests"):
         (WORKSPACE_ROOT / sub).mkdir(parents=True, exist_ok=True)
+    # Restore any persisted runs from previous server sessions.
+    # This re-creates RunState objects in the in-memory engine so that
+    # /board/runs, /board/runs/{id}, and /approve all work after restart.
+    # Runs that were awaiting approval at crash time are marked
+    # "interrupted" — the user can re-approve to retry the phase.
+    try:
+        result = get_store().restore_to_engine(engine)
+        restored = result.get("restored", 0)
+        interrupted = result.get("interrupted", 0)
+        if restored or interrupted:
+            print(f"[startup] restored {restored} run(s), "
+                  f"{interrupted} interrupted (awaiting approval at crash)",
+                  flush=True)
+    except Exception as e:
+        print(f"[startup] could not restore runs: {e}", flush=True)
     yield
 
 

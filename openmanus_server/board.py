@@ -23,7 +23,7 @@ from pydantic import BaseModel
 
 from .config import WORKSPACE_ROOT
 from .events import BoardEvent, bus
-from .store import store
+from .store import get_store
 from .workflow import RunState, engine, _snapshot_for_board, run_pipeline_async
 
 router = APIRouter(prefix="/board", tags=["board"])
@@ -99,7 +99,7 @@ async def list_runs() -> Dict[str, Any]:
     # Merge with store snapshots (covers runs that ended and got GC'd
     # from engine, or runs we just persisted events for).
     merged: Dict[str, Dict[str, Any]] = dict(active)
-    for snap in store.known_runs():
+    for snap in get_store().known_runs():
         rid = snap.get("run_id")
         if rid and rid not in merged:
             merged[rid] = snap
@@ -122,7 +122,7 @@ async def get_run(run_id: str) -> Dict[str, Any]:
     if run:
         snap = _snapshot_for_board(run)
     else:
-        snap = store.snapshot(run_id)
+        snap = get_store().snapshot(run_id)
     if not snap:
         raise HTTPException(404, f"unknown run_id: {run_id}")
 
@@ -167,7 +167,7 @@ async def create_run(req: StartRequest) -> Dict[str, Any]:
     asyncio.create_task(run_pipeline_async(run))
     # Persist initial snapshot so the board sees it before any events fire
     try:
-        store.update_snapshot(run.run_id, _snapshot_for_board(run))
+        get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
     except Exception:
         pass
     return {
@@ -185,10 +185,36 @@ async def approve(run_id: str, req: ApproveRequest) -> Dict[str, Any]:
     run = engine.get(run_id)
     if not run:
         raise HTTPException(404, f"unknown run_id: {run_id}")
-    if run.status != "awaiting_approval":
-        raise HTTPException(409, f"run not awaiting approval (status={run.status})")
     if req.decision not in ("approve", "reject", "modify"):
         raise HTTPException(400, f"decision must be approve|reject|modify, got {req.decision!r}")
+
+    # Special case: server was restarted while awaiting approval. The
+    # agent generator is gone, so we restart the pipeline from the
+    # current phase. The user is effectively "re-approving" the file
+    # that the interrupted phase was about to write.
+    if run.status == "interrupted":
+        # Reset status so the pipeline can run, clear pending, and
+        # kick off a fresh pipeline task.
+        run.status = "running"
+        run.pending_tool = None
+        run.pending_args = None
+        run.pending_preview = ""
+        run.resume_event.clear()
+        # Re-emit run_start (so the UI shows the restart in the event stream)
+        try:
+            from .events import BoardEvent, bus
+            from .store import get_store
+            ev = BoardEvent(run_id=run.run_id, kind="run_resumed",
+                            data={"phase": run.phase, "reason": "server_restart"})
+            get_store().append(ev); bus.emit(ev)
+        except Exception:
+            pass
+        asyncio.create_task(run_pipeline_async(run))
+        return {"status": "pipeline_restarted", "decision": req.decision,
+                "phase": run.phase}
+
+    if run.status != "awaiting_approval":
+        raise HTTPException(409, f"run not awaiting approval (status={run.status})")
     ok = engine.submit_decision(run_id, req.decision, req.comment)
     if not ok:
         raise HTTPException(409, "failed to submit decision (race?)")
@@ -201,14 +227,14 @@ async def approve(run_id: str, req: ApproveRequest) -> Dict[str, Any]:
 @router.get("/runs/{run_id}/files")
 async def list_run_files(run_id: str) -> Dict[str, Any]:
     # Sanity-check the run exists
-    if not engine.get(run_id) and not store.snapshot(run_id):
+    if not engine.get(run_id) and not get_store().snapshot(run_id):
         raise HTTPException(404, f"unknown run_id: {run_id}")
     return {"files": _list_workspace_files()}
 
 
 @router.get("/runs/{run_id}/files/{path:path}")
 async def read_run_file(run_id: str, path: str) -> Dict[str, Any]:
-    if not engine.get(run_id) and not store.snapshot(run_id):
+    if not engine.get(run_id) and not get_store().snapshot(run_id):
         raise HTTPException(404, f"unknown run_id: {run_id}")
     content = _read_file_safe(path)
     if not content:
@@ -227,13 +253,13 @@ async def stream_events(run_id: str, request: Request,
     Query: ?since=<unix-ts> — only events after this timestamp
     """
     # Validate run exists (or has history)
-    if not engine.get(run_id) and not store.snapshot(run_id) \
-            and not store.replay(run_id):
+    if not engine.get(run_id) and not get_store().snapshot(run_id) \
+            and not get_store().replay(run_id):
         raise HTTPException(404, f"unknown run_id: {run_id}")
 
     async def event_gen() -> AsyncIterator[bytes]:
         # Replay historical events first
-        for ev in store.replay(run_id, since_ts=since):
+        for ev in get_store().replay(run_id, since_ts=since):
             yield _format_sse(ev)
         # Subscribe to live events
         q = bus.subscribe(run_id)

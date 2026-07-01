@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Optional
 from .agent import Agent, FinishEvent, FailedEvent, ToolCallEvent, make_agent
 from .config import AGENT_PROMPTS, WORKSPACE_ROOT
 from .events import BoardEvent, bus
-from .store import store
+from .store import get_store
 
 
 def _should_request_approval(phase: str, tool: str, args: Dict[str, Any]) -> bool:
@@ -91,7 +91,7 @@ async def run_pipeline_async(run: RunState, prompts: Dict[str, str] = AGENT_PROM
         """Fire-and-forget event for the board. Never raises."""
         try:
             ev = BoardEvent(run_id=run.run_id, kind=kind, data=data)
-            store.append(ev)   # persist for board replay
+            get_store().append(ev)   # persist for board replay
             bus.emit(ev)       # push to live subscribers
         except Exception:
             pass  # board events are non-critical
@@ -102,7 +102,7 @@ async def run_pipeline_async(run: RunState, prompts: Dict[str, str] = AGENT_PROM
         # ----- Phase 1: DESIGN -----
         run.phase = "design"
         run.status = "running"
-        store.update_snapshot(run.run_id, _snapshot_for_board(run))
+        get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
         _emit("phase_start", phase="design", agent="architect_design",
               model=prompts.get("_minimax_model", "MiniMax"))
         architect = make_agent("architect_design", prompts)
@@ -124,7 +124,7 @@ async def run_pipeline_async(run: RunState, prompts: Dict[str, str] = AGENT_PROM
 
         # ----- Phase 2: IMPLEMENT -----
         run.phase = "implement"
-        store.update_snapshot(run.run_id, _snapshot_for_board(run))
+        get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
         _emit("phase_start", phase="implement", agent="coder_implement",
               model=prompts.get("_deepseek_model", "DeepSeek"))
         coder = make_agent("coder_implement", prompts)
@@ -152,7 +152,7 @@ async def run_pipeline_async(run: RunState, prompts: Dict[str, str] = AGENT_PROM
 
         # ----- Phase 3: REVIEW -----
         run.phase = "review"
-        store.update_snapshot(run.run_id, _snapshot_for_board(run))
+        get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
         _emit("phase_start", phase="review", agent="architect_review",
               model=prompts.get("_minimax_model", "MiniMax"))
         reviewer = make_agent("architect_review", prompts)
@@ -178,7 +178,7 @@ async def run_pipeline_async(run: RunState, prompts: Dict[str, str] = AGENT_PROM
         run.updated_at = time.time()
         _emit("run_end", status="completed", outputs=run.outputs)
         try:
-            store.update_snapshot(run.run_id, _snapshot_for_board(run))
+            get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
         except Exception:
             pass
 
@@ -187,7 +187,7 @@ async def run_pipeline_async(run: RunState, prompts: Dict[str, str] = AGENT_PROM
         run.error = f"{type(e).__name__}: {e}"
         try:
             _emit("run_end", status="failed", error=run.error)
-            store.update_snapshot(run.run_id, _snapshot_for_board(run))
+            get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
         except Exception:
             pass
 
@@ -281,7 +281,7 @@ async def _drive_agent(
             try:
                 ev_obj = BoardEvent(run_id=run.run_id, kind="agent_error",
                                     data={"error": ev.error, "phase": run.phase})
-                store.append(ev_obj); bus.emit(ev_obj)
+                get_store().append(ev_obj); bus.emit(ev_obj)
             except Exception:
                 pass
             return {"ok": False, "error": ev.error}
@@ -290,7 +290,7 @@ async def _drive_agent(
             try:
                 ev_obj = BoardEvent(run_id=run.run_id, kind="agent_finish",
                                     data={"phase": run.phase, "summary": ev.summary})
-                store.append(ev_obj); bus.emit(ev_obj)
+                get_store().append(ev_obj); bus.emit(ev_obj)
             except Exception:
                 pass
             return {"ok": True, "summary": ev.summary}
@@ -302,7 +302,7 @@ async def _drive_agent(
                 ev_obj = BoardEvent(run_id=run.run_id, kind="tool_call",
                                     data={"phase": run.phase, "tool": ev.tool,
                                           "args": ev.args, "preview": ev.preview})
-                store.append(ev_obj); bus.emit(ev_obj)
+                get_store().append(ev_obj); bus.emit(ev_obj)
             except Exception:
                 pass
             should = _should_request_approval(run.phase, ev.tool, ev.args)
@@ -313,13 +313,13 @@ async def _drive_agent(
                 run.pending_preview = ev.preview
                 run.status = "awaiting_approval"
                 run.updated_at = time.time()
-                store.update_snapshot(run.run_id, _snapshot_for_board(run))
+                get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
 
                 try:
                     ev_obj = BoardEvent(run_id=run.run_id, kind="approval_requested",
                                         data={"phase": run.phase, "tool": ev.tool,
                                               "args": ev.args, "preview": ev.preview})
-                    store.append(ev_obj); bus.emit(ev_obj)
+                    get_store().append(ev_obj); bus.emit(ev_obj)
                 except Exception:
                     pass
 
@@ -333,7 +333,7 @@ async def _drive_agent(
                     ev_obj = BoardEvent(run_id=run.run_id, kind="approval_resolved",
                                         data={"phase": run.phase, "decision": decision,
                                               "comment": comment})
-                    store.append(ev_obj); bus.emit(ev_obj)
+                    get_store().append(ev_obj); bus.emit(ev_obj)
                 except Exception:
                     pass
 
@@ -352,7 +352,7 @@ async def _drive_agent(
                     # Immediately reflect the running state so polling clients
                     # don't see a stale "awaiting_approval" between decisions.
                     run.status = "running"
-                    store.update_snapshot(run.run_id, _snapshot_for_board(run))
+                    get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
                     continue
 
                 # approved: send(None) to advance past the yield
@@ -362,7 +362,7 @@ async def _drive_agent(
                 run.pending_tool = None
                 run.pending_args = None
                 run.pending_preview = ""
-                store.update_snapshot(run.run_id, _snapshot_for_board(run))
+                get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
                 ev = await loop.run_in_executor(None, _send, None)
                 if ev is None:
                     return {"ok": True, "summary": ""}

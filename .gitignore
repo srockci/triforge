@@ -12,3 +12,7 @@ workspace/tests/*
 !workspace/design/.gitkeep
 !workspace/src/.gitkeep
 !workspace/tests/.gitkeep
+
+# SQLite database (auto-generated)
+data/*.db
+data/*.db-journal

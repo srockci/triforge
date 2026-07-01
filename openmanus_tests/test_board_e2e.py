@@ -84,30 +84,38 @@ def http_json(method: str, path: str, body: dict = None) -> dict:
 
 
 def read_sse_events(run_id: str, deadline_s: float) -> List[dict]:
-    """Connect to SSE and yield events until run_end or deadline."""
+    """Connect to SSE and yield events until run_end or deadline.
+
+    Uses readline() rather than read(1) — Python's http.client has
+    known issues with chunked transfer encoding + 1-byte reads.
+    """
     url = f"http://127.0.0.1:{PORT}/board/runs/{run_id}/events"
     req = urllib.request.Request(url)
     resp = urllib.request.urlopen(req, timeout=2)
     events: List[dict] = []
-    buf = b""
+    buf = ""
     start = time.time()
     while time.time() - start < deadline_s:
         try:
-            chunk = resp.read(1)
+            line_bytes = resp.readline()
         except (socket.timeout, TimeoutError):
-            chunk = b""
-        if not chunk:
-            time.sleep(0.05)
+            line_bytes = b""
+        if not line_bytes:
+            time.sleep(0.1)
+            if any(e["data"].get("kind") == "run_end" for e in events):
+                return events
             continue
-        buf += chunk
-        while b"\n\n" in buf:
-            frame, buf = buf.split(b"\n\n", 1)
+        line = line_bytes.decode("utf-8", errors="replace")
+        if line == "\n":
+            if not buf.strip():
+                continue
             kind, data_str = "message", ""
-            for line in frame.decode("utf-8", errors="replace").split("\n"):
-                if line.startswith("event: "):
-                    kind = line[7:].strip()
-                elif line.startswith("data: "):
-                    data_str += line[6:]
+            for ln in buf.split("\n"):
+                if ln.startswith("event: "):
+                    kind = ln[7:].strip()
+                elif ln.startswith("data: "):
+                    data_str += ln[6:]
+            buf = ""
             if data_str:
                 try:
                     payload = json.loads(data_str)
@@ -116,6 +124,10 @@ def read_sse_events(run_id: str, deadline_s: float) -> List[dict]:
                         return events
                 except json.JSONDecodeError:
                     pass
+        elif line.startswith(":"):
+            continue
+        else:
+            buf += line
     return events
 
 
