@@ -1,6 +1,6 @@
 """End-to-end test for the board API (P1).
 
-Spawns mock_llm_server + OpenManus FastAPI server, then drives a real
+Spawns mock_llm_server + TriForge FastAPI server, then drives a real
 pipeline through the /board/* endpoints including:
   - POST /board/runs
   - GET  /board/runs (kanban list)
@@ -21,20 +21,20 @@ import time
 import urllib.error
 import urllib.request
 from collections import Counter
+from pathlib import Path
 from threading import Thread
 from typing import List
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-WORKSPACE = os.path.join(ROOT, "workspace")
-MOCK_PORT = 11450
-PORT = 8770
+ROOT = Path(__file__).resolve().parent.parent
+WORKSPACE = ROOT / "workspace"
+MOCK_PORT = int(os.environ.get("MOCK_PORT", 11450))
+PORT = int(os.environ.get("PORT", 8770))
 
 
 def start_mock() -> subprocess.Popen:
-    py = os.path.join(ROOT, ".venv", "bin", "python")
     p = subprocess.Popen(
-        [py, "openmanus_tests/mock_llm_server.py", str(MOCK_PORT)],
-        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=ROOT,
+        [sys.executable, "-m", "triforge_tests.mock_llm_server", str(MOCK_PORT)],
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=str(ROOT),
     )
     for _ in range(50):
         try:
@@ -47,21 +47,20 @@ def start_mock() -> subprocess.Popen:
 
 
 def start_server() -> subprocess.Popen:
-    py = os.path.join(ROOT, ".venv", "bin", "python")
     env = os.environ.copy()
-    env["OPENMANUS_MINIMAX_BASE_URL"] = f"http://127.0.0.1:{MOCK_PORT}/v1"
-    env["OPENMANUS_DEEPSEEK_BASE_URL"] = f"http://127.0.0.1:{MOCK_PORT}/v1"
-    env["OPENMANUS_WORKSPACE"] = WORKSPACE
-    env["PYTHONPATH"] = ROOT
+    env["TRIFORGE_MINIMAX_BASE_URL"] = f"http://127.0.0.1:{MOCK_PORT}/v1"
+    env["TRIFORGE_DEEPSEEK_BASE_URL"] = f"http://127.0.0.1:{MOCK_PORT}/v1"
+    env["TRIFORGE_WORKSPACE"] = str(WORKSPACE)
+    env["PYTHONPATH"] = str(ROOT)
     # Mock LLM doesn't check keys but Agent.__init__ requires non-empty
     env["MINIMAX_CN_API_KEY"] = "mock-key-not-used"
     env["DEEPSEEK_API_KEY"] = "mock-key-not-used"
     p = subprocess.Popen(
-        [py, "-m", "uvicorn", "openmanus_server.server:app",
+        [sys.executable, "-m", "uvicorn", "triforge_server.server:app",
          "--host", "127.0.0.1", "--port", str(PORT), "--log-level", "warning",
          "--no-access-log"],
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-        env=env, cwd=ROOT,
+        env=env, cwd=str(ROOT),
     )
     for _ in range(80):
         try:
@@ -150,11 +149,11 @@ def main() -> int:
     print("Board API e2e test (P1)", flush=True)
     print("=" * 60, flush=True)
 
-    if os.path.exists(WORKSPACE):
+    if WORKSPACE.exists():
         shutil.rmtree(WORKSPACE)
-    os.makedirs(WORKSPACE, exist_ok=True)
+    WORKSPACE.mkdir(parents=True, exist_ok=True)
     for sub in ("design", "src", "tests"):
-        os.makedirs(os.path.join(WORKSPACE, sub), exist_ok=True)
+        (WORKSPACE / sub).mkdir(parents=True, exist_ok=True)
 
     print("\n[setup] starting mock LLM ...", flush=True)
     mock = start_mock()
@@ -260,7 +259,7 @@ def main() -> int:
         # ---- 9. Verify file endpoints ----
         fl = http_json("GET", f"/board/runs/{run_id}/files")
         paths = [f["path"] for f in fl["files"]]
-        print(f"\n[9] ✓ /board/runs/{id}/files: {len(paths)} files", flush=True)
+        print(f"\n[9] ✓ /board/runs/{run_id}/files: {len(paths)} files", flush=True)
         for required_path in ("design/architecture.md", "src/hello.py",
                               "design/review_report.md"):
             assert any(required_path in p for p in paths), \

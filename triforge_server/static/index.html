@@ -1,0 +1,4229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TriForge</title>
+<style>
+  /* ============== Design tokens ============== */
+  :root {
+    /* Neutral scale (HSL tuned, slightly cool) */
+    --bg:           hsl(240 6% 7%);
+    --bg-elev-1:    hsl(240 5% 9%);
+    --bg-elev-2:    hsl(240 4% 11%);
+    --bg-elev-3:    hsl(240 4% 13%);
+    --bg-hover:     hsl(240 4% 15%);
+
+    --border:       hsl(240 4% 16%);
+    --border-strong:hsl(240 4% 22%);
+    --divider:      hsl(240 4% 14%);
+
+    --text:         hsl(220 10% 95%);
+    --text-dim:     hsl(220 8% 70%);
+    --text-mute:    hsl(220 6% 50%);
+    --text-faint:   hsl(220 6% 35%);
+
+    /* Accent (indigo-violet) */
+    --accent:       hsl(245 80% 65%);
+    --accent-soft:  hsla(245 80% 65% / 0.12);
+    --accent-line:  hsla(245 80% 65% / 0.35);
+    --accent-2:     hsl(265 75% 68%);
+
+    /* Semantic */
+    --green:        hsl(150 65% 55%);
+    --green-soft:   hsla(150 65% 55% / 0.12);
+    --green-line:   hsla(150 65% 55% / 0.35);
+
+    --yellow:       hsl(40 95% 60%);
+    --yellow-soft:  hsla(40 95% 60% / 0.12);
+    --yellow-line:  hsla(40 95% 60% / 0.35);
+
+    --red:          hsl(0 75% 65%);
+    --red-soft:     hsla(0 75% 65% / 0.12);
+    --red-line:     hsla(0 75% 65% / 0.35);
+
+    --blue:         hsl(210 90% 65%);
+    --blue-soft:    hsla(210 90% 65% / 0.12);
+
+    --orange:       hsl(25 90% 60%);
+    --orange-soft:  hsla(25 90% 60% / 0.12);
+
+    --purple:       hsl(280 70% 70%);
+    --purple-soft:  hsla(280 70% 70% / 0.12);
+
+    /* Geometry */
+    --r-sm: 4px;
+    --r-md: 6px;
+    --r-lg: 8px;
+    --r-xl: 12px;
+
+    /* Theme mode indicator */
+    color-scheme: dark;
+  }
+
+  /* ============== Light theme ============== */
+  [data-theme="light"] {
+    --bg:           hsl(220 20% 97%);
+    --bg-elev-1:    hsl(220 20% 99%);
+    --bg-elev-2:    hsl(220 15% 95%);
+    --bg-elev-3:    hsl(220 12% 92%);
+    --bg-hover:     hsl(220 12% 89%);
+
+    --border:       hsl(220 15% 88%);
+    --border-strong:hsl(220 12% 78%);
+    --divider:      hsl(220 15% 90%);
+
+    --text:         hsl(220 20% 15%);
+    --text-dim:     hsl(220 12% 35%);
+    --text-mute:    hsl(220 8% 50%);
+    --text-faint:   hsl(220 8% 65%);
+
+    --accent:       hsl(245 75% 58%);
+    --accent-soft:  hsla(245 75% 58% / 0.08);
+    --accent-line:  hsla(245 75% 58% / 0.30);
+    --accent-2:     hsl(265 70% 60%);
+
+    --green:        hsl(150 60% 40%);
+    --green-soft:   hsla(150 60% 40% / 0.08);
+    --green-line:   hsla(150 60% 40% / 0.30);
+
+    --yellow:       hsl(40 90% 48%);
+    --yellow-soft:  hsla(40 90% 48% / 0.08);
+    --yellow-line:  hsla(40 90% 48% / 0.30);
+
+    --red:          hsl(0 70% 55%);
+    --red-soft:     hsla(0 70% 55% / 0.08);
+    --red-line:     hsla(0 70% 55% / 0.30);
+
+    --blue:         hsl(210 85% 55%);
+    --blue-soft:    hsla(210 85% 55% / 0.08);
+
+    --orange:       hsl(25 85% 50%);
+    --orange-soft:  hsla(25 85% 50% / 0.08);
+
+    --purple:       hsl(280 65% 55%);
+    --purple-soft:  hsla(280 65% 55% / 0.08);
+
+    color-scheme: light;
+  }
+
+  /* ============== System theme (follows OS) ============== */
+  @media (prefers-color-scheme: light) {
+    [data-theme="system"] {
+      --bg:           hsl(220 20% 97%);
+      --bg-elev-1:    hsl(220 20% 99%);
+      --bg-elev-2:    hsl(220 15% 95%);
+      --bg-elev-3:    hsl(220 12% 92%);
+      --bg-hover:     hsl(220 12% 89%);
+
+      --border:       hsl(220 15% 88%);
+      --border-strong:hsl(220 12% 78%);
+      --divider:      hsl(220 15% 90%);
+
+      --text:         hsl(220 20% 15%);
+      --text-dim:     hsl(220 12% 35%);
+      --text-mute:    hsl(220 8% 50%);
+      --text-faint:   hsl(220 8% 65%);
+
+      --accent:       hsl(245 75% 58%);
+      --accent-soft:  hsla(245 75% 58% / 0.08);
+      --accent-line:  hsla(245 75% 58% / 0.30);
+      --accent-2:     hsl(265 70% 60%);
+
+      --green:        hsl(150 60% 40%);
+      --green-soft:   hsla(150 60% 40% / 0.08);
+      --green-line:   hsla(150 60% 40% / 0.30);
+
+      --yellow:       hsl(40 90% 48%);
+      --yellow-soft:  hsla(40 90% 48% / 0.08);
+      --yellow-line:  hsla(40 90% 48% / 0.30);
+
+      --red:          hsl(0 70% 55%);
+      --red-soft:     hsla(0 70% 55% / 0.08);
+      --red-line:     hsla(0 70% 55% / 0.30);
+
+      --blue:         hsl(210 85% 55%);
+      --blue-soft:    hsla(210 85% 55% / 0.08);
+
+      --orange:       hsl(25 85% 50%);
+      --orange-soft:  hsla(25 85% 50% / 0.08);
+
+      --purple:       hsl(280 65% 55%);
+      --purple-soft:  hsla(280 65% 55% / 0.08);
+
+      color-scheme: light;
+    }
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "SF Pro Display",
+                 "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    font-size: 13px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background .25s ease, color .25s ease;
+  }
+  .num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+  .mono { font-family: ui-monospace, "SF Mono", "JetBrains Mono", "Menlo", Consolas, monospace; }
+
+  /* ============== SVG icon sizing ============== */
+  .icon { width: 14px; height: 14px; stroke-width: 1.75; flex-shrink: 0; }
+  .icon-sm { width: 12px; height: 12px; stroke-width: 1.75; flex-shrink: 0; }
+  .icon-lg { width: 16px; height: 16px; stroke-width: 1.75; flex-shrink: 0; }
+
+  /* ============== Top bar ============== */
+  .topbar {
+    height: 52px;
+    background: var(--bg-elev-1);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 20px;
+    position: relative;
+    transition: background .25s ease, border-color .25s ease;
+  }
+  .topbar::after {
+    content: "";
+    position: absolute;
+    inset: 0 0 -1px 0;
+    pointer-events: none;
+    background: linear-gradient(180deg, hsla(0 0% 100% / 0.03), transparent);
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: -0.01em;
+  }
+  .brand-mark {
+    width: 20px; height: 20px;
+    border-radius: 5px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    display: flex; align-items: center; justify-content: center;
+    color: white;
+    box-shadow: 0 0 0 1px hsla(245 80% 65% / 0.5), 0 4px 12px hsla(245 80% 65% / 0.25);
+  }
+  .brand-mark svg { width: 12px; height: 12px; stroke-width: 2; }
+  .brand-name {
+    font-size: 14px; font-weight: 600; letter-spacing: 0.01em;
+  }
+  .brand-sub {
+    font-size: 11px; color: var(--text-faint);
+    padding-left: 8px; margin-left: 8px;
+    border-left: 1px solid var(--border-strong);
+    font-weight: 400; letter-spacing: 0.04em;
+  }
+  .topbar-nav {
+    display: flex;
+    gap: 2px;
+    margin-left: 8px;
+  }
+  .topbar-nav .tab {
+    padding: 6px 10px;
+    font-size: 12px;
+    color: var(--text-dim);
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    font-weight: 500;
+  }
+  .topbar-nav .tab.active { color: var(--text); background: var(--bg-elev-2); }
+  .topbar-nav .tab:hover:not(.active) { color: var(--text); background: var(--bg-elev-2); }
+
+  .topbar .spacer { flex: 1; }
+  .topbar-right { display: flex; align-items: center; gap: 8px; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    cursor: pointer;
+    transition: background .12s, border-color .12s;
+    font-family: inherit;
+  }
+  .btn:hover { background: var(--bg-hover); border-color: var(--border-strong); }
+  .btn-primary {
+    background: linear-gradient(180deg, hsl(245 80% 68%), var(--accent));
+    border-color: hsla(245 80% 65% / 0.7);
+    color: white;
+    box-shadow: 0 1px 0 hsla(0 0% 100% / 0.1) inset, 0 1px 2px hsla(245 80% 30% / 0.5);
+  }
+  .btn-primary:hover { background: linear-gradient(180deg, hsl(245 80% 72%), hsl(245 80% 70%)); }
+
+  .icon-btn {
+    width: 28px; height: 28px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--r-md);
+    color: var(--text-dim);
+    cursor: pointer;
+  }
+  .icon-btn:hover { color: var(--text); background: var(--bg-elev-2); border-color: var(--border); }
+
+  /* Theme toggle */
+  .theme-toggle { position: relative; }
+  .theme-toggle .theme-icon { transition: opacity .2s, transform .2s; }
+  .theme-toggle:hover { color: var(--accent); }
+
+  .user-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 6px 4px 4px;
+    border-radius: 999px;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text-dim);
+    cursor: pointer;
+  }
+  .user-chip:hover { background: var(--bg-hover); }
+  .avatar {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, hsl(280 70% 60%), hsl(320 70% 60%));
+    color: white;
+    font-size: 11px;
+    font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .conn-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--green-soft);
+    border: 1px solid var(--green-line);
+    color: var(--green);
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .conn-pill .live-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 0 0 var(--green);
+    animation: pulse 2s ease-out infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 hsla(150 65% 55% / 0.5); }
+    100% { box-shadow: 0 0 0 6px hsla(150 65% 55% / 0); }
+  }
+
+  /* ============== Layout ============== */
+  .main {
+    display: grid;
+    grid-template-columns: 288px 1fr 384px;
+    height: calc(100vh - 52px);
+  }
+  .col {
+    overflow-y: auto;
+    background: var(--bg-elev-1);
+  }
+  .col-mid { background: var(--bg); border-left: 1px solid var(--border); border-right: 1px solid var(--border); padding: 0; overflow-y: auto; }
+  .col-mid .detail-header { position: sticky; top: 0; z-index: 3; background: var(--bg); box-shadow: 0 1px 0 var(--border); }
+  .col-right { background: var(--bg-elev-1); }
+
+  .col-header {
+    position: sticky;
+    top: 0;
+    background: var(--bg-elev-1);
+    padding: 14px 16px 10px;
+    z-index: 5;
+    border-bottom: 1px solid var(--divider);
+  }
+  .col-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2px;
+  }
+  .col-title .label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-mute);
+  }
+  .col-title .count {
+    font-size: 10px;
+    color: var(--text-faint);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    padding: 0;
+    background: none;
+    border: none;
+  }
+  .col-subtitle {
+    font-size: 11px;
+    color: var(--text-faint);
+    margin-top: 2px;
+  }
+
+  .col-body { padding: 10px; }
+
+  /* ============== Run card ============== */
+  .run-card {
+    position: relative;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 10px 12px 10px 14px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: background .12s, border-color .12s, transform .12s;
+  }
+  .run-card:hover {
+    background: var(--bg-elev-3);
+    border-color: var(--border-strong);
+  }
+  .run-card.active {
+    background: var(--bg-elev-3);
+    border-color: var(--accent-line);
+    box-shadow: 0 0 0 1px var(--accent-line), 0 4px 12px hsla(0 0% 0% / 0.3);
+  }
+  .run-card.active::before {
+    content: "";
+    position: absolute;
+    left: -1px;
+    top: 10px;
+    bottom: 10px;
+    width: 2px;
+    background: var(--accent);
+    border-radius: 0 2px 2px 0;
+  }
+  .run-card-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .run-id {
+    font-size: 10px;
+    color: var(--text-faint);
+    letter-spacing: 0.02em;
+  }
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 10px;
+    font-weight: 500;
+    padding: 2px 7px;
+    border-radius: 999px;
+    border: 1px solid;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .status-badge .dot { width: 5px; height: 5px; border-radius: 50%; }
+  .sb-running { background: var(--blue-soft); color: var(--blue); border-color: hsla(210 90% 65% / 0.35); }
+  .sb-running .dot { background: var(--blue); animation: pulse 1.5s infinite; box-shadow: 0 0 0 0 var(--blue); }
+  .sb-awaiting { background: var(--yellow-soft); color: var(--yellow); border-color: var(--yellow-line); }
+  .sb-awaiting .dot { background: var(--yellow); animation: pulse 2s infinite; box-shadow: 0 0 0 0 var(--yellow); }
+  .sb-done { background: var(--green-soft); color: var(--green); border-color: var(--green-line); }
+  .sb-done .dot { background: var(--green); }
+  .sb-failed { background: var(--red-soft); color: var(--red); border-color: var(--red-line); }
+  .sb-failed .dot { background: var(--red); }
+  .sb-interrupted { background: var(--orange-soft); color: var(--orange); border-color: hsla(25 90% 60% / 0.35); }
+  .sb-interrupted .dot { background: var(--orange); animation: pulse 2s infinite; box-shadow: 0 0 0 0 var(--orange); }
+  .sb-cancelled { background: var(--bg-elev-2); color: var(--text-mute); border-color: var(--border); }
+  .sb-cancelled .dot { background: var(--text-mute); }
+
+  .run-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    line-height: 1.35;
+    margin: 4px 0 8px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .run-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11px;
+    color: var(--text-faint);
+  }
+  .run-meta .sep { color: var(--border-strong); }
+  .run-meta .cost { color: var(--text-dim); font-weight: 500; }
+  .run-meta .phase-pill {
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 1px 6px;
+    border-radius: var(--r-sm);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+  }
+
+  /* Mini phase progress in card */
+  .mini-pipeline {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    margin-top: 8px;
+  }
+  .mini-pipeline .step {
+    flex: 1;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--bg);
+    position: relative;
+  }
+  .mini-pipeline .step.done { background: var(--green); }
+  .mini-pipeline .step.active { background: var(--yellow); box-shadow: 0 0 6px var(--yellow-line); }
+  .mini-pipeline .step.failed { background: var(--red); }
+
+  /* ============== Detail: Header ============== */
+  .detail-header {
+    padding: 20px 28px 16px;
+    border-bottom: 1px solid var(--divider);
+    background: linear-gradient(180deg, var(--bg-elev-1), var(--bg));
+  }
+  .detail-breadcrumb {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px;
+    color: var(--text-faint);
+    margin-bottom: 8px;
+  }
+  .detail-breadcrumb .crumb { color: var(--text-mute); }
+  .detail-breadcrumb .sep { color: var(--border-strong); }
+
+  .detail-title-row {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 12px;
+  }
+  .detail-title {
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1.25;
+    color: var(--text);
+  }
+  .detail-title .req {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--text-dim);
+    font-weight: 400;
+    letter-spacing: 0;
+  }
+
+  .badges {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    margin-bottom: 14px;
+  }
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 9px;
+    border-radius: 999px;
+    border: 1px solid;
+    letter-spacing: 0.01em;
+  }
+  .badge .bdot { width: 5px; height: 5px; border-radius: 50%; }
+  .b-yellow { background: var(--yellow-soft); color: var(--yellow); border-color: var(--yellow-line); }
+  .b-yellow .bdot { background: var(--yellow); }
+  .b-blue { background: var(--blue-soft); color: var(--blue); border-color: hsla(210 90% 65% / 0.35); }
+  .b-blue .bdot { background: var(--blue); }
+  .b-red { background: var(--red-soft); color: var(--red); border-color: var(--red-line); }
+  .b-red .bdot { background: var(--red); }
+  .b-green { background: var(--green-soft); color: var(--green); border-color: var(--green-line); }
+  .b-green .bdot { background: var(--green); }
+  .b-orange { background: var(--orange-soft); color: var(--orange); border-color: hsla(25 90% 60% / 0.35); }
+  .b-orange .bdot { background: var(--orange); }
+  .b-neutral { background: var(--bg-elev-2); color: var(--text-dim); border-color: var(--border); }
+
+  /* Stat tiles */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+  }
+  .stat-tile {
+    background: var(--bg-elev-1);
+    padding: 10px 14px;
+  }
+  .stat-tile .label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-mute);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .stat-tile .value {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.01em;
+  }
+  .stat-tile .sub {
+    font-size: 11px;
+    color: var(--text-faint);
+    margin-top: 1px;
+  }
+
+  /* Progress segmented bar */
+  .seg-bar {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .seg-bar .bar {
+    display: flex;
+    gap: 4px;
+  }
+  .seg-bar .seg {
+    flex: 1;
+    height: 5px;
+    border-radius: 3px;
+    background: var(--bg-elev-2);
+    overflow: hidden;
+    position: relative;
+  }
+  .seg-bar .seg .fill {
+    position: absolute; inset: 0;
+    border-radius: 3px;
+  }
+  .seg-bar .seg.arch .fill { background: linear-gradient(90deg, var(--green), hsla(150 65% 55% / 0.6)); width: 100%; }
+  .seg-bar .seg.code .fill { background: linear-gradient(90deg, var(--yellow), hsla(40 95% 60% / 0.4)); width: 22%; }
+  .seg-bar .seg.review .fill { background: linear-gradient(90deg, var(--border-strong), var(--bg-elev-3)); width: 0%; }
+  .seg-bar-labels {
+    display: flex; gap: 14px;
+    font-size: 11px;
+    color: var(--text-mute);
+  }
+  .seg-bar-labels span { display: inline-flex; align-items: center; gap: 5px; }
+  .seg-bar-labels strong { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .seg-bar-labels span:first-child strong { color: var(--green); }
+  .seg-bar-labels span:nth-child(2) strong { color: var(--yellow); }
+
+  /* ============== Sections ============== */
+  .section {
+    padding: 20px 28px;
+    border-bottom: 1px solid var(--divider);
+  }
+  .section-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .section-title {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.005em;
+  }
+  .section-title svg { color: var(--text-mute); }
+  .section-sub {
+    font-size: 11px;
+    color: var(--text-mute);
+  }
+
+  /* ============== Phase Timeline (improved) ============== */
+  .phase-timeline {
+    position: relative;
+    padding-left: 4px;
+  }
+  .phase-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: 28px 1fr;
+    gap: 12px;
+    padding-bottom: 4px;
+  }
+  .phase-row:last-child .connector { display: none; }
+  .phase-rail {
+    display: flex; flex-direction: column; align-items: center;
+    position: relative;
+  }
+  .phase-rail .node {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--bg-elev-2);
+    border: 1.5px solid var(--border-strong);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-faint);
+    position: relative;
+    z-index: 2;
+  }
+  .phase-rail .node.done {
+    background: var(--green-soft);
+    border-color: var(--green);
+    color: var(--green);
+  }
+  .phase-rail .node.active {
+    background: var(--yellow-soft);
+    border-color: var(--yellow);
+    color: var(--yellow);
+    animation: pulse-soft 1.8s ease-out infinite;
+  }
+  @keyframes pulse-soft {
+    0%, 100% { box-shadow: 0 0 0 0 var(--yellow-line); }
+    50% { box-shadow: 0 0 0 6px transparent; }
+  }
+  .phase-rail .node.locked { background: var(--bg-elev-2); border-style: dashed; }
+  .phase-rail .connector {
+    flex: 1;
+    width: 1.5px;
+    background: var(--border-strong);
+    margin-top: 2px;
+    min-height: 8px;
+  }
+  .phase-rail .connector.done { background: var(--green); }
+
+  .phase-body { padding-top: 1px; padding-bottom: 14px; }
+  .phase-name-row {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 4px;
+  }
+  .phase-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .phase-name-row.active .phase-name { color: var(--yellow); }
+  .phase-name-row.done .phase-name { color: var(--text); }
+  .phase-name-row.locked .phase-name { color: var(--text-faint); }
+  .phase-name-row.failed .phase-name { color: var(--red); }
+  .phase-name-row.failed .phase-tag {
+    background: var(--red-soft); color: var(--red); border-color: var(--red-line);
+  }
+
+  .phase-tag {
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    color: var(--text-mute);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+  .phase-tag.minimax { background: hsla(245 80% 65% / 0.08); border-color: var(--accent-line); color: hsl(245 80% 78%); }
+  .phase-tag.deepseek { background: hsla(280 70% 60% / 0.08); border-color: hsla(280 70% 70% / 0.3); color: hsl(280 70% 78%); }
+
+  .phase-time {
+    font-size: 11px;
+    color: var(--text-faint);
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .phase-desc {
+    font-size: 11px;
+    color: var(--text-mute);
+    margin-bottom: 6px;
+  }
+  .phase-files {
+    background: var(--bg-elev-1);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 6px 10px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .phase-file {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 11px;
+  }
+  .phase-file svg { color: var(--text-mute); }
+  .phase-file .fname { color: var(--text-dim); flex: 1; }
+  .phase-file .fsize { color: var(--text-faint); font-variant-numeric: tabular-nums; font-size: 10px; }
+  .phase-file .ftag {
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-weight: 500;
+  }
+  .ftag.ok { background: var(--green-soft); color: var(--green); }
+  .ftag.wait { background: var(--yellow-soft); color: var(--yellow); }
+  .ftag.idle { background: var(--bg-elev-2); color: var(--text-faint); }
+
+  /* ============== Approval Card ============== */
+  .approval {
+    background:
+      linear-gradient(135deg, var(--yellow-soft), transparent 60%),
+      var(--bg-elev-1);
+    border: 1px solid var(--yellow-line);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    box-shadow: 0 0 0 1px var(--yellow-line), 0 8px 24px hsla(40 95% 50% / 0.08);
+    position: relative;
+  }
+  .approval::before {
+    content: "ACTION REQUIRED";
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--yellow);
+    background: var(--yellow-soft);
+    border: 1px solid var(--yellow-line);
+    padding: 2px 8px;
+    border-radius: 999px;
+    z-index: 1;
+  }
+  .approval-head {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--yellow-line);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .approval-icon {
+    width: 28px; height: 28px;
+    border-radius: var(--r-md);
+    background: var(--yellow-soft);
+    border: 1px solid var(--yellow-line);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--yellow);
+  }
+  .approval-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .approval-subtitle {
+    font-size: 11px;
+    color: var(--text-mute);
+    margin-top: 1px;
+  }
+  .approval-body { padding: 14px 16px; }
+  .approval-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .approval-grid .field .k {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-mute);
+    font-weight: 600;
+    margin-bottom: 3px;
+  }
+  .approval-grid .field .v {
+    font-size: 12px;
+    color: var(--text);
+  }
+  .approval-grid .field .v.mono { font-family: ui-monospace, monospace; color: var(--text-dim); }
+
+  .code-block {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+  .code-block-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 12px;
+    background: var(--bg-elev-2);
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text-mute);
+  }
+  .code-block-head .filename { font-family: ui-monospace, monospace; color: var(--text-dim); display: inline-flex; align-items: center; gap: 6px; }
+  .code-block-head .filename svg { color: var(--text-mute); }
+  .code-block-head .meta { display: flex; align-items: center; gap: 4px; color: var(--text-faint); }
+  .code-block-head .meta-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 6px;
+    border-radius: var(--r-sm);
+    background: transparent;
+    border: none;
+    color: var(--text-mute);
+    font-size: 10px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .code-block-head .meta-btn:hover { background: var(--bg-elev-3); color: var(--text); }
+  .code-block-head .meta-btn.active { background: var(--accent-soft); color: var(--accent); }
+  .code-block-head .divider { width: 1px; height: 12px; background: var(--border); margin: 0 4px; }
+  .code-block-body {
+    padding: 12px 14px;
+    font-family: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--text);
+    overflow: hidden;
+    position: relative;
+  }
+  .code-block-body::after {
+    content: "";
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 32px;
+    background: linear-gradient(180deg, transparent, var(--bg));
+    pointer-events: none;
+  }
+  .ln { color: var(--text-faint); display: inline-block; width: 20px; user-select: none; text-align: right; margin-right: 14px; }
+  .kw { color: hsl(280 80% 78%); }
+  .fn { color: hsl(195 80% 70%); }
+  .str { color: hsl(95 60% 65%); }
+  .num { color: hsl(35 90% 65%); }
+  .cm { color: var(--text-faint); font-style: italic; }
+  .op { color: hsl(330 80% 75%); }
+  .var { color: var(--text); }
+
+  .approval-actions {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 8px;
+  }
+  .btn-approve {
+    background: linear-gradient(180deg, hsl(150 65% 50%), hsl(150 65% 42%));
+    border-color: hsla(150 65% 50% / 0.5);
+    color: white;
+    font-weight: 600;
+    padding: 9px;
+    justify-content: center;
+    box-shadow: 0 1px 0 hsla(0 0% 100% / 0.15) inset;
+  }
+  .btn-approve:hover { background: linear-gradient(180deg, hsl(150 65% 55%), hsl(150 65% 48%)); }
+  .btn-reject, .btn-modify {
+    background: var(--bg-elev-2);
+    padding: 9px;
+    justify-content: center;
+  }
+
+  /* ============== Files Panel ============== */
+  .files-card {
+    background: var(--bg-elev-1);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 4px;
+    font-family: ui-monospace, "SF Mono", monospace;
+    font-size: 12px;
+  }
+  .file-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 10px;
+    border-radius: var(--r-sm);
+    color: var(--text-dim);
+    cursor: default;
+  }
+  .file-row:hover { background: var(--bg-elev-2); }
+  .file-row .indent { display: inline-block; }
+  .file-row svg.folder { color: hsl(40 60% 60%); }
+  .file-row svg.file { color: var(--text-mute); }
+  .file-row .fname { flex: 1; color: var(--text); }
+  .file-row .fsize { color: var(--text-faint); font-size: 11px; }
+  .file-row .ftag-sm { font-size: 10px; padding: 1px 6px; border-radius: 3px; font-weight: 500; }
+
+  /* ============== Event Stream (improved) ============== */
+  .live-stream { padding: 4px 0; }
+  .live-day {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-mute);
+    font-weight: 600;
+    padding: 12px 16px 6px;
+    position: sticky;
+    top: 0;
+    background: var(--bg-elev-1);
+    z-index: 2;
+  }
+  .evt {
+    display: grid;
+    grid-template-columns: 60px 24px 1fr;
+    gap: 10px;
+    padding: 5px 16px;
+    font-size: 12px;
+    line-height: 1.5;
+    position: relative;
+  }
+  .evt:hover { background: var(--bg-elev-2); }
+  .evt .ts {
+    color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
+    font-size: 11px;
+    padding-top: 1px;
+    font-family: ui-monospace, monospace;
+  }
+  .evt .evt-icon {
+    width: 18px; height: 18px;
+    border-radius: var(--r-sm);
+    display: flex; align-items: center; justify-content: center;
+    color: white;
+  }
+  .evt-icon svg { width: 11px; height: 11px; stroke-width: 2; }
+  .ei-agent   { background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
+  .ei-write   { background: linear-gradient(135deg, var(--purple), hsl(320 60% 60%)); }
+  .ei-read    { background: linear-gradient(135deg, var(--blue), hsl(190 80% 55%)); }
+  .ei-user    { background: linear-gradient(135deg, var(--green), hsl(170 60% 50%)); }
+  .ei-system  { background: linear-gradient(135deg, var(--text-mute), hsl(220 6% 30%)); }
+  .ei-stats   { background: var(--bg-elev-2); color: var(--text-mute); border: 1px solid var(--border); }
+  .ei-error   { background: linear-gradient(135deg, var(--red), hsl(20 80% 55%)); }
+  .ei-think   { background: linear-gradient(135deg, hsl(220 8% 50%), hsl(220 8% 40%)); }
+
+  .evt .body { padding-top: 1px; color: var(--text-dim); }
+  .evt .body .who {
+    font-weight: 500;
+    color: var(--text);
+    font-family: ui-monospace, monospace;
+    font-size: 11.5px;
+  }
+  .evt.user .body .who { color: var(--green); }
+  .evt.system .body .who { color: var(--orange); }
+  .evt.error .body .who { color: var(--red); }
+  .evt .body .verb { color: var(--text-mute); margin: 0 6px; }
+  .evt .body .target { color: var(--text); }
+  .evt .body .target.mono { font-family: ui-monospace, monospace; }
+  .evt .body .arg { color: var(--text-mute); font-family: ui-monospace, monospace; font-size: 11.5px; }
+  .evt .body .preview { color: var(--text-faint); font-family: ui-monospace, monospace; font-size: 11px; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; border: 2px solid var(--bg-elev-1); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+
+  /* Special: ring gradient on left column active card */
+  .col-left .col-body { padding: 8px; }
+
+  /* ============ Board tab: stat tiles ============ */
+  .board-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    padding: 10px 8px 4px;
+  }
+  .board-stats .stat-tile {
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 8px 10px;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .board-stats .stat-tile .stat-label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--text-mute); font-weight: 600;
+  }
+  .board-stats .stat-tile .stat-value {
+    font-size: 22px; font-weight: 600; color: var(--text);
+    line-height: 1.1;
+  }
+  .board-stats .stat-tile .stat-sub {
+    font-size: 10px; color: var(--text-faint); margin-top: 2px;
+  }
+  .board-stats .stat-tile.stat-need-attention {
+    background: hsla(40 95% 60% / 0.12);
+    border-color: var(--yellow-line);
+    animation: approval-pulse 2s ease-in-out infinite;
+  }
+  .board-stats .stat-tile.stat-need-attention .stat-value { color: var(--yellow); }
+  .board-stats .stat-tile.stat-success { background: var(--green-soft); border-color: var(--green-line); }
+  .board-stats .stat-tile.stat-success .stat-value { color: var(--green); }
+  .board-stats .stat-tile.stat-failed  { background: var(--red-soft); border-color: var(--red-line); }
+  .board-stats .stat-tile.stat-failed  .stat-value { color: var(--red); }
+  .board-stats .stat-tile.stat-paused  { background: var(--orange-soft); border-color: hsla(25 90% 60% / 0.35); }
+  .board-stats .stat-tile.stat-paused  .stat-value { color: var(--orange); }
+  @keyframes approval-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 hsla(40 95% 60% / 0.10); }
+    50%      { box-shadow: 0 0 12px 0 hsla(40 95% 60% / 0.30); }
+  }
+
+  /* ============ All Runs tab: filter pills + dense rows ============ */
+  .allruns-header { padding: 4px 4px 8px; }
+  .allruns-title {
+    font-size: 15px; font-weight: 600; color: var(--text);
+    letter-spacing: 0.01em;
+  }
+  .allruns-sub {
+    font-size: 11px; color: var(--text-mute); margin-top: 2px;
+  }
+  .filter-pills {
+    display: flex; flex-wrap: wrap; gap: 4px;
+    padding: 8px 4px 4px;
+  }
+  .filter-pill {
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--bg-elev-2);
+    color: var(--text-dim);
+    font-size: 11px; font-weight: 500;
+    cursor: pointer;
+    transition: all .12s;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .filter-pill:hover { background: var(--bg-hover); color: var(--text); }
+  .filter-pill.selected {
+    background: var(--accent-soft); color: var(--accent);
+    border-color: var(--accent-line);
+  }
+  .filter-pill .pill-count {
+    background: var(--bg);
+    color: var(--text-mute);
+    padding: 0 6px; border-radius: 999px;
+    font-size: 10px; font-family: ui-monospace, monospace;
+  }
+  .filter-pill.selected .pill-count {
+    background: var(--accent); color: white;
+  }
+  .run-row {
+    border-radius: var(--r-md);
+    border: 1px solid var(--border);
+    background: var(--bg-elev-2);
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: all .12s;
+  }
+  .run-row:hover { background: var(--bg-elev-3); border-color: var(--border-strong); }
+  .run-row.selected { background: var(--accent-soft); border-color: var(--accent-line); }
+  .run-row-top {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 4px;
+  }
+  .run-row-id {
+    font-size: 11px; color: var(--text-mute); font-family: ui-monospace, monospace;
+    flex: 1;
+  }
+  .run-row-when {
+    font-size: 10px; color: var(--text-faint);
+  }
+  .run-row-req {
+    font-size: 12px; color: var(--text); margin: 4px 0 6px;
+    line-height: 1.4;
+    overflow: hidden; text-overflow: ellipsis;
+    display: -webkit-box; -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .run-row-meta {
+    display: flex; flex-wrap: wrap; gap: 4px;
+  }
+  .meta-chip {
+    display: inline-block;
+    padding: 2px 8px; border-radius: 999px;
+    background: var(--bg); border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 10.5px; font-family: ui-monospace, monospace;
+  }
+  .meta-chip.meta-done  { background: var(--green-soft); color: var(--green); border-color: var(--green-line); }
+  .meta-chip.meta-cost  { color: var(--yellow); }
+  .meta-chip.meta-tok   { color: var(--text-mute); }
+
+  /* Clickable file rows */
+  .file-clickable { cursor: pointer; }
+  .file-clickable:hover { background: var(--bg-elev-3); }
+  .file-clickable:hover .fname { color: var(--accent); }
+  .file-download-btn {
+    background: none; border: none; cursor: pointer; padding: 2px;
+    color: var(--text-faint); border-radius: var(--r-sm);
+    opacity: 0; transition: opacity .15s;
+  }
+  .file-clickable:hover .file-download-btn { opacity: 1; }
+  .file-download-btn:hover { color: var(--text); background: var(--bg-elev-2); }
+
+  /* File viewer modal */
+  .file-viewer-bg {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.65);
+    z-index: 110; display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+  .file-viewer {
+    background: var(--bg-elev-1); border: 1px solid var(--border-strong);
+    border-radius: var(--r-xl); width: 720px; max-width: 92vw;
+    max-height: 80vh; display: flex; flex-direction: column;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+  }
+  .file-viewer-head {
+    padding: 12px 16px; border-bottom: 1px solid var(--divider);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .file-viewer-title {
+    font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px;
+    font-family: ui-monospace, monospace;
+  }
+  .file-viewer-actions { display: flex; gap: 6px; }
+  .file-viewer-body {
+    padding: 16px; overflow: auto; flex: 1;
+    font-family: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, monospace;
+    font-size: 12px; line-height: 1.6; color: var(--text);
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .file-viewer-body .ln {
+    color: var(--text-faint); display: inline-block; width: 32px;
+    user-select: none; text-align: right; margin-right: 16px;
+  }
+
+  /* ============== Settings Panel ============== */
+  .settings-panel {
+    height: calc(100vh - 52px);
+    overflow-y: auto;
+    background: var(--bg);
+  }
+  .settings-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 32px 24px 64px;
+  }
+  .settings-header {
+    margin-bottom: 28px;
+  }
+  .settings-title {
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .settings-subtitle {
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+  .settings-section {
+    background: var(--bg-elev-1);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .settings-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .settings-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .settings-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .settings-field.full {
+    grid-column: 1 / -1;
+  }
+  .settings-field label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-mute);
+    font-weight: 600;
+  }
+  .settings-field input,
+  .settings-field select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 8px 10px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.5;
+    transition: border-color .12s;
+  }
+  .settings-field input:focus,
+  .settings-field select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-soft);
+  }
+  .settings-field input[readonly] {
+    color: var(--text-dim);
+    background: var(--bg-elev-2);
+    cursor: default;
+  }
+  .api-key-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .api-key-wrap input {
+    padding-right: 38px;
+  }
+  .api-key-toggle {
+    position: absolute;
+    right: 4px;
+    background: none;
+    border: none;
+    color: var(--text-mute);
+    cursor: pointer;
+    padding: 4px 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--r-sm);
+    font-size: 11px;
+    font-family: inherit;
+  }
+  .api-key-toggle:hover {
+    color: var(--text);
+    background: var(--bg-elev-3);
+  }
+  .settings-field.subdued {
+    opacity: 0.7;
+  }
+  .settings-field.subdued label {
+    font-size: 10px;
+    color: var(--text-faint);
+    font-weight: 500;
+  }
+  .settings-field.subdued input {
+    font-size: 12px;
+    color: var(--text-dim);
+    padding: 6px 8px;
+  }
+  .settings-field select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23777' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 28px;
+  }
+  .settings-textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 10px 12px;
+    color: var(--text);
+    font-family: ui-monospace, "SF Mono", "JetBrains Mono", "Menlo", Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    resize: vertical;
+    min-height: 140px;
+    transition: border-color .12s;
+  }
+  .settings-textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-soft);
+  }
+  .settings-card {
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .settings-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .settings-card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .settings-card-remove {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    font-size: 11px;
+    color: var(--red);
+    background: var(--red-soft);
+    border: 1px solid var(--red-line);
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 500;
+  }
+  .settings-card-remove:hover {
+    background: hsla(0 75% 65% / 0.2);
+  }
+  .settings-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 24px;
+  }
+
+  /* ---- Notification channels ---- */
+  .channel-card {
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--bg-elev-2);
+    padding: 14px 16px;
+    margin-bottom: 10px;
+  }
+  .channel-card-head {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .channel-card-head .ch-title {
+    font-size: 14px; font-weight: 600; color: var(--text);
+  }
+  .channel-card-head .ch-sub {
+    font-size: 11px; color: var(--text-mute);
+  }
+  .channel-card-head .ch-actions {
+    margin-left: auto; display: flex; gap: 6px;
+  }
+  .channel-card-head .ch-actions .btn { padding: 4px 10px; font-size: 11px; }
+  .channel-form-grid {
+    display: grid; grid-template-columns: 110px 1fr 1fr; gap: 8px 12px;
+    align-items: center; margin-top: 8px;
+  }
+  .channel-form-grid label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--text-mute); font-weight: 600;
+  }
+  .channel-form-grid input, .channel-form-grid select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    padding: 5px 8px;
+    color: var(--text); font-family: ui-monospace, monospace;
+    font-size: 12px;
+  }
+  .channel-form-grid input:focus, .channel-form-grid select:focus {
+    outline: none; border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-soft);
+  }
+  .channel-form-grid .mode-toggle { display: flex; gap: 6px; }
+  .channel-form-grid .mode-toggle label {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    cursor: pointer;
+    font-size: 11px; text-transform: none; letter-spacing: 0;
+  }
+  .channel-form-grid .mode-toggle input { display: none; }
+  .channel-form-grid .mode-toggle label.active {
+    background: var(--accent-soft); border-color: var(--accent-line);
+    color: var(--accent);
+  }
+  .channel-empty {
+    padding: 16px;
+    color: var(--text-faint);
+    font-size: 12px; text-align: center;
+    border: 1px dashed var(--border);
+    border-radius: var(--r-md);
+  }
+  .ch-test-result { font-size: 11px; color: var(--text-mute); margin-top: 6px; }
+  .ch-test-result.ok    { color: var(--green); }
+  .ch-test-result.fail  { color: var(--red); }
+  .notif-history-block { margin-top: 14px; }
+  .notif-history-block summary {
+    font-size: 11px; color: var(--text-mute); cursor: pointer;
+    padding: 4px 0;
+  }
+  .notif-history {
+    margin-top: 8px; padding: 8px;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    max-height: 220px; overflow-y: auto;
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+  .notif-row { padding: 2px 0; border-bottom: 1px dashed var(--divider); }
+  .notif-row.ok   { color: var(--text-dim); }
+  .notif-row.fail { color: var(--red); }
+  .notif-row .ts { color: var(--text-faint); margin-right: 6px; }
+    padding-top: 20px;
+    border-top: 1px solid var(--divider);
+  }
+
+  /* Approval section: working paths */
+  .approval-path-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .approval-path-row input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 8px 10px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.5;
+    transition: border-color .12s;
+  }
+  .approval-path-row input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-soft);
+  }
+  .approval-path-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    color: var(--red);
+    background: var(--red-soft);
+    border: 1px solid var(--red-line);
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    padding: 0;
+  }
+  .approval-path-remove:hover {
+    background: hsla(0 75% 65% / 0.2);
+  }
+  .approval-add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    font-size: 12px;
+    color: var(--accent);
+    background: var(--accent-soft);
+    border: 1px solid var(--accent-line);
+    border-radius: var(--r-sm);
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 500;
+    margin-top: 4px;
+  }
+  .approval-add-btn:hover {
+    background: hsla(245 80% 65% / 0.18);
+  }
+  .approval-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .approval-toggle-row input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .approval-toggle-row label {
+    font-size: 13px;
+    color: var(--text);
+    cursor: pointer;
+    user-select: none;
+  }
+  .settings-toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    padding: 10px 18px;
+    border-radius: var(--r-md);
+    font-size: 13px;
+    font-weight: 500;
+    z-index: 200;
+    animation: toast-in .25s ease-out;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  }
+  .settings-toast.success {
+    background: var(--green-soft);
+    color: var(--green);
+    border: 1px solid var(--green-line);
+  }
+  .settings-toast.error {
+    background: var(--red-soft);
+    color: var(--red);
+    border: 1px solid var(--red-line);
+  }
+  @keyframes toast-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ============== Approval Modal ============== */
+  .approval-modal-bg {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.78);
+    z-index: 180;                                       /* above file-viewer (110) and main modal (100), below toasts (200) */
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(8px);
+    animation: approval-fade-in 0.18s ease-out;
+  }
+  .approval-modal {
+    width: 720px; max-width: 94vw; max-height: 90vh;
+    overflow: hidden;                                   /* inner scroller */
+    border-radius: var(--r-xl);
+    background: var(--bg-elev-1);
+    border: 1px solid var(--yellow-line);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px var(--yellow-line);
+    animation: approval-glow 2.5s ease-in-out infinite;
+    display: flex; flex-direction: column;
+  }
+  .approval-modal .approval-head-banner {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 20px;
+    background: linear-gradient(180deg,
+      hsla(40 95% 60% / 0.18),
+      hsla(40 95% 60% / 0.06));
+    border-bottom: 1px solid var(--yellow-line);
+    flex-shrink: 0;
+  }
+  .approval-modal .approval-head-banner .dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--yellow);
+    box-shadow: 0 0 8px hsla(40 95% 60% / 0.6);
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  .approval-modal .approval-head-banner .ttl {
+    font-size: 14px; font-weight: 600; color: var(--yellow); letter-spacing: 0.01em;
+  }
+  .approval-modal .approval-head-banner .sub {
+    font-size: 11px; color: var(--text-mute); margin-left: auto;
+    font-family: ui-monospace, monospace;
+  }
+  .approval-modal .approval-body {
+    flex: 1; overflow-y: auto; padding: 18px 20px;
+  }
+  .approval-modal .approval {
+    border-radius: 0;
+    background: transparent;
+    border: 0;
+  }
+  .approval-modal .approval-actions {
+    position: sticky; bottom: 0;
+    background: linear-gradient(180deg, transparent, var(--bg-elev-1) 30%);
+    padding: 14px 20px 16px;
+    margin: 0 -20px -18px;
+    border-top: 1px solid var(--divider);
+    display: flex; gap: 8px; justify-content: flex-end;
+  }
+  .approval-modal .btn-approve  { min-width: 110px; }
+  .approval-modal .btn-reject   { min-width: 110px; }
+  .approval-modal .btn-modify   { min-width: 110px; }
+  .approval-modal .key-hint {
+    font-size: 10px; color: var(--text-faint);
+    margin-left: 6px; padding: 1px 5px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: var(--bg-elev-2);
+    font-family: ui-monospace, monospace;
+  }
+  .approval-modal .approval-context {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--bg-elev-2);
+    font-size: 12px;
+  }
+  .approval-modal .approval-context .ctx-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 4px 0;
+  }
+  .approval-modal .approval-context .ctx-k {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--text-mute); font-weight: 600;
+    flex-shrink: 0; width: 110px;
+  }
+  .approval-modal .approval-context .ctx-v {
+    display: inline-flex; flex-wrap: wrap; gap: 4px; align-items: center;
+  }
+  .approval-modal .approval-context .ctx-hint {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--border);
+    font-size: 11px;
+    color: var(--text-mute);
+    line-height: 1.5;
+  }
+  .approval-modal .approval-context .ctx-hint code {
+    background: var(--bg); padding: 1px 5px; border-radius: 3px;
+    color: var(--text-dim); font-size: 11px;
+  }
+  @keyframes approval-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: 0.5; transform: scale(0.85); }
+  }
+  @keyframes approval-glow {
+    0%, 100% { box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px var(--yellow-line), 0 0 24px hsla(40 95% 60% / 0.15); }
+    50%       { box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px var(--yellow-line), 0 0 48px hsla(40 95% 60% / 0.30); }
+  }
+</style>
+</head>
+<body>
+<!-- ====================== TOPBAR ====================== -->
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    </div>
+    <span class="brand-name">TriForge</span>
+    <span class="brand-sub">三元锻造</span>
+  </div>
+  <div class="topbar-nav">
+    <div class="tab active" data-nav="board">Board</div>
+    <div class="tab" data-nav="runs">All Runs</div>
+    <div class="tab" data-nav="settings">Settings</div>
+  </div>
+  <div class="spacer"></div>
+  <div class="topbar-right">
+    <div class="conn-pill" id="conn-pill">
+      <span class="live-dot"></span>
+      <span>connected</span>
+    </div>
+    <button class="icon-btn theme-toggle" id="theme-toggle" title="Toggle theme (dark → light → system)">
+      <!-- Moon icon (dark mode, default) -->
+      <svg class="icon theme-icon theme-icon-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      <!-- Sun icon (light mode) -->
+      <svg class="icon theme-icon theme-icon-light" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="display:none;"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      <!-- Monitor icon (system mode) -->
+      <svg class="icon theme-icon theme-icon-system" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="display:none;"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+    </button>
+    <button class="btn btn-primary" data-action="new-task">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14"/></svg>
+      New Task
+    </button>
+  </div>
+</div>
+
+<!-- ====================== MAIN ====================== -->
+<div class="main">
+
+  <!-- ============ LEFT: RUNS ============ -->
+  <div class="col col-left">
+    <div id="board-stats"></div>
+    <div class="col-body" id="active-list"></div>
+
+    <div id="board-sections">
+      <div class="col-title" style="margin: 18px 4px 8px;">
+        <span class="label">Recent</span>
+        <span class="count" id="recent-count">0</span>
+      </div>
+      <div class="col-body" id="recent-list"></div>
+    </div>
+  </div>
+
+  <!-- ============ MIDDLE: DETAIL ============ -->
+  <div class="col col-mid" id="detail-col">
+    <div class="empty-state" id="empty-detail">
+      <div class="empty-icon">
+        <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:32px;height:32px;stroke-width:1.5;">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <path d="M9 9h6M9 13h6M9 17h4"/>
+        </svg>
+      </div>
+      <div class="empty-title">No run selected</div>
+      <div class="empty-hint">Start a new task from the top bar, or click a run on the left to view its progress.</div>
+      <button class="btn btn-primary" id="empty-new-task" style="margin-top: 16px;">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14"/></svg>
+        New Task
+      </button>
+    </div>
+
+    <!-- Detail (filled by JS) -->
+    <div id="detail-root" style="display: none;"></div>
+
+    <!-- Keyboard hints strip (always visible) -->
+    <div class="kbd-hints">
+      <span><kbd>Ctrl</kbd>+<kbd>N</kbd> new</span>
+      <span><kbd>↑</kbd>/<kbd>↓</kbd> switch run</span>
+      <span><kbd>A</kbd> approve · <kbd>R</kbd> reject · <kbd>M</kbd> modify</span>
+    </div>
+  </div>
+
+  <!-- ============ RIGHT: LIVE STREAM ============ -->
+  <div class="col col-right">
+    <div class="col-header">
+      <div class="col-title">
+        <span class="label">Live Stream</span>
+        <div class="conn-pill" id="sse-status" style="padding: 2px 7px; font-size: 10px;">
+          <span class="live-dot" id="sse-dot"></span>
+          <span id="sse-text">idle</span>
+        </div>
+      </div>
+      <div class="col-subtitle" id="sse-sub">No run selected</div>
+    </div>
+
+    <div class="live-stream" id="live-stream">
+      <div style="padding: 32px; text-align: center; color: var(--text-faint); font-size: 12px;">
+        Live events will stream here when a run is selected.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ====================== FILE VIEWER MODAL ====================== -->
+<div class="file-viewer-bg" id="file-viewer-bg" style="display:none;">
+  <div class="file-viewer">
+    <div class="file-viewer-head">
+      <div class="file-viewer-title">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span id="file-viewer-name">filename</span>
+      </div>
+      <div class="file-viewer-actions">
+        <button class="btn" id="file-viewer-download">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download
+        </button>
+        <button class="icon-btn" id="file-viewer-close">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="file-viewer-body" id="file-viewer-body">Loading...</div>
+  </div>
+</div>
+
+<!-- ====================== APPROVAL MODAL ====================== -->
+<div class="approval-modal-bg" id="approval-modal-bg" style="display:none;">
+  <div class="approval-modal" id="approval-modal"></div>
+</div>
+
+<!-- ====================== PERSONAL WECHAT PAIR WIZARD ====================== -->
+<div class="modal-bg" id="pw-wizard-bg" style="display:none;">
+  <div class="modal" style="width: 540px;">
+    <div class="modal-head">
+      <div class="modal-title">连接个人微信</div>
+      <button class="icon-btn" id="pw-wizard-close">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="pw-wizard-body">
+      <!-- Step 1: real iLink QR + scan instruction -->
+      <div id="pw-step-1">
+        <div style="font-size:13px; color:var(--text); line-height:1.6;">
+          <strong>第 1 步：</strong>用你的<strong>个人微信</strong>扫下面的二维码完成绑定。
+        </div>
+        <div style="text-align:center; margin:18px 0 8px;">
+          <img id="pw-qr-img" alt="iLink login QR"
+               style="width:220px; height:220px; background:#fff; border-radius:6px; border:1px solid var(--border);">
+        </div>
+        <div style="font-size:12px; color:var(--text-mute); line-height:1.55; text-align:center;">
+          打开微信 → 点右上角 <kbd style="background:var(--bg-elev-2);padding:1px 5px;border-radius:3px;">+</kbd> → 扫一扫
+        </div>
+      </div>
+
+      <!-- Step 2: polling status -->
+      <div id="pw-step-2" style="display:none;">
+        <div style="text-align:center; padding:24px 0;">
+          <div class="pw-spinner"></div>
+          <div style="margin-top:14px; font-size:14px; color:var(--text);">
+            等待你在微信里点击「确认登录」…
+            <span id="pw-status-text" style="color:var(--text-mute); margin-left:6px;">未配对</span>
+          </div>
+          <div style="margin-top:6px; font-size:11px; color:var(--text-faint);">
+            5 分钟内未完成会自动过期
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: success -->
+      <div id="pw-step-3" style="display:none;">
+        <div style="text-align:center; padding:12px 0 18px;">
+          <div style="font-size:28px; color:var(--green);">✓</div>
+          <div style="margin-top:8px; font-size:15px; color:var(--text); font-weight:600;">
+            已连接
+          </div>
+          <div style="margin-top:6px; font-size:12px; color:var(--text-dim);">
+            账号：<strong id="pw-success-account">—</strong>
+            ·  iLink Bot ID：<code id="pw-success-url">—</code>
+          </div>
+        </div>
+        <div style="border-top:1px solid var(--divider); padding-top:14px; font-size:12px; color:var(--text-dim);">
+          <strong>接下来：</strong>后续通知会通过 iLink Bot API 直接发到你的微信。
+          想要测试请点下方按钮，或在「Notifications 通道」列表里点对应卡片的「测试」按钮。
+        </div>
+      </div>
+
+      <!-- Network-reachability hint (always visible) -->
+      <div class="pw-reach-hint">
+        <b>🌐 网络可达性：</b>
+        <ul style="margin:6px 0 0 0; padding-left:18px; font-size:11px; line-height:1.6;">
+          <li>TriForge → <code>https://ilinkai.weixin.qq.com</code>（腾讯 iLink 服务器，公开可达）</li>
+          <li>你的微信 → 腾讯 iLink 服务器（同上）</li>
+          <li><strong>没有 bridge daemon 了</strong>——本服务直接和 iLink 对话，不需要你跑任何进程</li>
+        </ul>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" id="pw-wizard-cancel">关闭</button>
+      <button class="btn" id="pw-recheck" style="display:none;">我已扫码，刷新</button>
+      <button class="btn btn-primary" id="pw-done" style="display:none;">完成</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====================== SETTINGS PANEL ====================== -->
+<div id="settings-panel" style="display:none;" class="settings-panel">
+  <div class="settings-container">
+    <div class="settings-header">
+      <h2 class="settings-title">Settings</h2>
+      <p class="settings-subtitle">Configure providers, roles, and pipeline parameters</p>
+    </div>
+
+    <!-- Section A: Providers -->
+    <div class="settings-section">
+      <div class="settings-section-head">
+        <div class="section-title">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          Providers
+        </div>
+        <button class="btn" id="settings-add-provider">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14"/></svg>
+          Add Provider
+        </button>
+      </div>
+      <div id="settings-providers-list"></div>
+    </div>
+
+    <!-- Section B: Roles -->
+    <div class="settings-section">
+      <div class="settings-section-head">
+        <div class="section-title">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          Roles
+        </div>
+      </div>
+      <div id="settings-roles-list"></div>
+    </div>
+
+    <!-- Section C: Pipeline Parameters -->
+    <div class="settings-section">
+      <div class="settings-section-head">
+        <div class="section-title">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Pipeline Parameters
+        </div>
+      </div>
+      <div id="settings-pipeline-list"></div>
+    </div>
+
+    <!-- Section D: Approval -->
+    <div class="settings-section">
+      <div class="settings-section-head">
+        <div class="section-title">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          Approval
+        </div>
+      </div>
+      <div id="settings-approval-content"></div>
+    </div>
+
+    <!-- Section E: Notifications (SNS dispatch) -->
+    <div class="settings-section">
+      <div class="settings-section-head">
+        <div class="section-title">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          Notifications  ·  飞书/企微/钉钉/Telegram
+        </div>
+        <button class="btn" id="settings-add-channel">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14"/></svg>
+          Add Channel
+        </button>
+      </div>
+      <div id="settings-channels-list"></div>
+      <details class="notif-history-block">
+        <summary>最近 50 条推送记录</summary>
+        <div id="notif-history" class="notif-history"></div>
+      </details>
+    </div>
+
+    <!-- Actions -->
+    <div class="settings-actions">
+      <button class="btn" id="settings-reset">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Reset to Defaults
+      </button>
+      <button class="btn btn-primary" id="settings-save">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1-2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Save Settings
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ====================== NEW TASK MODAL ====================== -->
+<div class="modal-bg" id="modal-bg" style="display: none;">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">New Task</div>
+      <button class="icon-btn" id="modal-close">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <label class="form-label">Requirement</label>
+      <textarea class="form-input" id="modal-req" rows="5" placeholder="Describe what you want to build. e.g.&#10;Build a JWT auth system with refresh tokens, stateless, Python FastAPI"></textarea>
+
+      <!-- Working paths: prominent, with presets to make the value obvious. -->
+      <div class="wp-section">
+        <label class="form-label">
+          <span style="color:var(--accent); font-weight:700;">⚡ Working paths</span>
+          <span style="text-transform:none; letter-spacing:0; font-weight:400; color:var(--text-faint); margin-left: 6px;">
+            Writes here skip approval. Per-project (only this run).
+          </span>
+        </label>
+        <div class="wp-presets">
+          <button class="wp-preset" data-preset="src/">+ src/</button>
+          <button class="wp-preset" data-preset="tests/">+ tests/</button>
+          <button class="wp-preset" data-preset="design/">+ design/</button>
+          <button class="wp-preset" data-preset="docs/">+ docs/</button>
+        </div>
+        <div class="wp-input-row">
+          <input class="form-input" id="modal-wp-input" type="text" placeholder="e.g. src/, tests/, design/architecture.md" />
+          <button class="btn" id="modal-wp-add" type="button">Add</button>
+        </div>
+        <div class="wp-chips" id="modal-wp-chips"></div>
+        <div class="wp-hint">
+          <strong>Tip:</strong> if approval popups keep appearing for the same kind of file,
+          add that directory here. Click a preset above or paste a list separated by commas.
+        </div>
+      </div>
+
+      <label class="form-label" style="margin-top: 14px;">Priority</label>
+      <div class="priority-row">
+        <button class="priority-pill selected" data-priority="medium">Medium</button>
+        <button class="priority-pill" data-priority="high">High</button>
+        <button class="priority-pill" data-priority="low">Low</button>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" id="modal-cancel">Cancel</button>
+      <button class="btn btn-primary" id="modal-submit">Start Run</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* Modal */
+  .modal-bg {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+  }
+  .modal {
+    background: var(--bg-elev-1);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--r-xl);
+    width: 560px; max-width: 92vw;
+    box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+  }
+  .modal-head { padding: 16px 20px; border-bottom: 1px solid var(--divider); display: flex; align-items: center; justify-content: space-between; }
+  .modal-title { font-size: 15px; font-weight: 600; }
+  .modal-body { padding: 18px 20px; }
+  .modal-foot { padding: 12px 20px; border-top: 1px solid var(--divider); display: flex; gap: 8px; justify-content: flex-end; }
+  .form-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-mute); font-weight: 600; display: block; margin-bottom: 6px; }
+  .form-input {
+    width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: var(--r-md);
+    padding: 10px 12px; color: var(--text); font-family: inherit; font-size: 13px; resize: vertical;
+    line-height: 1.5;
+  }
+  .form-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+  .priority-row { display: flex; gap: 8px; }
+  .priority-pill {
+    flex: 1; padding: 6px 12px; border-radius: var(--r-md); border: 1px solid var(--border);
+    background: var(--bg-elev-2); color: var(--text-dim); font-size: 12px; cursor: pointer;
+    transition: all .12s;
+  }
+  .priority-pill:hover { background: var(--bg-hover); }
+  .priority-pill.selected { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-line); }
+
+  /* Working paths (per-project) */
+  .wp-section {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border: 1px solid var(--accent-line);
+    border-radius: var(--r-md);
+    background:
+      linear-gradient(135deg, var(--accent-soft), transparent 70%),
+      var(--bg-elev-2);
+  }
+  .wp-section .form-label { margin-bottom: 8px; }
+  .wp-presets { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+  .wp-preset {
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--accent-line);
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: 12px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    cursor: pointer;
+    transition: all .12s;
+  }
+  .wp-preset:hover { background: var(--accent); color: white; }
+  .wp-input-row { display: flex; gap: 6px; }
+  .wp-input-row .form-input { flex: 1; }
+  .wp-input-row .btn { white-space: nowrap; }
+  .wp-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; min-height: 4px; }
+
+  /* ---- Personal WeChat pair wizard ---- */
+  .pw-code-row {
+    display: flex; align-items: stretch; gap: 6px;
+    margin-top: 10px;
+  }
+  .pw-command-box {
+    flex: 1; background: var(--bg); color: var(--accent);
+    border: 1px solid var(--border-strong); border-radius: var(--r-sm);
+    padding: 8px 10px; font-family: ui-monospace, monospace; font-size: 12px;
+    overflow-x: auto; white-space: nowrap;
+  }
+  .pw-spinner {
+    width: 28px; height: 28px; margin: 0 auto;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: pw-spin 0.9s linear infinite;
+  }
+  @keyframes pw-spin { to { transform: rotate(360deg); } }
+  .pw-reach-hint {
+    margin-top: 18px; padding: 10px 14px;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--yellow-line);
+    border-radius: var(--r-sm);
+    font-size: 12px; color: var(--text-dim); line-height: 1.6;
+  }
+  .pw-reach-hint code {
+    background: var(--bg); padding: 0 4px; border-radius: 3px;
+    color: var(--text);
+  }
+  .pw-reach-hint ul { color: var(--text-faint); }
+  .pw-in-channel {
+    grid-column: span 3;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 0; gap: 10px;
+  }
+  .wp-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: 999px;
+    background: var(--accent-soft); color: var(--accent);
+    border: 1px solid var(--accent-line);
+    font-size: 12px; font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  .wp-chip-remove {
+    background: none; border: 0; cursor: pointer; padding: 0 0 0 2px;
+    color: var(--accent); opacity: .6; line-height: 1; font-size: 14px;
+  }
+  .wp-chip-remove:hover { opacity: 1; color: var(--red); }
+  .wp-hint { font-size: 11px; color: var(--text-faint); margin-top: 8px; line-height: 1.45; }
+  .wp-hint code { background: var(--bg-elev-2); padding: 0 4px; border-radius: 3px; }
+
+  /* Detail-page working path chips */
+  .wp-chips-inline { display: inline-flex; flex-wrap: wrap; gap: 4px; vertical-align: middle; }
+  .wp-chip-inline {
+    display: inline-block;
+    padding: 2px 8px; border-radius: 999px;
+    background: var(--accent-soft); color: var(--accent);
+    border: 1px solid var(--accent-line);
+    font-size: 11px; font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  .wp-chip-inline.muted { background: transparent; color: var(--text-faint); border-color: var(--border); }
+
+  /* Keyboard hints */
+  .kbd-hints {
+    position: sticky;
+    bottom: 0;
+    background: var(--bg-elev-1);
+    border-top: 1px solid var(--divider);
+    padding: 8px 16px;
+    display: flex;
+    gap: 16px;
+    font-size: 11px;
+    color: var(--text-faint);
+    z-index: 2;
+  }
+  .kbd-hints kbd {
+    display: inline-block;
+    padding: 1px 6px;
+    margin: 0 2px;
+    font-family: ui-monospace, monospace;
+    font-size: 10px;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--text-dim);
+  }
+
+  /* Empty state */
+  .empty-state {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    height: 100%; padding: 40px;
+    text-align: center;
+  }
+  .empty-icon {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-faint);
+    margin-bottom: 16px;
+  }
+  .empty-title { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+  .empty-hint { font-size: 13px; color: var(--text-dim); max-width: 380px; line-height: 1.5; }
+
+  /* Phase file row state */
+  .phase-file-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 4px 8px;
+    font-size: 12px;
+    border-radius: var(--r-sm);
+  }
+  .phase-file-row:hover { background: var(--bg-elev-2); }
+  .phase-file-row svg { color: var(--text-mute); flex-shrink: 0; }
+  .phase-file-row .fname { color: var(--text-dim); flex: 1; font-family: ui-monospace, monospace; font-size: 11.5px; }
+  .phase-file-row .fsize { color: var(--text-faint); font-size: 11px; }
+  .phase-file-row .ftag { font-size: 10px; padding: 1px 6px; border-radius: 3px; }
+
+  /* Event item variants */
+  .evt .body .preview { color: var(--text-faint); font-family: ui-monospace, monospace; font-size: 11px; }
+</style>
+
+<script>
+// ====================== THEME MANAGER ======================
+const ThemeManager = {
+  STORAGE_KEY: 'triforge_theme',
+  MODES: ['dark', 'light', 'system'],
+
+  init() {
+    const saved = localStorage.getItem(this.STORAGE_KEY) || 'dark';
+    this.apply(saved);
+    // Listen for system theme changes when in 'system' mode
+    if (window.matchMedia) {
+      window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
+        if (this.current() === 'system') this.apply('system');
+      });
+    }
+  },
+
+  current() {
+    return localStorage.getItem(this.STORAGE_KEY) || 'dark';
+  },
+
+  cycle() {
+    const idx = this.MODES.indexOf(this.current());
+    const next = this.MODES[(idx + 1) % this.MODES.length];
+    this.apply(next);
+    return next;
+  },
+
+  apply(mode) {
+    localStorage.setItem(this.STORAGE_KEY, mode);
+    document.documentElement.setAttribute('data-theme', mode);
+    this.updateIcon(mode);
+  },
+
+  updateIcon(mode) {
+    document.querySelectorAll('.theme-icon').forEach(el => el.style.display = 'none');
+    const icon = document.querySelector(`.theme-icon-${mode}`);
+    if (icon) icon.style.display = '';
+    const labels = { dark: 'Dark mode', light: 'Light mode', system: 'System theme' };
+    const btn = document.getElementById('theme-toggle');
+    if (btn) btn.title = labels[mode] + ' (click to switch)';
+  },
+};
+
+// ====================== DASHBOARD APP ======================
+const App = {
+  // State
+  state: {
+    runs: [],
+    selectedRunId: null,
+    selectedDetail: null,
+    events: [],          // BoardEvent[] for selected run
+    sse: null,           // EventSource
+    pollTimer: null,
+    sseConnected: false,
+    settings: null,      // Settings data from API
+    draftWorkingPaths: [], // user-entered paths in the new-task modal
+    nav: 'board',        // 'board' | 'runs' | 'settings'
+    allRunsFilter: 'all', // 'all'|'awaiting'|'running'|'failed'|'completed'|'interrupted'|'cancelled'
+  },
+
+  // ---- Init ----
+  async init() {
+    ThemeManager.init();
+    this.bindUI();
+    await this.refreshRuns();
+    this.startPolling();
+  },
+
+  bindUI() {
+    // Theme toggle
+    const themeBtn = document.getElementById('theme-toggle');
+    if (themeBtn) {
+      themeBtn.addEventListener('click', () => ThemeManager.cycle());
+    }
+
+    // Top bar buttons
+    document.querySelectorAll('[data-action="new-task"]').forEach(btn => {
+      btn.addEventListener('click', () => this.openModal());
+    });
+    document.getElementById('empty-new-task')?.addEventListener('click', () => this.openModal());
+
+    // Modal
+    document.getElementById('modal-close').addEventListener('click', () => this.closeModal());
+    document.getElementById('modal-cancel').addEventListener('click', () => this.closeModal());
+    document.getElementById('modal-bg').addEventListener('click', (e) => {
+      if (e.target.id === 'modal-bg') this.closeModal();
+    });
+    document.getElementById('modal-submit').addEventListener('click', () => this.submitNewTask());
+
+    // Working paths input (per-project)
+    document.getElementById('modal-wp-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        this.addWorkingPathFromInput();
+      }
+    });
+    document.getElementById('modal-wp-add').addEventListener('click', () => this.addWorkingPathFromInput());
+
+    // Preset chips: click to add a common working path
+    document.querySelectorAll('.wp-preset').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const p = btn.dataset.preset;
+        if (p && !this.state.draftWorkingPaths.includes(p)) {
+          this.state.draftWorkingPaths.push(p);
+          this.renderDraftWorkingPaths();
+        }
+      });
+    });
+
+    // Priority pills
+    document.querySelectorAll('.priority-pill').forEach(p => {
+      p.addEventListener('click', () => {
+        document.querySelectorAll('.priority-pill').forEach(x => x.classList.remove('selected'));
+        p.classList.add('selected');
+      });
+    });
+
+    // Escape closes modal (but NOT the approval modal — that one is blocking)
+    document.addEventListener('keydown', (e) => {
+      // Skip if typing in input/textarea
+      const tag = (e.target.tagName || '').toLowerCase();
+      const isTyping = tag === 'input' || tag === 'textarea' || e.target.isContentEditable;
+
+      // Modal: Escape closes the *new-task* / file viewer. Approval modal
+      // is deliberately not escapable: it's a blocking gate.
+      if (e.key === 'Escape') {
+        if (this.isApprovalModalVisible()) {
+          // Tiny visual nudge; do not close.
+          const modal = document.getElementById('approval-modal');
+          if (modal) {
+            modal.style.transition = 'transform .12s ease';
+            modal.style.transform = 'translateX(-6px)';
+            setTimeout(() => { modal.style.transform = ''; }, 120);
+          }
+          return;
+        }
+        this.closeModal();
+        this.closeFileViewer();
+        return;
+      }
+      if (isTyping) return;
+
+      // Ctrl/Cmd + N: new task
+      if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+        e.preventDefault();
+        this.openModal();
+        return;
+      }
+
+      // ↑ / ↓ : switch between runs
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const runs = this.state.runs.filter(r => r.status === 'awaiting_approval' || r.status === 'running' || r.status === 'interrupted');
+        if (runs.length === 0) return;
+        const idx = runs.findIndex(r => r.run_id === this.state.selectedRunId);
+        let next;
+        if (e.key === 'ArrowDown') {
+          next = idx === -1 ? 0 : Math.min(idx + 1, runs.length - 1);
+        } else {
+          next = idx <= 0 ? 0 : idx - 1;
+        }
+        this.selectRun(runs[next].run_id);
+        return;
+      }
+
+      // A: approve, R: reject, M: modify — when a run is selected and awaiting
+      if (this.state.selectedRunId && this.state.selectedDetail?.status === 'awaiting_approval') {
+        if (e.key === 'a' || e.key === 'A') {
+          this.submitApproval('approve');
+        } else if (e.key === 'r' || e.key === 'R') {
+          this.submitApproval('reject');
+        } else if (e.key === 'm' || e.key === 'M') {
+          this.submitApproval('modify');
+        }
+      }
+    });
+  },
+
+  isApprovalModalVisible() {
+    const bg = document.getElementById('approval-modal-bg');
+    return bg && bg.style.display !== 'none' && bg.style.display !== '';
+  },
+
+  // ---- API helpers ----
+  async api(method, path, body = null) {
+    const opts = { method, headers: {} };
+    if (body) {
+      opts.headers['Content-Type'] = 'application/json';
+      opts.body = JSON.stringify(body);
+    }
+    const r = await fetch(path, opts);
+    if (!r.ok) {
+      const err = await r.text();
+      throw new Error(`${method} ${path}: ${r.status} ${err}`);
+    }
+    return r.json();
+  },
+
+  // ---- Runs list ----
+  async refreshRuns() {
+    try {
+      const data = await this.api('GET', '/board/runs');
+      this.state.runs = data.runs;
+      this.renderKanban();
+      // Refresh selected detail if any
+      if (this.state.selectedRunId) {
+        const exists = this.state.runs.find(r => r.run_id === this.state.selectedRunId);
+        if (exists) {
+          await this.refreshDetail();
+        } else {
+          this.deselectRun();
+        }
+      }
+    } catch (e) {
+      console.error('refreshRuns failed:', e);
+    }
+  },
+
+  renderKanban() {
+    if (this.state.nav === 'runs') {
+      this.renderAllRunsView();
+    } else {
+      this.renderBoardView();
+    }
+  },
+
+  // Null-safe text setter so a markup typo doesn't break the whole view
+  _setText(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+  },
+
+  renderBoardView() {
+    const runs = this.state.runs || [];
+    const active = runs.filter(r =>
+      r.status === 'awaiting_approval' || r.status === 'running' || r.status === 'interrupted'
+    );
+    const recent = runs.filter(r =>
+      r.status === 'completed' || r.status === 'failed' || r.status === 'cancelled'
+    );
+
+    // ---- Aggregate stats ----
+    const totalRuns = runs.length;
+    const awaiting = runs.filter(r => r.status === 'awaiting_approval').length;
+    const running = runs.filter(r => r.status === 'running').length;
+    const failed = runs.filter(r => r.status === 'failed').length;
+    const completed = runs.filter(r => r.status === 'completed').length;
+    const cancelled = runs.filter(r => r.status === 'cancelled').length;
+    const interrupted = runs.filter(r => r.status === 'interrupted').length;
+    const oneDayAgo = (Date.now() / 1000) - 86400;
+    const completedToday = runs.filter(r =>
+      r.status === 'completed' && (r.updated_at || 0) > oneDayAgo
+    ).length;
+
+    const statsHTML = `
+      <div class="board-stats">
+        <div class="stat-tile stat-total">
+          <div class="stat-label">Total runs</div>
+          <div class="stat-value num">${totalRuns}</div>
+        </div>
+        ${awaiting > 0 ? `
+        <div class="stat-tile stat-need-attention" title="Awaiting your approval">
+          <div class="stat-label">Awaiting</div>
+          <div class="stat-value num">${awaiting}</div>
+        </div>` : ''}
+        <div class="stat-tile" title="Currently running">
+          <div class="stat-label">Running</div>
+          <div class="stat-value num">${running}</div>
+        </div>
+        <div class="stat-tile stat-success" title="Completed runs (all time)">
+          <div class="stat-label">Completed</div>
+          <div class="stat-value num">${completed}</div>
+          <div class="stat-sub">+${completedToday} today</div>
+        </div>
+        ${failed > 0 ? `
+        <div class="stat-tile stat-failed" title="Failed runs (click All Runs tab for full list)">
+          <div class="stat-label">Failed</div>
+          <div class="stat-value num">${failed}</div>
+        </div>` : ''}
+        ${interrupted > 0 || cancelled > 0 ? `
+        <div class="stat-tile stat-paused" title="Interrupted / cancelled (resumable)">
+          <div class="stat-label">Paused</div>
+          <div class="stat-value num">${interrupted + cancelled}</div>
+        </div>` : ''}
+      </div>
+    `;
+
+    document.getElementById('board-stats').innerHTML = statsHTML;
+    const sections = document.getElementById('board-sections');
+    if (sections) sections.style.display = '';
+    this._setText('active-count', active.length);
+    this._setText('recent-count', recent.length);
+
+    document.getElementById('active-list').innerHTML =
+      active.map(r => this.renderRunCard(r)).join('') ||
+      '<div style="padding: 12px; color: var(--text-faint); font-size: 12px; text-align: center;">No active runs</div>';
+    document.getElementById('recent-list').innerHTML =
+      recent.slice(0, 10).map(r => this.renderRunCard(r)).join('') ||
+      '<div style="padding: 12px; color: var(--text-faint); font-size: 12px; text-align: center;">No history</div>';
+
+    this.bindRunCardClicks();
+  },
+
+  renderAllRunsView() {
+    const all = this.state.runs || [];
+    const filter = this.state.allRunsFilter || 'all';
+    const filtered = filter === 'all'
+      ? all
+      : all.filter(r => r.status === filter);
+
+    // sort by updated_at desc
+    filtered.sort((a, b) => (b.updated_at || 0) - (a.updated_at || 0));
+
+    // ----- Filter pills -----
+    const counts = {
+      all: all.length,
+      awaiting_approval: all.filter(r => r.status === 'awaiting_approval').length,
+      running: all.filter(r => r.status === 'running').length,
+      failed: all.filter(r => r.status === 'failed').length,
+      completed: all.filter(r => r.status === 'completed').length,
+      interrupted: all.filter(r => r.status === 'interrupted').length,
+      cancelled: all.filter(r => r.status === 'cancelled').length,
+    };
+    const filters = [
+      ['all',            'All',             counts.all],
+      ['awaiting_approval', 'Awaiting',    counts.awaiting_approval],
+      ['running',        'Running',         counts.running],
+      ['failed',         'Failed',          counts.failed],
+      ['completed',      'Completed',       counts.completed],
+      ['interrupted',    'Interrupted',     counts.interrupted],
+      ['cancelled',      'Cancelled',       counts.cancelled],
+    ];
+    const pillsHTML = filters.map(([key, label, n]) => `
+      <button class="filter-pill ${filter === key ? 'selected' : ''}" data-filter="${key}">
+        ${this.escape(label)}<span class="pill-count">${n}</span>
+      </button>
+    `).join('');
+
+    // ----- Full run list rows -----
+    const rowsHTML = filtered.length === 0
+      ? '<div style="padding: 24px; color: var(--text-faint); font-size: 12px; text-align: center;">No runs match this filter.</div>'
+      : filtered.map(r => this.renderAllRunsRow(r)).join('');
+
+    document.getElementById('board-stats').innerHTML = `
+      <div class="allruns-header">
+        <div>
+          <div class="allruns-title">All runs</div>
+          <div class="allruns-sub">Click any row to inspect. ${all.length} total.</div>
+        </div>
+      </div>
+      <div class="filter-pills">${pillsHTML}</div>
+    `;
+
+    document.getElementById('active-list').innerHTML = rowsHTML;
+    document.getElementById('board-sections').style.display = 'none';
+    document.getElementById('recent-count').textContent = filtered.length;
+    document.getElementById('active-count').textContent = all.length;
+
+    // Bind clicks for filter pills
+    document.querySelectorAll('.filter-pill').forEach(p => {
+      p.addEventListener('click', () => {
+        this.state.allRunsFilter = p.dataset.filter;
+        this.renderAllRunsView();
+      });
+    });
+
+    this.bindRunCardClicks('.run-row');
+  },
+
+  renderAllRunsRow(r) {
+    const statusClass = this.statusBadgeClass(r.status);
+    const statusLabel = this.statusLabel(r.status);
+    const phaseLabel = (r.phase || '?').charAt(0).toUpperCase() + (r.phase || '?').slice(1);
+    const cpCount = (r.completed_phases || []).length;
+    const cost = (r.cost_estimate || 0).toFixed(4);
+    const totalTokens = (r.tokens_in || 0) + (r.tokens_out || 0);
+    const updated = r.updated_at ? new Date(r.updated_at * 1000).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) : '—';
+    return `
+      <div class="run-row ${r.run_id === this.state.selectedRunId ? 'selected' : ''}" data-run-id="${this.escape(r.run_id)}">
+        <div class="run-row-top">
+          <span class="badge ${statusClass}"><span class="bdot"></span>${this.escape(statusLabel)}</span>
+          <span class="run-row-id mono">${this.escape(r.run_id)}</span>
+          <span class="run-row-when mono">${this.escape(updated)}</span>
+        </div>
+        <div class="run-row-req">${this.escape((r.requirement || '(no requirement)').slice(0, 140))}</div>
+        <div class="run-row-meta">
+          <span class="meta-chip">Phase ${phaseLabel}</span>
+          ${cpCount > 0 ? `<span class="meta-chip meta-done">${cpCount} done</span>` : ''}
+          <span class="meta-chip meta-cost">¥${cost}</span>
+          ${totalTokens > 0 ? `<span class="meta-chip meta-tok">${totalTokens.toLocaleString()} tok</span>` : ''}
+        </div>
+      </div>
+    `;
+  },
+
+  bindRunCardClicks(selector = '.run-card') {
+    document.querySelectorAll(selector).forEach(el => {
+      el.addEventListener('click', () => {
+        const rid = el.dataset.runId;
+        this.selectRun(rid);
+      });
+    });
+  },
+
+  renderRunCard(r) {
+    const statusClass = ({
+      'awaiting_approval': 'sb-awaiting',
+      'running': 'sb-running',
+      'completed': 'sb-done',
+      'failed': 'sb-failed',
+      'interrupted': 'sb-interrupted',
+      'cancelled': 'sb-cancelled',
+    })[r.status] || 'sb-running';
+
+    const statusLabel = ({
+      'awaiting_approval': 'Awaiting',
+      'running': 'Running',
+      'completed': 'Done',
+      'failed': 'Failed',
+      'interrupted': 'Interrupted',
+      'cancelled': 'Cancelled',
+    })[r.status] || r.status;
+
+    const elapsed = this.formatElapsed(r.updated_at, r.created_at);
+    const cost = this.formatCost(r);
+    const isActive = r.status === 'running' || r.status === 'awaiting_approval';
+
+    // Phase progress mini bar
+    const phaseIdx = r.phase_index || 0;
+    const totalPhases = 3;
+    let progressHTML = '';
+    if (r.status === 'completed' || r.status === 'failed' || r.status === 'cancelled') {
+      progressHTML = `<div class="mini-pipeline">` +
+        Array.from({length: totalPhases}, (_, i) =>
+          `<div class="step ${i < phaseIdx || r.status === 'completed' ? 'done' : (r.status === 'failed' && i === phaseIdx ? 'failed' : '')}"></div>`
+        ).join('') +
+        `</div>`;
+    } else {
+      progressHTML = `<div class="mini-pipeline">` +
+        Array.from({length: totalPhases}, (_, i) =>
+          `<div class="step ${i < phaseIdx ? 'done' : i === phaseIdx ? 'active' : ''}"></div>`
+        ).join('') +
+        `</div>`;
+    }
+
+    const activeClass = r.run_id === this.state.selectedRunId ? 'active' : '';
+
+    // Token info if available
+    const tokenInfo = (r.tokens_in || r.tokens_out)
+      ? `<span class="sep">·</span><span title="Token usage">${((r.tokens_in||0)/1000).toFixed(1)}k in</span>`
+      : '';
+
+    return `
+      <div class="run-card ${activeClass}" data-run-id="${r.run_id}">
+        <div class="run-card-head">
+          <span class="run-id mono">${r.run_id}</span>
+          <span class="status-badge ${statusClass}"><span class="dot"></span>${statusLabel}</span>
+        </div>
+        <div class="run-title">${this.escape(r.requirement || '(no requirement)')}</div>
+        <div class="run-meta">
+          <span class="phase-pill">Phase ${Math.min(phaseIdx + 1, totalPhases)}/${totalPhases}</span>
+          <span class="sep">·</span>
+          <span>${elapsed}</span>
+          <span class="sep">·</span>
+          <span class="cost">${cost}</span>
+          ${tokenInfo}
+        </div>
+        ${progressHTML}
+      </div>`;
+  },
+
+  // ---- Run detail ----
+  async selectRun(runId) {
+    this.state.selectedRunId = runId;
+    this.state.events = [];
+    this.renderKanban();  // update active highlight
+    document.getElementById('empty-detail').style.display = 'none';
+    document.getElementById('detail-root').style.display = 'block';
+    document.getElementById('detail-root').innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-faint);">Loading...</div>';
+    document.getElementById('live-stream').innerHTML = '<div style="padding: 20px; color: var(--text-faint); font-size: 12px; text-align: center;">Connecting...</div>';
+    document.getElementById('sse-sub').textContent = `Run ${runId}`;
+    this.connectSSE(runId);
+    await this.refreshDetail();
+  },
+
+  deselectRun() {
+    this.state.selectedRunId = null;
+    this.state.selectedDetail = null;
+    this.state.events = [];
+    if (this.state.sse) {
+      this.state.sse.close();
+      this.state.sse = null;
+    }
+    this.setSSEStatus(false, 'idle');
+    document.getElementById('empty-detail').style.display = 'flex';
+    document.getElementById('detail-root').style.display = 'none';
+    document.getElementById('detail-root').innerHTML = '';
+    document.getElementById('live-stream').innerHTML = '<div style="padding: 32px; text-align: center; color: var(--text-faint); font-size: 12px;">Live events will stream here when a run is selected.</div>';
+    document.getElementById('sse-sub').textContent = 'No run selected';
+  },
+
+  async refreshDetail() {
+    if (!this.state.selectedRunId) return;
+    try {
+      const detail = await this.api('GET', `/board/runs/${this.state.selectedRunId}`);
+      this.state.selectedDetail = detail;
+      this.renderDetail(detail);
+    } catch (e) {
+      console.error('refreshDetail failed:', e);
+    }
+  },
+
+  renderDetail(d) {
+    const phaseIdx = d.phase_index || 0;
+    const totalPhases = 3;
+    const statusLabel = this.statusLabel(d.status);
+    const statusClass = this.statusBadgeClass(d.status);
+
+    // completed_phases is the source of truth for which phases have finished.
+    // phase_index derives from run.phase which only tracks the *current* one —
+    // so on resume after a partial run, completed phases would otherwise look
+    // "locked" again. completed_phases fixes that.
+    const completedSet = new Set(d.completed_phases || []);
+    const failedSet = d.status === 'failed'
+      ? new Set([d.phase])  // the current phase failed
+      : new Set();
+    const phaseNodes = ['design', 'implement', 'review'].map((phase, i) => {
+      const isDone = completedSet.has(phase) || d.status === 'completed';
+      const isFailedPhase = failedSet.has(phase);
+      const isActive = phase === d.phase && (d.status === 'running' || d.status === 'awaiting_approval');
+      const isLocked = !isDone && !isActive && !isFailedPhase;
+
+      // Find output files for this phase
+      const phaseFiles = this.findPhaseFiles(d.files || [], phase);
+      const nodeClass = isDone ? 'done' : (isFailedPhase ? 'failed' : isActive ? 'active' : 'locked');
+      const icon = isDone
+        ? '<svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2.5;"><polyline points="20 6 9 17 4 12"/></svg>'
+        : isActive
+          ? '<svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2.5;"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9" stroke-dasharray="3 3"/></svg>'
+          : '<svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
+
+      const phaseName = {
+        'design': 'architect_design',
+        'implement': 'coder_implement',
+        'review': 'architect_review',
+      }[phase];
+      const model = (d.models && d.models[phase]) || (phase === 'implement' ? 'DeepSeek' : 'MiniMax');
+      const filesHTML = phaseFiles.length === 0 ? '' :
+        '<div class="phase-files">' + phaseFiles.map(f => `
+          <div class="phase-file-row">
+            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <span class="fname">${this.escape(f.path)}</span>
+            <span class="fsize">${this.formatSize(f.size)}</span>
+            <span class="ftag" style="background: ${isDone ? 'var(--green-soft)' : 'var(--yellow-soft)'}; color: ${isDone ? 'var(--green)' : 'var(--yellow)'};">${isDone ? 'approved' : 'awaiting'}</span>
+          </div>
+        `).join('') + '</div>';
+
+      const connectorClass = isDone ? 'done' : '';
+
+      return `
+        <div class="phase-row">
+          <div class="phase-rail">
+            <div class="node ${nodeClass}">${icon}</div>
+            ${i < totalPhases - 1 ? `<div class="connector ${connectorClass}"></div>` : ''}
+          </div>
+          <div class="phase-body">
+            <div class="phase-name-row ${nodeClass}">
+              <span class="phase-name">${phaseName}</span>
+              <span class="phase-tag ${phase === 'implement' ? 'deepseek' : 'minimax'}">${model}</span>
+            </div>
+            <div class="phase-desc">${phase === 'design' ? 'Design system architecture' : phase === 'implement' ? 'Implement code based on spec' : 'Review architecture compliance'}</div>
+            ${filesHTML}
+          </div>
+        </div>`;
+    }).join('');
+
+    // Approval panel: ONLY render as a modal (no inline copy in detail)
+    let approvalModalHTML = '';
+    if (d.status === 'awaiting_approval' && d.pending) {
+      const preview = d.pending.preview || '(no preview)';
+      const previewShort = preview.length > 1200 ? preview.slice(0, 1200) + '\n...' : preview;
+      const args = d.pending.args || {};
+      const phaseLabel = d.phase ? d.phase.charAt(0).toUpperCase() + d.phase.slice(1) : '?';
+      const wpChips = (d.working_paths && d.working_paths.length)
+        ? `<span class="wp-chip-inline">${d.working_paths.map(p => this.escape(p)).join('</span> <span class="wp-chip-inline">')}</span>`
+        : '<em style="color:var(--text-faint); font-style:normal;">none</em>';
+      const approvedChips = (d.approved_paths && d.approved_paths.length)
+        ? `<span class="wp-chip-inline muted">${d.approved_paths.map(p => this.escape(p)).join('</span> <span class="wp-chip-inline muted">')}</span>`
+        : '<em style="color:var(--text-faint); font-style:normal;">none yet</em>';
+      const blockedNote = `
+        <div class="approval-context">
+          <div class="ctx-row"><span class="ctx-k">Working paths</span><span class="ctx-v">${wpChips}</span></div>
+          <div class="ctx-row"><span class="ctx-k">Already approved</span><span class="ctx-v">${approvedChips}</span></div>
+          <div class="ctx-hint">Tip: add <code>src/</code> or <code>tests/</code> to working paths to stop seeing prompts for files in those directories.</div>
+        </div>
+      `;
+      approvalModalHTML = `
+          <div class="approval-head-banner">
+            <span class="dot"></span>
+            <span class="ttl">Approval required · ${phaseLabel} phase</span>
+            <span class="sub mono">${this.escape(d.run_id || '')}</span>
+          </div>
+          <div class="approval-body">
+            <div class="approval">
+              <div class="approval-head">
+                <div class="approval-icon">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+                </div>
+                <div style="flex:1;">
+                  <div class="approval-title">Agent wants to write a file</div>
+                  <div class="approval-subtitle">Tool: <code class="mono" style="color:var(--text);">${this.escape(d.pending.tool || '?')}</code></div>
+                </div>
+              </div>
+              <div class="approval-body" style="padding:0;">
+                <div class="approval-grid">
+                  <div class="field"><div class="k">Path</div><div class="v mono">${this.escape(args.path || '?')}</div></div>
+                  <div class="field"><div class="k">Size</div><div class="v num">${this.formatSize((args.content || '').length)}</div></div>
+                  <div class="field"><div class="k">Phase</div><div class="v">${this.escape(phaseLabel)}</div></div>
+                </div>
+                <div class="code-block">
+                  <div class="code-block-head">
+                    <span class="filename">${this.escape(args.path || 'preview')}</span>
+                    <span class="meta">${this.formatSize((args.content || '').length)} · first 1.2 KB</span>
+                  </div>
+                  <div class="code-block-body"><pre style="margin:0; white-space:pre-wrap; font-family: inherit;">${this.escape(previewShort)}</pre></div>
+                </div>
+                ${blockedNote}
+              </div>
+              <div class="approval-actions">
+                <button class="btn btn-reject" data-approve="reject">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:var(--red);"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  Reject
+                  <span class="key-hint">R</span>
+                </button>
+                <button class="btn btn-modify" data-approve="modify">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                  Modify
+                  <span class="key-hint">M</span>
+                </button>
+                <button class="btn btn-approve" data-approve="approve">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:white;"><polyline points="20 6 9 17 4 12"/></svg>
+                  Approve
+                  <span class="key-hint">A</span>
+                </button>
+              </div>
+            </div>
+          </div>
+      `;
+    }
+
+    // Files section
+    const allFiles = d.files || [];
+    const filesHTML = allFiles.length === 0 ? '<div style="color: var(--text-faint); font-size: 12px; padding: 8px;">No files yet</div>' :
+      '<div class="files-card">' + this.renderFileTree(allFiles) + '</div>';
+
+    // Stat tiles — real token usage from API
+    const cost = d.cost_estimate ?? 0;
+    const tokensIn = d.tokens_in || 0;
+    const tokensOut = d.tokens_out || 0;
+    const totalTokens = tokensIn + tokensOut;
+    const elapsed = this.formatElapsed(d.updated_at, d.created_at);
+
+    // Action buttons based on run status
+    const isTerminal = d.status === 'completed' || d.status === 'failed' || d.status === 'cancelled';
+    const isActive = d.status === 'running' || d.status === 'awaiting_approval';
+    const isInterrupted = d.status === 'interrupted';
+    const isFailed = d.status === 'failed';
+    let actionsHTML = '';
+    if (isActive) {
+      actionsHTML = `
+        <button class="btn" data-action="force-stop" style="color: var(--red); border-color: var(--red-line);">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+          Force Stop
+        </button>
+        <button class="btn" data-action="cancel" style="color: var(--orange); border-color: hsla(25 90% 60% / 0.35);">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+          Cancel
+        </button>`;
+    } else if (isInterrupted) {
+      actionsHTML = `
+        <button class="btn btn-primary" data-action="resume">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:white;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Continue
+        </button>
+        <button class="btn" data-action="force-stop" style="color: var(--red); border-color: var(--red-line);">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+          Force Stop
+        </button>`;
+    } else if (isFailed) {
+      const completedCount = (d.completed_phases || []).length;
+      const continueLabel = completedCount > 0
+        ? `Continue (skip ${completedCount} done)`
+        : `Continue`;
+      const continueTitle = completedCount > 0
+        ? `Skip the ${completedCount} phase(s) that already completed; resume from the failed one.`
+        : `Restart from design.`;
+      actionsHTML = `
+        <button class="btn btn-primary" data-action="resume" title="${continueTitle}">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:white;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          ${continueLabel}
+        </button>
+        <button class="btn" data-action="delete" style="color: var(--text-mute);">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          Delete
+        </button>`;
+    } else if (d.status === 'cancelled') {
+      // Cancelled is treated like failed for the user: Continue works
+      // (resumes from the current phase, skipping completed_phases).
+      // We just label it explicitly so the user understands why.
+      const completedCount = (d.completed_phases || []).length;
+      const continueLabel = completedCount > 0
+        ? `Resume (skip ${completedCount} done)`
+        : `Resume`;
+      const continueTitle = completedCount > 0
+        ? `Skip the ${completedCount} phase(s) that already completed; resume from the failed one.`
+        : `Restart from design.`;
+      actionsHTML = `
+        <button class="btn btn-primary" data-action="resume" title="${continueTitle}">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:white;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          ${continueLabel}
+        </button>
+        <button class="btn" data-action="delete" style="color: var(--text-mute);">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          Delete
+        </button>`;
+    } else if (d.status === 'completed') {
+      actionsHTML = `<button class="btn" data-action="delete" style="color: var(--text-faint);">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        Delete
+      </button>`;
+    }
+
+    document.getElementById('detail-root').innerHTML = `
+      <div class="detail-header">
+        <div class="detail-breadcrumb">
+          <span class="crumb">Active Runs</span>
+          <span class="sep">/</span>
+          <span class="crumb mono">${d.run_id}</span>
+          <span class="sep">/</span>
+          <span>started ${this.formatTime(d.created_at)}</span>
+        </div>
+        <div class="detail-title-row">
+          <h1 class="detail-title">${this.escape(d.requirement || '(no requirement)')}
+            ${d.error ? `<span class="req" style="color: var(--red);">Error: ${this.escape(d.error)}</span>` : ''}
+          </h1>
+          <div style="display:flex; gap:8px; flex-shrink:0;">${actionsHTML}</div>
+        </div>
+        <div class="badges">
+          <span class="badge ${statusClass}"><span class="bdot"></span>${statusLabel}</span>
+          <span class="badge b-neutral">Phase ${Math.min(phaseIdx + 1, totalPhases)} of ${totalPhases}</span>
+          ${(d.working_paths && d.working_paths.length)
+            ? `<span class="badge b-neutral" style="padding-left:6px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:12px;height:12px;margin-right:4px;vertical-align:-2px;"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 12l9 4 9-4"/><path d="M3 17l9 4 9-4"/></svg>
+                working paths:
+                <span class="wp-chips-inline" style="margin-left:6px;">
+                  ${d.working_paths.map(p => `<span class="wp-chip-inline">${this.escape(p)}</span>`).join('')}
+                </span>
+              </span>`
+            : ''}
+        </div>
+        <div class="stat-grid">
+          <div class="stat-tile">
+            <div class="label">Cost</div>
+            <div class="value num">&yen;${cost.toFixed(4)}</div>
+            <div class="sub">${totalTokens > 0 ? 'actual' : 'estimate'}</div>
+          </div>
+          <div class="stat-tile">
+            <div class="label">Tokens</div>
+            <div class="value num">${totalTokens > 0 ? totalTokens.toLocaleString() : '—'}</div>
+            <div class="sub">${tokensIn.toLocaleString()} in / ${tokensOut.toLocaleString()} out</div>
+          </div>
+          <div class="stat-tile">
+            <div class="label">Files</div>
+            <div class="value num">${allFiles.length}</div>
+            <div class="sub">in workspace</div>
+          </div>
+          <div class="stat-tile">
+            <div class="label">Elapsed</div>
+            <div class="value">${elapsed || '—'}</div>
+            <div class="sub">${d.status === 'completed' ? 'total' : 'so far'}</div>
+          </div>
+        </div>
+        <div class="seg-bar">
+          <div class="bar">
+            <div class="seg arch"><div class="fill" style="width: ${d.status === 'completed' || phaseIdx > 0 ? '100%' : (d.status === 'awaiting_approval' && d.phase === 'design' ? '90%' : '0%')};"></div></div>
+            <div class="seg code"><div class="fill" style="width: ${d.status === 'completed' || phaseIdx > 1 ? '100%' : (phaseIdx === 1 ? '60%' : '0%')};"></div></div>
+            <div class="seg review"><div class="fill" style="width: ${d.status === 'completed' && phaseIdx >= 2 ? '100%' : '0%'};"></div></div>
+          </div>
+          <div class="seg-bar-labels">
+            <span>Architecture <strong>${d.status === 'completed' || phaseIdx > 0 ? '100%' : (d.status === 'awaiting_approval' && d.phase === 'design' ? '90%' : '0%')}</strong></span>
+            <span>Coding <strong>${d.status === 'completed' || phaseIdx > 1 ? '100%' : (phaseIdx === 1 ? '60%' : '0%')}</strong></span>
+            <span>Review <strong>${d.status === 'completed' && phaseIdx >= 2 ? '100%' : '0%'}</strong></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-head">
+          <div class="section-title">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Phase Pipeline
+          </div>
+          <span class="section-sub">3 phases · design → implement → review</span>
+        </div>
+        <div class="phase-timeline">${phaseNodes}</div>
+      </div>
+
+      <div class="section">
+        <div class="section-head">
+          <div class="section-title">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            Workspace Files
+          </div>
+          <span class="section-sub">${allFiles.length} file${allFiles.length === 1 ? '' : 's'}</span>
+        </div>
+        ${filesHTML}
+      </div>
+    `;
+
+    // (Approval buttons are bound inside showApprovalModal — detail panel no
+    // longer carries an inline approval card, so no double-binding.)
+
+    // Show/hide approval modal
+    if (approvalModalHTML) {
+      this.showApprovalModal(approvalModalHTML);
+    } else {
+      this.hideApprovalModal();
+    }
+
+    // Bind cancel/force-stop/delete/resume action buttons
+    document.querySelectorAll('[data-action="cancel"]').forEach(btn => {
+      btn.addEventListener('click', () => this.cancelRun());
+    });
+    document.querySelectorAll('[data-action="force-stop"]').forEach(btn => {
+      btn.addEventListener('click', () => this.forceStopRun());
+    });
+    document.querySelectorAll('[data-action="delete"]').forEach(btn => {
+      btn.addEventListener('click', () => this.deleteRun());
+    });
+    document.querySelectorAll('[data-action="resume"]').forEach(btn => {
+      btn.addEventListener('click', () => this.resumeRun());
+    });
+
+    // Bind file click (view) and download
+    document.querySelectorAll('.file-clickable[data-file-path]').forEach(row => {
+      row.addEventListener('click', (e) => {
+        if (e.target.closest('.file-download-btn')) return; // don't trigger view on download click
+        this.viewFile(row.dataset.filePath);
+      });
+    });
+    document.querySelectorAll('.file-download-btn[data-download-path]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.downloadFile(btn.dataset.downloadPath);
+      });
+    });
+  },
+
+  renderFileTree(files) {
+    // Build tree
+    const tree = {};
+    files.forEach(f => {
+      const parts = f.path.split('/');
+      let cur = tree;
+      parts.forEach((part, i) => {
+        if (i === parts.length - 1) {
+          cur[part] = { __file: f };
+        } else {
+          cur[part] = cur[part] || {};
+          cur = cur[part];
+        }
+      });
+    });
+    const renderNode = (node, depth) => {
+      let html = '';
+      for (const [name, val] of Object.entries(node)) {
+        if (val.__file) {
+          const fpath = val.__file.path;
+          html += `<div class="file-row file-clickable" data-file-path="${this.escape(fpath)}" style="padding-left: ${8 + depth * 16}px;">
+            <svg class="icon-sm file" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <span class="fname">${this.escape(name)}</span>
+            <span class="fsize">${this.formatSize(val.__file.size)}</span>
+            <button class="file-download-btn" data-download-path="${this.escape(fpath)}" title="Download">
+              <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </button>
+          </div>`;
+        } else {
+          html += `<div class="file-row" style="padding-left: ${8 + depth * 16}px;">
+            <svg class="icon-sm folder" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            <span class="fname">${this.escape(name)}/</span>
+          </div>`;
+          html += renderNode(val, depth + 1);
+        }
+      }
+      return html;
+    };
+    return renderNode(tree, 0);
+  },
+
+  findPhaseFiles(files, phase) {
+    const prefixes = {
+      'design': ['design/'],
+      'implement': ['src/', 'tests/'],
+      'review': ['design/'],  // review writes to design/review_report.md
+    };
+    const targets = prefixes[phase] || [];
+    return files.filter(f => targets.some(p => f.path.startsWith(p)) &&
+      !f.path.endsWith('review_report.md') === (phase !== 'review'));
+  },
+
+  // ---- File Viewer ----
+  async viewFile(filePath) {
+    if (!this.state.selectedRunId) return;
+    const runId = this.state.selectedRunId;
+    document.getElementById('file-viewer-name').textContent = filePath;
+    document.getElementById('file-viewer-body').textContent = 'Loading...';
+    document.getElementById('file-viewer-bg').style.display = 'flex';
+
+    // Bind close
+    document.getElementById('file-viewer-close').onclick = () => this.closeFileViewer();
+    document.getElementById('file-viewer-bg').onclick = (e) => {
+      if (e.target.id === 'file-viewer-bg') this.closeFileViewer();
+    };
+
+    // Bind download
+    document.getElementById('file-viewer-download').onclick = () => this.downloadFile(filePath);
+
+    try {
+      const data = await this.api('GET', `/board/runs/${runId}/files/${filePath}`);
+      const content = data.content || '';
+      const lines = content.split('\n');
+      const numbered = lines.map((line, i) =>
+        `<span class="ln">${i + 1}</span>${this.escape(line)}`
+      ).join('\n');
+      document.getElementById('file-viewer-body').innerHTML = numbered;
+    } catch (e) {
+      document.getElementById('file-viewer-body').textContent = `Error: ${e.message}`;
+    }
+  },
+
+  downloadFile(filePath) {
+    if (!this.state.selectedRunId) return;
+    const runId = this.state.selectedRunId;
+    const url = `/board/runs/${runId}/files/${filePath}`;
+    // Fetch and trigger download
+    fetch(url)
+      .then(r => {
+        if (!r.ok) throw new Error(`${r.status}`);
+        return r.json();
+      })
+      .then(data => {
+        const blob = new Blob([data.content || ''], { type: 'text/plain' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = filePath.split('/').pop() || 'file';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
+      })
+      .catch(e => alert('Download failed: ' + e.message));
+  },
+
+  closeFileViewer() {
+    document.getElementById('file-viewer-bg').style.display = 'none';
+  },
+
+  // ---- SSE ----
+  connectSSE(runId) {
+    if (this.state.sse) this.state.sse.close();
+    const url = `/board/runs/${runId}/events`;
+    const es = new EventSource(url);
+    this.state.sse = es;
+    this.setSSEStatus(false, 'connecting');
+
+    es.onopen = () => this.setSSEStatus(true, 'streaming');
+    es.onerror = () => this.setSSEStatus(false, 'retrying');
+    es.onmessage = (e) => this.handleSSEEvent('message', JSON.parse(e.data));
+
+    // Listen to specific event types
+    ['run_start', 'phase_start', 'phase_end', 'tool_call', 'agent_finish',
+     'agent_error', 'approval_requested', 'approval_resolved', 'run_end',
+     'token_usage', 'run_resumed']
+    .forEach(kind => {
+      es.addEventListener(kind, (e) => this.handleSSEEvent(kind, JSON.parse(e.data)));
+    });
+  },
+
+  handleSSEEvent(kind, payload) {
+    this.state.events.push({ kind, payload, ts: payload.ts || Date.now()/1000 });
+    this.renderEvents();
+
+    // On phase change / approval / run end / token usage, refresh detail
+    if (['approval_requested', 'approval_resolved', 'phase_start',
+         'phase_end', 'run_end', 'tool_call', 'token_usage'].includes(kind)) {
+      this.refreshDetail();
+      this.refreshRuns();
+    }
+  },
+
+  renderEvents() {
+    const container = document.getElementById('live-stream');
+    const events = this.state.events.slice(-100);  // last 100 events
+    if (events.length === 0) {
+      container.innerHTML = '<div style="padding: 20px; color: var(--text-faint); font-size: 12px;">No events yet</div>';
+      return;
+    }
+
+    // Group by day/hour for header
+    let lastDay = '';
+    let html = '';
+    events.forEach((e, idx) => {
+      const ts = new Date(e.ts * 1000);
+      const day = ts.toLocaleDateString([], { month: 'short', day: 'numeric' });
+      const time = ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+
+      if (day !== lastDay) {
+        html += `<div class="live-day">${day}</div>`;
+        lastDay = day;
+      }
+
+      const ev = e.payload;
+      const data = ev.data || {};
+      const evRow = this.renderEventRow(e.kind, data, time);
+      html += evRow;
+    });
+    container.innerHTML = html;
+
+    // Auto-scroll to bottom if user is at bottom
+    const isAtBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 50;
+    if (isAtBottom) container.scrollTop = container.scrollHeight;
+  },
+
+  renderEventRow(kind, data, time) {
+    if (kind === 'run_start') {
+      return `<div class="evt"><span class="ts">${time}</span><div class="evt-icon ei-agent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div><div class="body"><span class="who">workflow</span> <span class="verb">started</span> <span class="preview">"${this.escape((data.requirement || '').slice(0, 60))}"</span></div></div>`;
+    }
+    if (kind === 'phase_start') {
+      return `<div class="evt"><span class="ts">${time}</span><div class="evt-icon ei-think"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 10v6"/></svg></div><div class="body"><span class="who">${this.escape(data.agent || data.phase)}</span> <span class="verb">started</span> <span class="preview">phase ${data.phase}</span></div></div>`;
+    }
+    if (kind === 'phase_end') {
+      return `<div class="evt system"><span class="ts">${time}</span><div class="evt-icon ei-system"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div class="body"><span class="who">system</span> <span class="verb">phase ${data.phase} ${data.ok ? 'done' : 'failed'}</span> ${data.error ? `<span class="preview">${this.escape(data.error)}</span>` : ''}</div></div>`;
+    }
+    if (kind === 'tool_call') {
+      const args = data.args || {};
+      const path = args.path || '';
+      const preview = (data.preview || '').slice(0, 60);
+      return `<div class="evt"><span class="ts">${time}</span><div class="evt-icon ei-write"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div><div class="body"><span class="who">${this.escape(data.phase)}</span> <span class="verb">${this.escape(data.tool)}</span> <span class="target mono">${this.escape(path)}</span> ${preview ? `<span class="preview">${this.escape(preview)}…</span>` : ''}</div></div>`;
+    }
+    if (kind === 'agent_finish') {
+      return `<div class="evt"><span class="ts">${time}</span><div class="evt-icon ei-agent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="20 6 9 17 4 12"/></svg></div><div class="body"><span class="who">${this.escape(data.phase || 'agent')}</span> <span class="verb">finished</span> ${data.summary ? `<span class="preview">${this.escape(data.summary)}</span>` : ''}</div></div>`;
+    }
+    if (kind === 'approval_requested') {
+      const path = (data.args || {}).path || '?';
+      return `<div class="evt system"><span class="ts">${time}</span><div class="evt-icon ei-system"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div class="body"><span class="who">system</span> <span class="verb">awaiting approval</span> <span class="target mono">${this.escape(path)}</span></div></div>`;
+    }
+    if (kind === 'approval_resolved') {
+      return `<div class="evt user"><span class="ts">${time}</span><div class="evt-icon ei-user"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="20 6 9 17 4 12"/></svg></div><div class="body"><span class="who">user</span> <span class="verb">${this.escape(data.decision)}</span></div></div>`;
+    }
+    if (kind === 'run_end') {
+      return `<div class="evt"><span class="ts">${time}</span><div class="evt-icon ${data.status === 'completed' ? 'ei-agent' : 'ei-error'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="20 6 9 17 4 12"/></svg></div><div class="body"><span class="who">workflow</span> <span class="verb">${this.escape(data.status)}</span> ${data.error ? `<span class="preview">${this.escape(data.error)}</span>` : ''}</div></div>`;
+    }
+    if (kind === 'token_usage') {
+      const total = (data.tokens_in || 0) + (data.tokens_out || 0);
+      return `<div class="evt stats"><span class="ts">${time}</span><div class="evt-icon ei-stats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:var(--text-mute);"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg></div><div class="body"><span class="who">tokens</span> <span class="verb">+${total.toLocaleString()}</span> <span class="preview">${(data.tokens_in||0).toLocaleString()} in / ${(data.tokens_out||0).toLocaleString()} out · ¥${(data.cost||0).toFixed(3)}</span></div></div>`;
+    }
+    if (kind === 'agent_error') {
+      return `<div class="evt error"><span class="ts">${time}</span><div class="evt-icon ei-error"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div><div class="body"><span class="who">${this.escape(data.phase || 'agent')}</span> <span class="verb">error</span> <span class="preview">${this.escape(data.error || '')}</span></div></div>`;
+    }
+    if (kind === 'run_resumed') {
+      return `<div class="evt system"><span class="ts">${time}</span><div class="evt-icon ei-system"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></div><div class="body"><span class="who">system</span> <span class="verb">pipeline restarted</span> <span class="preview">${this.escape(data.reason || '')} · phase ${this.escape(data.phase || '')}</span></div></div>`;
+    }
+    // fallback
+    return `<div class="evt"><span class="ts">${time}</span><div class="evt-icon ei-system"></div><div class="body"><span class="who">${this.escape(kind)}</span> <span class="verb">event</span></div></div>`;
+  },
+
+  setSSEStatus(connected, label) {
+    this.state.sseConnected = connected;
+    const dot = document.getElementById('sse-dot');
+    const text = document.getElementById('sse-text');
+    const pill = document.getElementById('sse-status');
+    text.textContent = label;
+    if (connected) {
+      pill.style.background = 'var(--green-soft)';
+      pill.style.color = 'var(--green)';
+      pill.style.borderColor = 'var(--green-line)';
+    } else if (label === 'connecting' || label === 'retrying') {
+      pill.style.background = 'var(--yellow-soft)';
+      pill.style.color = 'var(--yellow)';
+      pill.style.borderColor = 'var(--yellow-line)';
+    } else {
+      pill.style.background = '';
+      pill.style.color = '';
+      pill.style.borderColor = '';
+    }
+  },
+
+  // ---- Approval Modal ----
+  showApprovalModal(html) {
+    const bg = document.getElementById('approval-modal-bg');
+    const modal = document.getElementById('approval-modal');
+    modal.innerHTML = html;
+    bg.style.display = 'flex';
+    // Bind approval buttons inside the modal
+    modal.querySelectorAll('[data-approve]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const decision = btn.dataset.approve;
+        this.submitApproval(decision);
+      });
+    });
+  },
+
+  hideApprovalModal() {
+    document.getElementById('approval-modal-bg').style.display = 'none';
+  },
+
+  // ---- Approval ----
+  async submitApproval(decision) {
+    if (!this.state.selectedRunId) return;
+    const comment = decision === 'modify' ? prompt('Modify instructions for agent:') || '' : '';
+    try {
+      await this.api('POST', `/board/runs/${this.state.selectedRunId}/approve`,
+                     { decision, comment });
+      this.hideApprovalModal();
+      // Detail will refresh via SSE event
+    } catch (e) {
+      alert('Approval failed: ' + e.message);
+    }
+  },
+
+  // ---- Cancel ----
+  async cancelRun() {
+    if (!this.state.selectedRunId) return;
+    if (!confirm('Cancel this run? The pipeline will be stopped.')) return;
+    try {
+      await this.api('POST', `/board/runs/${this.state.selectedRunId}/cancel`);
+      await this.refreshRuns();
+      await this.refreshDetail();
+    } catch (e) {
+      alert('Cancel failed: ' + e.message);
+    }
+  },
+
+  // ---- Force Stop ----
+  async forceStopRun() {
+    if (!this.state.selectedRunId) return;
+    if (!confirm('Force stop this run? Use this when a run is stuck and not responding.')) return;
+    try {
+      await this.api('POST', `/board/runs/${this.state.selectedRunId}/force-stop`);
+      await this.refreshRuns();
+      await this.refreshDetail();
+    } catch (e) {
+      alert('Force stop failed: ' + e.message);
+    }
+  },
+
+  // ---- Resume ----
+  async resumeRun() {
+    if (!this.state.selectedRunId) return;
+    try {
+      await this.api('POST', `/board/runs/${this.state.selectedRunId}/resume`);
+      await this.refreshRuns();
+      await this.refreshDetail();
+    } catch (e) {
+      alert('Resume failed: ' + e.message);
+    }
+  },
+
+  // ---- Delete ----
+  async deleteRun() {
+    if (!this.state.selectedRunId) return;
+    if (!confirm('Delete this run and its data? This cannot be undone.')) return;
+    const runId = this.state.selectedRunId;
+    try {
+      const r = await fetch(`/board/runs/${runId}`, { method: 'DELETE' });
+      if (!r.ok) {
+        const err = await r.text();
+        throw new Error(`${r.status} ${err}`);
+      }
+      this.deselectRun();
+      await this.refreshRuns();
+    } catch (e) {
+      alert('Delete failed: ' + e.message);
+    }
+  },
+
+  // ---- Modal ----
+  openModal() {
+    this.state.draftWorkingPaths = [];
+    this.renderDraftWorkingPaths();
+    document.getElementById('modal-wp-input').value = '';
+    document.getElementById('modal-bg').style.display = 'flex';
+    document.getElementById('modal-req').value = '';
+    document.getElementById('modal-req').focus();
+  },
+  closeModal() {
+    document.getElementById('modal-bg').style.display = 'none';
+  },
+  addWorkingPathFromInput() {
+    const inp = document.getElementById('modal-wp-input');
+    const raw = (inp.value || '').trim();
+    if (!raw) return;
+    // Allow comma-separated bulk paste: "src/, tests/, design/"
+    const parts = raw.split(',').map(s => s.trim()).filter(Boolean);
+    for (const p of parts) {
+      const norm = p.replace(/^[.\/\\]+|[.\/\\]+$/g, '');
+      if (!norm) continue;
+      if (!this.state.draftWorkingPaths.includes(norm)) {
+        this.state.draftWorkingPaths.push(norm);
+      }
+    }
+    inp.value = '';
+    this.renderDraftWorkingPaths();
+  },
+  removeDraftWorkingPath(path) {
+    this.state.draftWorkingPaths = this.state.draftWorkingPaths.filter(p => p !== path);
+    this.renderDraftWorkingPaths();
+  },
+  renderDraftWorkingPaths() {
+    const container = document.getElementById('modal-wp-chips');
+    if (!container) return;
+    if (!this.state.draftWorkingPaths || this.state.draftWorkingPaths.length === 0) {
+      container.innerHTML = '';
+      return;
+    }
+    container.innerHTML = this.state.draftWorkingPaths.map(p => `
+      <span class="wp-chip" title="${this.escape(p)}">
+        <code>${this.escape(p)}</code>
+        <button class="wp-chip-remove" data-remove-wp="${this.escape(p)}" title="Remove">×</button>
+      </span>
+    `).join('');
+    container.querySelectorAll('[data-remove-wp]').forEach(btn => {
+      btn.addEventListener('click', () => this.removeDraftWorkingPath(btn.dataset.removeWp));
+    });
+  },
+  async submitNewTask() {
+    const req = document.getElementById('modal-req').value.trim();
+    if (!req) {
+      alert('Requirement cannot be empty');
+      return;
+    }
+    // Final pass: make sure any text still in the input gets added.
+    if (document.getElementById('modal-wp-input').value.trim()) {
+      this.addWorkingPathFromInput();
+    }
+    const priority = document.querySelector('.priority-pill.selected')?.dataset.priority || 'medium';
+    const workingPaths = Array.from(this.state.draftWorkingPaths || []);
+    try {
+      this.closeModal();
+      const result = await this.api('POST', '/board/runs', {
+        requirement: req, priority, working_paths: workingPaths,
+      });
+      await this.refreshRuns();
+      this.selectRun(result.run_id);
+    } catch (e) {
+      alert('Failed to start run: ' + e.message);
+    }
+  },
+
+  // ---- Polling (for cross-run updates) ----
+  startPolling() {
+    if (this.state.pollTimer) clearInterval(this.state.pollTimer);
+    this.state.pollTimer = setInterval(() => this.refreshRuns(), 5000);
+  },
+
+  // ---- Utils ----
+  escape(s) {
+    if (s == null) return '';
+    return String(s).replace(/[&<>"']/g, ch => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    })[ch]);
+  },
+  formatSize(bytes) {
+    if (!bytes || bytes < 0) return '0 B';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024*1024) return `${(bytes/1024).toFixed(1)} KB`;
+    return `${(bytes/1024/1024).toFixed(1)} MB`;
+  },
+  formatCost(r) {
+    // Use real cost_estimate from token tracking if available
+    if (typeof r.cost_estimate === 'number' && r.cost_estimate > 0) return `¥${r.cost_estimate.toFixed(4)}`;
+    if (typeof r.cost_estimate === 'number') return `¥${r.cost_estimate.toFixed(2)}`;
+    return '¥0.00';
+  },
+  formatElapsed(updated, created) {
+    if (!created) return '';
+    const elapsed = (updated || created) - created;
+    if (elapsed < 60) return `${Math.round(elapsed)}s`;
+    if (elapsed < 3600) return `${Math.round(elapsed/60)}m`;
+    return `${(elapsed/3600).toFixed(1)}h`;
+  },
+  formatTime(ts) {
+    if (!ts) return '';
+    return new Date(ts * 1000).toLocaleString([], {
+      month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+  },
+  statusLabel(s) {
+    return ({
+      'awaiting_approval': 'Awaiting Approval',
+      'running': 'Running',
+      'completed': 'Completed',
+      'failed': 'Failed',
+      'interrupted': 'Interrupted',
+      'cancelled': 'Cancelled',
+    })[s] || s;
+  },
+  statusBadgeClass(s) {
+    return ({
+      'awaiting_approval': 'b-yellow',
+      'running': 'b-blue',
+      'completed': 'b-green',
+      'failed': 'b-red',
+      'interrupted': 'b-orange',
+      'cancelled': 'b-neutral',
+    })[s] || 'b-neutral';
+  },
+
+  // ---- Settings ----
+  async loadSettings() {
+    try {
+      const data = await this.api('GET', '/board/settings');
+      this.state.settings = data;
+      this.renderSettings(data);
+    } catch (e) {
+      console.error('loadSettings failed:', e);
+      this.showToast('Failed to load settings', 'error');
+    }
+  },
+
+  async saveSettings() {
+    try {
+      const settings = this.collectSettings();
+      await this.api('POST', '/board/settings', settings);
+      this.showToast('Settings saved successfully', 'success');
+    } catch (e) {
+      console.error('saveSettings failed:', e);
+      this.showToast('Failed to save settings: ' + e.message, 'error');
+    }
+  },
+
+  async resetSettings() {
+    if (!confirm('Reset all settings to defaults?')) return;
+    try {
+      await this.api('POST', '/board/settings/reset');
+      await this.loadSettings();
+      this.showToast('Settings reset to defaults', 'success');
+    } catch (e) {
+      console.error('resetSettings failed:', e);
+      this.showToast('Failed to reset settings: ' + e.message, 'error');
+    }
+  },
+
+  renderSettings(s) {
+    this.renderProviders(s.providers || {});
+    this.renderRoles(s.roles || {}, s.providers || {});
+    this.renderPipeline(s.pipeline_params || {});
+    this.renderApproval(s.approval || {});
+    this.renderNotifications(s.notification_channels || []);
+    this.refreshNotifHistory();
+  },
+
+  renderProviders(providers) {
+    const container = document.getElementById('settings-providers-list');
+    const keys = Object.keys(providers);
+    container.innerHTML = keys.map(key => {
+      const p = providers[key];
+      return `
+        <div class="settings-card" data-provider-key="${this.escape(key)}">
+          <div class="settings-card-head">
+            <span class="settings-card-title">${this.escape(key)}</span>
+            <button class="settings-card-remove" data-remove-provider="${this.escape(key)}">
+              <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              Remove
+            </button>
+          </div>
+          <div class="settings-grid">
+            <div class="settings-field">
+              <label>Provider Name</label>
+              <input type="text" value="${this.escape(key)}" readonly>
+            </div>
+            <div class="settings-field">
+              <label>API Key</label>
+              <div class="api-key-wrap">
+                <input type="password" data-provider-field="api_key" data-provider-key="${this.escape(key)}" value="${this.escape(p.api_key || '')}" placeholder="sk-... or leave blank to use env var">
+                <button type="button" class="api-key-toggle" onclick="App.toggleApiKeyVisibility(this)" title="Show / hide API key">
+                  <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="settings-field subdued">
+              <label>Env Var Fallback</label>
+              <input type="text" data-provider-field="api_key_env" data-provider-key="${this.escape(key)}" value="${this.escape(p.api_key_env || '')}" placeholder="e.g. OPENAI_API_KEY">
+            </div>
+            <div class="settings-field">
+              <label>Base URL</label>
+              <input type="text" data-provider-field="base_url" data-provider-key="${this.escape(key)}" value="${this.escape(p.base_url || '')}" placeholder="https://api.example.com/v1">
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+
+    // Bind remove buttons
+    container.querySelectorAll('[data-remove-provider]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const key = btn.dataset.removeProvider;
+        if (this.state.settings && this.state.settings.providers[key]) {
+          delete this.state.settings.providers[key];
+          this.renderProviders(this.state.settings.providers);
+          this.renderRoles(this.state.settings.roles || {}, this.state.settings.providers);
+        }
+      });
+    });
+  },
+
+  renderRoles(roles, providers) {
+    const container = document.getElementById('settings-roles-list');
+    const providerKeys = Object.keys(providers);
+    const keys = Object.keys(roles);
+    container.innerHTML = keys.map(key => {
+      const r = roles[key];
+      const providerOptions = providerKeys.map(pk =>
+        `<option value="${this.escape(pk)}" ${pk === r.provider ? 'selected' : ''}>${this.escape(pk)}</option>`
+      ).join('');
+      return `
+        <div class="settings-card" data-role-key="${this.escape(key)}">
+          <div class="settings-card-head">
+            <span class="settings-card-title">${this.escape(key)}</span>
+          </div>
+          <div class="settings-grid">
+            <div class="settings-field">
+              <label>Display Name</label>
+              <input type="text" data-role-field="display_name" data-role-key="${this.escape(key)}" value="${this.escape(r.display_name || '')}">
+            </div>
+            <div class="settings-field">
+              <label>Provider</label>
+              <select data-role-field="provider" data-role-key="${this.escape(key)}">${providerOptions}</select>
+            </div>
+            <div class="settings-field full">
+              <label>Model</label>
+              <input type="text" data-role-field="model" data-role-key="${this.escape(key)}" value="${this.escape(r.model || '')}" placeholder="e.g. MiniMax-M2.5, DeepSeek-V3">
+            </div>
+            <div class="settings-field full">
+              <label>System Prompt</label>
+              <textarea class="settings-textarea" rows="10" data-role-field="system_prompt" data-role-key="${this.escape(key)}">${this.escape(r.system_prompt || '')}</textarea>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  },
+
+  renderPipeline(pipelineParams) {
+    const container = document.getElementById('settings-pipeline-list');
+    const phases = Object.keys(pipelineParams);
+    container.innerHTML = phases.map(phase => {
+      const p = pipelineParams[phase];
+      return `
+        <div class="settings-card" data-pipeline-key="${this.escape(phase)}">
+          <div class="settings-card-head">
+            <span class="settings-card-title">${this.escape(phase)}</span>
+          </div>
+          <div class="settings-grid">
+            <div class="settings-field">
+              <label>Max Steps</label>
+              <input type="number" data-pipeline-field="max_steps" data-pipeline-key="${this.escape(phase)}" value="${p.max_steps ?? 20}" min="1" step="1">
+            </div>
+            <div class="settings-field">
+              <label>Temperature</label>
+              <input type="number" data-pipeline-field="temperature" data-pipeline-key="${this.escape(phase)}" value="${p.temperature ?? 0.7}" min="0" max="2" step="0.1">
+            </div>
+            <div class="settings-field">
+              <label>Max Tokens</label>
+              <input type="number" data-pipeline-field="max_tokens" data-pipeline-key="${this.escape(phase)}" value="${p.max_tokens ?? 4096}" min="1" step="1">
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  },
+
+  renderApproval(approval) {
+    const container = document.getElementById('settings-approval-content');
+    const paths = approval.working_paths || [];
+    const rememberApproved = approval.remember_approved !== false; // default true
+
+    let pathsHtml = paths.map((p, i) => `
+      <div class="approval-path-row">
+        <input type="text" data-approval-path-index="${i}" value="${this.escape(p)}" placeholder="e.g. src/">
+        <button type="button" class="approval-path-remove" data-remove-path-index="${i}" title="Remove path">
+          <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>`).join('');
+
+    container.innerHTML = `
+      <div class="settings-field full" style="margin-bottom: 8px;">
+        <label>Working Paths</label>
+        <div style="font-size:12px;color:var(--text-mute);margin-bottom:8px;">
+          Path prefixes where writes are auto-approved (relative to workspace root).
+        </div>
+        <div id="approval-paths-list">${pathsHtml}</div>
+        <button type="button" class="approval-add-btn" id="approval-add-path">
+          <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14"/></svg>
+          Add Path
+        </button>
+      </div>
+      <div class="approval-toggle-row">
+        <input type="checkbox" id="approval-remember-approved" ${rememberApproved ? 'checked' : ''}>
+        <label for="approval-remember-approved">Remember approved files within a run</label>
+      </div>`;
+
+    // Bind add-path button
+    container.querySelector('#approval-add-path').addEventListener('click', () => {
+      if (!this.state.settings) this.state.settings = {};
+      if (!this.state.settings.approval) this.state.settings.approval = {};
+      if (!this.state.settings.approval.working_paths) this.state.settings.approval.working_paths = [];
+      this.state.settings.approval.working_paths.push('');
+      this.renderApproval(this.state.settings.approval);
+    });
+
+    // Bind remove-path buttons
+    container.querySelectorAll('[data-remove-path-index]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.dataset.removePathIndex, 10);
+        if (this.state.settings && this.state.settings.approval && this.state.settings.approval.working_paths) {
+          // Sync current input values back to state before removing
+          this._syncApprovalPathsFromDOM();
+          this.state.settings.approval.working_paths.splice(idx, 1);
+          this.renderApproval(this.state.settings.approval);
+        }
+      });
+    });
+  },
+
+  /** Sync working_paths input values from the DOM back into state.settings.approval.working_paths */
+  _syncApprovalPathsFromDOM() {
+    if (!this.state.settings || !this.state.settings.approval) return;
+    const inputs = document.querySelectorAll('[data-approval-path-index]');
+    const paths = [];
+    inputs.forEach(inp => {
+      paths.push(inp.value);
+    });
+    this.state.settings.approval.working_paths = paths;
+  },
+
+  // -------- Notifications section --------
+  PLATFORM_DEFS: {
+    feishu:          { name: '飞书 (Feishu / Lark)',            needs: ['webhook_url'] },
+    dingtalk:        { name: '钉钉 (DingTalk)',                  needs: ['webhook_url', 'secret?'] },
+    wechatwork:      { name: '企业微信 (Clawbot-style)',           needs: ['webhook_url'] },
+    telegram:        { name: 'Telegram',                          needs: ['bot_token', 'chat_id'] },
+    personal_wechat: { name: '个人微信 (Personal WeChat)',
+                       // No form fields — the channel is auto-created
+                       // by the bridge-pairing flow.
+                       needs: [] },
+  },
+
+  renderNotifications(channels) {
+    const container = document.getElementById('settings-channels-list');
+    if (!container) return;
+    if (!channels.length) {
+      container.innerHTML = `
+        <div class="channel-empty">
+          未配置推送通道。点击右上"Add Channel"添加 飞书 / 钉钉 / 企业微信 / Telegram。<br>
+          <span style="color:var(--text-mute);">简单模式</span> = 仅在完成 / 失败 / 等待审批时通知;
+          <span style="color:var(--text-mute);">复杂模式</span> = 实时推送所有进展。
+        </div>
+      `;
+      return;
+    }
+    container.innerHTML = channels.map((ch, idx) => this._channelCardHTML(ch, idx)).join('');
+    // Bind the per-card action buttons
+    channels.forEach((ch, idx) => {
+      const sendBtn  = container.querySelector(`[data-channel-test="${idx}"]`);
+      const delBtn   = container.querySelector(`[data-channel-delete="${idx}"]`);
+      const typeSel  = container.querySelector(`[data-channel-field="${idx}-type"]`);
+      const enaChk   = container.querySelector(`[data-channel-field="${idx}-enabled"]`);
+      const modeRad  = container.querySelectorAll(`input[name="ch-mode-${idx}"]`);
+      const fields   = ['webhook_url','secret','bot_token','chat_id','at_all_on_error',
+                        'bridge_url','bridge_token','bridge_account'];
+      fields.forEach(k => {
+        const input = container.querySelector(`[data-channel-field="${idx}-${k}"]`);
+        if (!input) return;
+        input.addEventListener('change', () => {
+          const v = (input.type === 'checkbox') ? input.checked
+                  : (input.tagName === 'INPUT') ? input.value : input.value;
+          this.state.settings.notification_channels[idx][k] = v;
+        });
+      });
+      if (typeSel) typeSel.addEventListener('change', () => {
+        this.state.settings.notification_channels[idx].type = typeSel.value;
+        this.renderNotifications(this.state.settings.notification_channels);
+      });
+      if (enaChk) enaChk.addEventListener('change', () => {
+        this.state.settings.notification_channels[idx].enabled = enaChk.checked;
+      });
+      modeRad.forEach(r => r.addEventListener('change', () => {
+        if (r.checked) this.state.settings.notification_channels[idx].mode = r.value;
+      }));
+      if (sendBtn) sendBtn.addEventListener('click', () => this._testChannel(idx));
+      if (delBtn)  delBtn.addEventListener('click',  () => this._deleteChannel(idx));
+    });
+  },
+
+  _channelCardHTML(ch, idx) {
+    const def = this.PLATFORM_DEFS[ch.type];
+    const typeOpts = Object.entries(this.PLATFORM_DEFS)
+      .map(([k, v]) => `<option value="${k}" ${k===ch.type?'selected':''}>${this.escape(v.name)}</option>`)
+      .join('');
+    const isSimple = ch.mode !== 'complex';
+    return `
+      <div class="channel-card" data-channel-idx="${idx}">
+        <div class="channel-card-head">
+          <span class="ch-title">${this.escape(def ? def.name : ch.type)}</span>
+          <span class="ch-sub">
+            <label style="display:inline-flex; align-items:center; gap:5px; cursor:pointer;">
+              <input type="checkbox" data-channel-field="${idx}-enabled" ${ch.enabled?'checked':''}/>
+              ${ch.enabled?'已启用':'已禁用'}
+            </label>
+          </span>
+          <span class="ch-sub">${isSimple?'简单模式 · 仅关键事件':'复杂模式 · 实时全部进展'}</span>
+          <div class="ch-actions">
+            <button class="btn" data-channel-test="${idx}" title="向该通道发送一条测试消息">
+              测试
+            </button>
+            <button class="btn" data-channel-delete="${idx}" title="移除此通道" style="color:var(--red); border-color:var(--red-line);">
+              删除
+            </button>
+          </div>
+        </div>
+        <div class="channel-form-grid">
+          <label>平台</label>
+          <select data-channel-field="${idx}-type" style="grid-column: span 2;">${typeOpts}</select>
+
+          <label>模式</label>
+          <div class="mode-toggle" style="grid-column: span 2;">
+            <label class="${isSimple?'active':''}">
+              <input type="radio" name="ch-mode-${idx}" value="simple" ${isSimple?'checked':''}/>
+              简单 — 仅完成 / 错误 / 待审批
+            </label>
+            <label class="${!isSimple?'active':''}">
+              <input type="radio" name="ch-mode-${idx}" value="complex" ${!isSimple?'checked':''}/>
+              复杂 — 全部事件实时推送
+            </label>
+          </div>
+
+          ${(ch.type === 'feishu' || ch.type === 'dingtalk' || ch.type === 'wechatwork') ? `
+            <label>Webhook URL</label>
+            <input type="text" data-channel-field="${idx}-webhook_url"
+                   value="${this.escape(ch.webhook_url || '')}"
+                   placeholder="https://..."
+                   style="grid-column: span 2;"/>
+          ` : ''}
+
+          ${ch.type === 'dingtalk' ? `
+            <label>加签 Secret</label>
+            <input type="password" data-channel-field="${idx}-secret"
+                   value="${this.escape(ch.secret || '')}"
+                   placeholder="(可选) DingTalk 加签密钥"
+                   style="grid-column: span 2;"/>
+          ` : ''}
+
+          ${ch.type === 'telegram' ? `
+            <label>Bot Token</label>
+            <input type="password" data-channel-field="${idx}-bot_token"
+                   value="${this.escape(ch.bot_token || '')}"
+                   placeholder="123456:ABC..." style="grid-column: span 2;"/>
+
+            <label>Chat ID</label>
+            <input type="text" data-channel-field="${idx}-chat_id"
+                    value="${this.escape(ch.chat_id || '')}"
+                    placeholder="@channel 或数字 ID" style="grid-column: span 2;"/>
+          ` : ''}
+
+          ${ch.type === 'personal_wechat' ? `
+            <div class="pw-in-channel" data-pw-channel-idx="${idx}">
+              <div style="font-size:12px; color:var(--text-dim); padding:6px 0;">
+                <b>✓ 已配对：</b> 账号 <code>${this.escape(ch.account_label || ch.ilink_bot_id || '—')}</code>
+                ·  通过 iLink Bot API 直发微信
+              </div>
+              <button class="btn pw-rebind-btn" data-pw-rebind="${idx}">重新扫码绑定新账号</button>
+            </div>
+          ` : ''}
+
+          <label>@所有人</label>
+          <label style="grid-column: span 2; display:flex; align-items:center; gap:6px;">
+            <input type="checkbox" data-channel-field="${idx}-at_all_on_error" ${ch.at_all_on_error?'checked':''}/>
+            错误消息前缀 @all（提醒全员）
+          </label>
+        </div>
+        <div class="ch-test-result" data-channel-result="${idx}"></div>
+      </div>
+    `;
+  },
+
+  async _addChannel(type = 'feishu') {
+    if (!this.state.settings) this.state.settings = {};
+    if (!Array.isArray(this.state.settings.notification_channels))
+      this.state.settings.notification_channels = [];
+    // Pre-populate platform-specific defaults so the rendered form has
+    // values to bind to immediately. The user edits them in the UI.
+    const defaults = {
+      feishu:          { webhook_url: '' },
+      dingtalk:        { webhook_url: '', secret: '' },
+      wechatwork:      { webhook_url: '' },
+      telegram:        { bot_token: '', chat_id: '' },
+      // personal_wechat has no form fields — the channel is created
+      // automatically by the bridge-pairing flow.
+    }[type] || {};
+    this.state.settings.notification_channels.push({
+      type, enabled: false, mode: 'simple',
+      webhook_url: '', secret: '', bot_token: '', chat_id: '',
+      bridge_url: '', bridge_token: '', bridge_account: '',
+      at_all_on_error: false,
+      ...defaults,
+    });
+    this.renderNotifications(this.state.settings.notification_channels);
+    // If this is a personal_wechat card, kick off the pairing wizard.
+    if (type === 'personal_wechat') this._openWeChatPairWizard();
+    // re-bind Add Channel button (it survived)
+  },
+
+  async _deleteChannel(idx) {
+    if (!confirm('确定删除该通知通道？')) return;
+    this.state.settings.notification_channels.splice(idx, 1);
+    this.renderNotifications(this.state.settings.notification_channels);
+  },
+
+  async _testChannel(idx) {
+    const ch = this.state.settings.notification_channels[idx];
+    if (!ch) return;
+    const resultEl = document.querySelector(`[data-channel-result="${idx}"]`);
+    resultEl.textContent = '发送中…';
+    resultEl.className = 'ch-test-result';
+    try {
+      const r = await this.api('POST', '/board/notifications/test', ch);
+      resultEl.textContent = '✓ 测试消息已发送（请检查该平台是否能收到）';
+      resultEl.className = 'ch-test-result ok';
+    } catch (e) {
+      resultEl.textContent = '✗ 失败: ' + (e.message || e);
+      resultEl.className = 'ch-test-result fail';
+    }
+    this.refreshNotifHistory();
+  },
+
+  // ---- Personal WeChat pairing wizard ----
+  _pwState: { code: null, timer: null, channelIdx: null },
+
+  async _openWeChatPairWizard(channelIdx = null) {
+    this._pwState.channelIdx = channelIdx;
+    const bg = document.getElementById('pw-wizard-bg');
+    bg.style.display = 'flex';
+    document.getElementById('pw-step-1').style.display = '';
+    document.getElementById('pw-step-2').style.display = 'none';
+    document.getElementById('pw-step-3').style.display = 'none';
+    document.getElementById('pw-recheck').style.display = 'none';
+    document.getElementById('pw-done').style.display = 'none';
+
+    let r;
+    try {
+      r = await this.api('POST', '/board/notifications/personal-wechat/pair-start', {});
+    } catch (e) {
+      alert('启动配对失败: ' + (e.message || e));
+      this._closeWeChatPairWizard();
+      return;
+    }
+    this._pwState.code = r.code;
+
+    // iLink returns the QR as a base64 PNG data URL. Drop it straight
+    // into <img src=...> — no client-side QR generator needed.
+    document.getElementById('pw-qr-img').src = r.qrcode_img_content;
+
+    // Long-poll iLink for the user pressing "确认登录" in WeChat.
+    this._pwState.timer = setInterval(() => this._pwPollOnce(), 2000);
+  },
+
+  async _pwPollOnce() {
+    if (!this._pwState.code) return;
+    try {
+      const r = await this.api('GET', `/board/notifications/personal-wechat/pair-status?code=${this._pwState.code}`);
+      if (r.status === 'paired') {
+        this._pwShowPaired(r.channel || {});
+        return;
+      }
+      if (r.status === 'expired') {
+        clearInterval(this._pwState.timer); this._pwState.timer = null;
+        document.getElementById('pw-status-text').textContent = '已过期，请重新开始';
+        document.getElementById('pw-step-2').style.display = 'none';
+        document.getElementById('pw-recheck').style.display = '';
+        return;
+      }
+      // pending: keep polling
+      document.getElementById('pw-status-text').textContent = '等待中…';
+    } catch (e) {
+      // network blip — keep polling
+    }
+  },
+
+  _pwShowPaired(channel) {
+    clearInterval(this._pwState.timer); this._pwState.timer = null;
+    document.getElementById('pw-step-1').style.display = 'none';
+    document.getElementById('pw-step-2').style.display = 'none';
+    document.getElementById('pw-step-3').style.display = '';
+    document.getElementById('pw-success-account').textContent =
+      channel.account_label || channel.ilink_bot_id || '—';
+    document.getElementById('pw-success-url').textContent =
+      channel.ilink_bot_id || '—';
+    document.getElementById('pw-done').style.display = '';
+    document.getElementById('pw-recheck').style.display = 'none';
+    // Refresh channel list so the new/updated channel shows up
+    this.refreshSettings();
+  },
+
+  async _pwRecheck() {
+    document.getElementById('pw-recheck').style.display = 'none';
+    document.getElementById('pw-step-2').style.display = '';
+    document.getElementById('pw-status-text').textContent = '检查中…';
+    this._pwState.timer = setInterval(() => this._pwPollOnce(), 2000);
+    await this._pwPollOnce();
+  },
+
+  _closeWeChatPairWizard() {
+    if (this._pwState.timer) { clearInterval(this._pwState.timer); this._pwState.timer = null; }
+    this._pwState.code = null;
+    document.getElementById('pw-wizard-bg').style.display = 'none';
+  },
+
+  async refreshNotifHistory() {
+    try {
+      const r = await this.api('GET', '/board/notifications/history?limit=50');
+      const list = this.state && (this.state.notifHistory = r.history);
+      const el = document.getElementById('notif-history');
+      if (!el) return;
+      if (!list || !list.length) {
+        el.innerHTML = '<div style="color:var(--text-faint); padding:4px;">暂无记录。启用一个通道并等待事件触发即可看到。</div>';
+        return;
+      }
+      el.innerHTML = list.slice().reverse().map(h => {
+        const when = new Date(h.ts * 1000).toLocaleTimeString();
+        const cls = h.ok ? 'ok' : 'fail';
+        return `<div class="notif-row ${cls}"><span class="ts">${this.escape(when)}</span> [${this.escape(h.channel)}] ${this.escape(h.kind)} — ${this.escape(h.detail)}</div>`;
+      }).join('');
+    } catch (e) {
+      // silent
+    }
+  },
+
+  collectSettings() {
+    const settings = {
+      providers: {},
+      roles: {},
+      pipeline_params: {},
+      approval: {},
+      notification_channels: Array.isArray(this.state.settings?.notification_channels)
+        ? JSON.parse(JSON.stringify(this.state.settings.notification_channels))
+        : [],
+    };
+
+    // Collect providers
+    document.querySelectorAll('[data-provider-key]').forEach(el => {
+      const key = el.dataset.providerKey;
+      if (!settings.providers[key]) {
+        settings.providers[key] = {};
+      }
+      const field = el.dataset.providerField;
+      if (field) {
+        const val = el.value;
+        // Skip masked api_key values (server sent "********" placeholder)
+        if (field === 'api_key' && val && /^\*+$/.test(val)) {
+          return; // don't overwrite the real key with the mask
+        }
+        settings.providers[key][field] = val;
+      }
+    });
+
+    // Collect roles
+    document.querySelectorAll('[data-role-key]').forEach(el => {
+      const key = el.dataset.roleKey;
+      if (!settings.roles[key]) {
+        settings.roles[key] = {};
+      }
+      const field = el.dataset.roleField;
+      if (field) {
+        settings.roles[key][field] = el.value;
+      }
+    });
+
+    // Collect pipeline params
+    document.querySelectorAll('[data-pipeline-key]').forEach(el => {
+      const key = el.dataset.pipelineKey;
+      if (!settings.pipeline_params[key]) {
+        settings.pipeline_params[key] = {};
+      }
+      const field = el.dataset.pipelineField;
+      if (field) {
+        const val = el.value;
+        settings.pipeline_params[key][field] = field === 'temperature'
+          ? parseFloat(val)
+          : parseInt(val, 10);
+      }
+    });
+
+    // Collect approval settings
+    const pathInputs = document.querySelectorAll('[data-approval-path-index]');
+    settings.approval.working_paths = [];
+    pathInputs.forEach(inp => {
+      settings.approval.working_paths.push(inp.value);
+    });
+    const rememberCheckbox = document.getElementById('approval-remember-approved');
+    settings.approval.remember_approved = rememberCheckbox ? rememberCheckbox.checked : true;
+
+    return settings;
+  },
+
+  toggleApiKeyVisibility(btn) {
+    const input = btn.parentElement.querySelector('input');
+    if (!input) return;
+    const isPassword = input.type === 'password';
+    input.type = isPassword ? 'text' : 'password';
+    // Swap icon: eye-open vs eye-off
+    btn.innerHTML = isPassword
+      ? '<svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>'
+      : '<svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+  },
+
+  addProvider() {
+    const name = prompt('Enter provider name (e.g. "openai"):');
+    if (!name || !name.trim()) return;
+    const key = name.trim().toLowerCase().replace(/\s+/g, '_');
+    if (!this.state.settings) this.state.settings = {};
+    if (!this.state.settings.providers) this.state.settings.providers = {};
+    if (this.state.settings.providers[key]) {
+      this.showToast('Provider "' + key + '" already exists', 'error');
+      return;
+    }
+    this.state.settings.providers[key] = {
+      base_url: '',
+      api_key: '',
+      api_key_env: key.toUpperCase() + '_API_KEY',
+    };
+    this.renderProviders(this.state.settings.providers);
+    this.renderRoles(this.state.settings.roles || {}, this.state.settings.providers);
+  },
+
+  showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = 'settings-toast ' + type;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transition = 'opacity .3s';
+      setTimeout(() => toast.remove(), 300);
+    }, 3000);
+  },
+
+  switchView(view) {
+    this.state.nav = view;
+    const mainEl = document.querySelector('.main');
+    const settingsEl = document.getElementById('settings-panel');
+    if (view === 'settings') {
+      mainEl.style.display = 'none';
+      settingsEl.style.display = 'block';
+      this.loadSettings();
+    } else {
+      mainEl.style.display = 'grid';
+      settingsEl.style.display = 'none';
+      this.refreshRuns().then(() => this.renderKanban());
+    }
+  },
+};
+
+// Top bar wiring
+document.addEventListener('DOMContentLoaded', () => {
+  // Nav tabs
+  document.querySelectorAll('[data-nav]').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('[data-nav]').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const view = tab.dataset.nav;
+      App.switchView(view);
+    });
+  });
+
+  // Settings buttons
+  document.getElementById('settings-save')?.addEventListener('click', () => App.saveSettings());
+  document.getElementById('settings-reset')?.addEventListener('click', () => App.resetSettings());
+  document.getElementById('settings-add-provider')?.addEventListener('click', () => App.addProvider());
+  document.getElementById('settings-add-channel')?.addEventListener('click', () => App._addChannel('feishu'));
+
+  // Personal WeChat wizard
+  document.getElementById('pw-wizard-close')?.addEventListener('click', () => App._closeWeChatPairWizard());
+  document.getElementById('pw-wizard-cancel')?.addEventListener('click', () => App._closeWeChatPairWizard());
+  document.getElementById('pw-wizard-bg')?.addEventListener('click', (e) => {
+    if (e.target.id === 'pw-wizard-bg') App._closeWeChatPairWizard();
+  });
+  document.getElementById('pw-recheck')?.addEventListener('click', () => App._pwRecheck());
+  document.getElementById('pw-done')?.addEventListener('click', () => App._closeWeChatPairWizard());
+
+  // "重新扫码绑定新账号" button rendered per channel card
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.pw-rebind-btn');
+    if (btn) App._openWeChatPairWizard(parseInt(btn.dataset.pwRebind, 10));
+  });
+
+  // Refresh notification history every 15 s when the settings tab is open
+  setInterval(() => {
+    if (App.state.nav === 'settings' && document.getElementById('notif-history')) {
+      App.refreshNotifHistory();
+    }
+  }, 15000);
+
+  App.init();
+});
+</script>
+
+</body>
+</html>

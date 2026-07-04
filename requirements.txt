@@ -1,0 +1,27 @@
+# TriForge · Python dependencies
+# Install:   pip install -r requirements.txt
+# Pinned to minor versions that are known-good as of 2026-Q3.
+# Bump with `pip-compile` or by hand when verifying newer releases.
+
+# --- Web stack ---
+fastapi>=0.110,<1.0     # REST + SSE endpoints
+uvicorn[standard]>=0.27,<1.0  # ASGI server
+
+# --- LLM clients ---
+openai>=1.12,<2.0       # OpenAI-compatible client (used for all providers)
+
+# --- Persistence / utils ---
+pydantic>=2.0,<3.0      # Settings / request models
+
+# --- HTTP I/O for notifier + iLink Bot API ---
+requests>=2.31,<3.0      # Tencent iLink, Feishu, DingTalk, WeChat Work
+# httpx is intentionally not required — requests covers our needs and
+# pulls fewer transitive deps. Switch if/when we need async outbound.
+
+# --- MCP server (stdio transport for Hermes / Telegram / etc.) ---
+mcp>=1.0,<2.0
+
+# --- Dev / test (optional) ---
+# Uncomment to run the e2e tests locally:
+# pytest>=7,<9
+# pytest-asyncio>=0.23,<1

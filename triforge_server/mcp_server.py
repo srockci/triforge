@@ -1,17 +1,21 @@
-"""MCP server wrapping the OpenManus integration.
+"""MCP server wrapping the TriForge integration.
 
 Exposes three tools over MCP (Model Context Protocol, stdio transport):
 
-  - openmanus_start(requirement: str)
-  - openmanus_approve(run_id: str, decision: str, comment: str = "")
-  - openmanus_status(run_id: str)
+  - triforge_start(requirement: str)
+  - triforge_approve(run_id: str, decision: str, comment: str = "")
+  - triforge_status(run_id: str)
 
 Hermes auto-discovers any MCP server registered in config.yaml under
 mcp_servers and surfaces its tools to the LLM.
 
 Run standalone for debugging:
-    cd /root/openmanus-integration && source .venv/bin/activate
-    python -m openmanus_server.mcp_server
+    # Linux / macOS
+    cd <project_root> && source .venv/bin/activate
+    python -m triforge_server.mcp_server
+
+    # Windows
+    .venv/Scripts/python -X utf8 -m triforge_server.mcp_server
 """
 from __future__ import annotations
 
@@ -24,25 +28,25 @@ from typing import Any
 import requests
 from mcp.server.fastmcp import FastMCP
 
-OPENMANUS_URL = os.environ.get("OPENMANUS_URL", "http://127.0.0.1:8000").rstrip("/")
-POLL_INTERVAL = float(os.environ.get("OPENMANUS_POLL_INTERVAL", "3"))
-APPROVAL_TIMEOUT = float(os.environ.get("OPENMANUS_APPROVAL_TIMEOUT", "600"))
+TRIFORGE_URL = os.environ.get("TRIFORGE_URL", "http://127.0.0.1:8000").rstrip("/")
+POLL_INTERVAL = float(os.environ.get("TRIFORGE_POLL_INTERVAL", "3"))
+APPROVAL_TIMEOUT = float(os.environ.get("TRIFORGE_APPROVAL_TIMEOUT", "600"))
 
 
-mcp = FastMCP("openmanus")
+mcp = FastMCP("triforge")
 
 
 # ---------------------------------------------------------------------------
 # HTTP helpers
 # ---------------------------------------------------------------------------
 def _post(path: str, body: dict, timeout: float = 30) -> dict:
-    r = requests.post(f"{OPENMANUS_URL}{path}", json=body, timeout=timeout)
+    r = requests.post(f"{TRIFORGE_URL}{path}", json=body, timeout=timeout)
     r.raise_for_status()
     return r.json()
 
 
 def _get(path: str, timeout: float = 10) -> dict:
-    r = requests.get(f"{OPENMANUS_URL}{path}", timeout=timeout)
+    r = requests.get(f"{TRIFORGE_URL}{path}", timeout=timeout)
     r.raise_for_status()
     return r.json()
 
@@ -70,9 +74,9 @@ def _format_approval_request(snap: dict) -> str:
         f"{(snap.get('pending_preview', '') or '')[:1200]}\n"
         f"```\n\n"
         f"Reply with one of:\n"
-        f"  `/openmanus_approve {snap.get('run_id')} approve`\n"
-        f"  `/openmanus_approve {snap.get('run_id')} reject <reason>`\n"
-        f"  `/openmanus_approve {snap.get('run_id')} modify <feedback>`"
+        f"  `/triforge_approve {snap.get('run_id')} approve`\n"
+        f"  `/triforge_approve {snap.get('run_id')} reject <reason>`\n"
+        f"  `/triforge_approve {snap.get('run_id')} modify <feedback>`"
     )
 
 
@@ -104,7 +108,7 @@ def _poll_until_pause_or_done(run_id: str) -> str:
 
     return (
         f"⏱️  Timed out waiting for run `{run_id}` after {APPROVAL_TIMEOUT:.0f}s. "
-        f"Check status with `openmanus_status({run_id!r})`."
+        f"Check status with `triforge_status({run_id!r})`."
     )
 
 
@@ -112,11 +116,11 @@ def _poll_until_pause_or_done(run_id: str) -> str:
 # Tools
 # ---------------------------------------------------------------------------
 @mcp.tool()
-def openmanus_start(requirement: str) -> str:
-    """Start an OpenManus dev pipeline (Architect-A designs, Coder-B implements, Architect-A reviews).
+def triforge_start(requirement: str) -> str:
+    """Start an TriForge dev pipeline (Architect-A designs, Coder-B implements, Architect-A reviews).
 
     Blocks until the first approval gate or completion. The user should then
-    reply with `/openmanus_approve <run_id> <decision>`.
+    reply with `/triforge_approve <run_id> <decision>`.
 
     Args:
         requirement: Full user requirement description (include tech stack, features)
@@ -124,16 +128,16 @@ def openmanus_start(requirement: str) -> str:
     try:
         resp = _post("/workflow/start", {"requirement": requirement})
     except Exception as e:
-        return f"❌ Failed to start OpenManus: {type(e).__name__}: {e}"
+        return f"❌ Failed to start TriForge: {type(e).__name__}: {e}"
     return _poll_until_pause_or_done(resp["run_id"])
 
 
 @mcp.tool()
-def openmanus_approve(run_id: str, decision: str, comment: str = "") -> str:
-    """Resume a paused OpenManus run.
+def triforge_approve(run_id: str, decision: str, comment: str = "") -> str:
+    """Resume a paused TriForge run.
 
     Args:
-        run_id: The run ID returned by openmanus_start
+        run_id: The run ID returned by triforge_start
         decision: One of "approve", "reject", or "modify"
         comment: Optional reason / feedback (required for reject/modify)
     """
@@ -147,7 +151,7 @@ def openmanus_approve(run_id: str, decision: str, comment: str = "") -> str:
 
 
 @mcp.tool()
-def openmanus_status(run_id: str) -> str:
+def triforge_status(run_id: str) -> str:
     """Snapshot of a run's current state (non-blocking).
 
     Args:

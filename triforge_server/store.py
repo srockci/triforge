@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import json
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from .events import BoardEvent
 from .persistence import get_db
@@ -25,6 +25,37 @@ from .persistence import get_db
 def _event_from_row(ts: float, kind: str, data: Dict[str, Any], run_id: str) -> BoardEvent:
     """Reconstruct a BoardEvent from a persisted row."""
     return BoardEvent(run_id=run_id, kind=kind, ts=ts, data=data)
+
+
+def _latest_terminal_state(events: List[Tuple[float, str, Dict[str, Any]]]) -> Optional[Dict[str, Any]]:
+    """Walk events from the end and find the latest terminating signal.
+
+    Used during server startup to reconcile a stale `runs.status` with
+    the actual event history. Walks BACKWARDS so the most recent
+    signal wins (e.g., phase_end(ok=false) after a stale run_end).
+
+    Returns a dict {"status", "error", "phase"} or None if no
+    terminating signal is present at all (run is still genuinely
+    active — let the existing 'awaiting_approval' path handle it).
+    """
+    for ts, kind, data in reversed(events):
+        d = data or {}
+        if kind == "run_end":
+            return {"status": d.get("status", "failed"),
+                    "error": d.get("error", ""),
+                    "phase": d.get("phase")}
+        if kind == "phase_end":
+            if not d.get("ok", True):
+                return {"status": "failed",
+                        "error": d.get("error", "phase failed"),
+                        "phase": d.get("phase")}
+            # ok=true phase_end is mid-pipeline, keep scanning
+            continue
+        if kind == "agent_error":
+            return {"status": "failed",
+                    "error": d.get("error", "agent error"),
+                    "phase": d.get("phase")}
+    return None
 
 
 class RunStore:
@@ -55,6 +86,8 @@ class RunStore:
                 "error": snapshot.get("error"),
                 "created_at": snapshot.get("created_at", time.time()),
                 "updated_at": snapshot.get("updated_at", time.time()),
+                "working_paths": snapshot.get("working_paths") or [],
+                "completed_phases": list(snapshot.get("completed_phases") or []),
             }
             self._db.upsert_run(row)
         except Exception:
@@ -67,6 +100,10 @@ class RunStore:
     def snapshot(self, run_id: str) -> Optional[Dict[str, Any]]:
         return self._db.get_run(run_id)
 
+    def delete_run(self, run_id: str) -> None:
+        """Delete a run and its events from the database."""
+        self._db.delete_run(run_id)
+
     def known_runs(self) -> List[Dict[str, Any]]:
         """Return a board-friendly list (same shape as the kanban snapshot).
 
@@ -78,6 +115,9 @@ class RunStore:
         out = []
         for r in rows:
             r["phase_index"] = phase_to_idx.get(r.get("phase", "design"), 0)
+            # ensure lists are always present
+            r.setdefault("working_paths", [])
+            r.setdefault("completed_phases", [])
             out.append(r)
         return out
 
@@ -96,23 +136,50 @@ class RunStore:
         """
         import asyncio
         from .workflow import RunState
+        from .config import workspace_for_run
 
         restored = 0
         interrupted = 0
+        reconciled = 0
         for snap in self._db.load_runs():
             if snap["run_id"] in engine.runs:
                 continue  # already loaded
             status = snap.get("status", "running")
+            run_id = snap["run_id"]
+            error_msg = snap.get("error")
+            # If the persisted status disagrees with the latest event, reconcile.
+            # Common cause: pipeline emitted run_end but the snapshot wasn't
+            # updated before the server crashed; or the run was force-stopped
+            # mid-flight and the snapshot row was never finalised.
+            terminal = _latest_terminal_state(self._db.load_events(run_id))
+            if terminal is not None and terminal["status"] != status:
+                status = terminal["status"]
+                error_msg = terminal.get("error") or error_msg
+                # Use the terminal event's reported phase (it knows
+                # what phase the run died in), fall back to current.
+                phase_from_terminal = terminal.get("phase") or snap.get("phase", "done")
+                reconciled += 1
+                self._db.upsert_run({
+                    "run_id": run_id,
+                    "status": status,
+                    "phase": phase_from_terminal,
+                    "requirement": snap.get("requirement", ""),
+                    "pending_tool": None,
+                    "pending_args": None,
+                    "pending_preview": "",
+                    "outputs": snap.get("outputs") or {},
+                    "error": error_msg,
+                    "created_at": snap.get("created_at") or time.time(),
+                    "updated_at": time.time(),
+                })
+                snap = self._db.get_run(run_id) or snap
             # If the server died while awaiting approval, we cannot
             # resume the in-flight generator. Mark as interrupted.
-            if status == "awaiting_approval":
+            elif status == "awaiting_approval":
                 status = "interrupted"
                 interrupted += 1
-                # Update the DB row to reflect "interrupted" before we
-                # construct the in-memory RunState, so we read the
-                # updated error message below.
                 self._db.upsert_run({
-                    "run_id": snap["run_id"],
+                    "run_id": run_id,
                     "status": "interrupted",
                     "phase": snap.get("phase", "design"),
                     "requirement": snap.get("requirement", ""),
@@ -124,28 +191,57 @@ class RunStore:
                     "created_at": snap.get("created_at") or time.time(),
                     "updated_at": time.time(),
                 })
-                # Re-read so the snapshot we build the RunState from has
-                # the new status + error.
-                snap = self._db.get_run(snap["run_id"]) or snap
+                snap = self._db.get_run(run_id) or snap
+            # Backfill completed_phases on restore: prefer the stored
+            # value; if empty (legacy runs that pre-date the field),
+            # infer from outputs so "Continue" can skip phases that
+            # visibly finished. Imported lazily to avoid circular import
+            # (workflow -> store -> workflow at module load).
+            # Backfill completed_phases on restore: union stored values
+            # with whatever can be inferred from outputs. Imported lazily
+            # to avoid circular import (workflow -> store -> workflow at
+            # module load).
+            from .workflow import _backfill_completed_phases
+            outputs = snap.get("outputs") or {}
             run = RunState(
-                run_id=snap["run_id"],
+                run_id=run_id,
                 requirement=snap.get("requirement", ""),
                 phase=snap.get("phase", "design"),
                 status=status,
                 pending_tool=snap.get("pending_tool"),
                 pending_args=snap.get("pending_args"),
                 pending_preview=snap.get("pending_preview") or "",
-                outputs=snap.get("outputs") or {},
+                outputs=outputs,
                 error=snap.get("error"),
                 created_at=snap.get("created_at") or time.time(),
                 updated_at=snap.get("updated_at") or time.time(),
+                workspace_root=workspace_for_run(run_id),
+                working_paths=list(snap.get("working_paths") or []),
+                completed_phases=set(snap.get("completed_phases") or []),
             )
-            # Re-create the resume_event so any future approve is a no-op
-            # (since there's no listener for interrupted runs).
+            # Backfill any phases the outputs prove finished. If backfill
+            # actually changed the set, persist so future restarts don't
+            # need to re-derive.
+            if _backfill_completed_phases(run):
+                self._db.upsert_run({
+                    "run_id": run_id,
+                    "status": status,
+                    "phase": snap.get("phase", "design"),
+                    "requirement": snap.get("requirement", ""),
+                    "pending_tool": snap.get("pending_tool"),
+                    "pending_args": snap.get("pending_args"),
+                    "pending_preview": snap.get("pending_preview") or "",
+                    "outputs": outputs,
+                    "error": snap.get("error"),
+                    "created_at": snap.get("created_at") or time.time(),
+                    "updated_at": time.time(),
+                    "working_paths": list(snap.get("working_paths") or []),
+                    "completed_phases": sorted(run.completed_phases),
+                })
             run.resume_event = asyncio.Event()
             engine.runs[run.run_id] = run
             restored += 1
-        return {"restored": restored, "interrupted": interrupted}
+        return {"restored": restored, "interrupted": interrupted, "reconciled": reconciled}
 
 
 # Module-level singleton (initialized lazily).

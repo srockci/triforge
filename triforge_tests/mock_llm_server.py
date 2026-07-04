@@ -61,7 +61,11 @@ def build_response(system: str, tool_msgs_so_far: int) -> dict:
         "id": "mock",
         "object": "chat.completion",
         "choices": [choice],
-        "usage": {"prompt_tokens": 100, "completion_tokens": 50, "total_tokens": 150},
+        "usage": {
+            "prompt_tokens": 100,
+            "completion_tokens": 50,
+            "total_tokens": 150,
+        },
     }
 
 

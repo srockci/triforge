@@ -1,8 +1,13 @@
 """FastAPI server entrypoint.
 
 Run with:
-    cd /root/openmanus-integration && source .venv/bin/activate
-    uvicorn openmanus_server.server:app --host 127.0.0.1 --port 8000
+    # Linux / macOS
+    cd <project_root> && source .venv/bin/activate
+    uvicorn triforge_server.server:app --host 127.0.0.1 --port 8000
+
+    # Windows
+    cd <project_root>
+    .venv/Scripts/python -X utf8 -m uvicorn triforge_server.server:app --host 127.0.0.1 --port 8000
 
 Endpoints:
     GET  /health
@@ -31,31 +36,67 @@ from .store import get_store
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Ensure workspace dirs exist
-    for sub in ("design", "src", "tests"):
-        (WORKSPACE_ROOT / sub).mkdir(parents=True, exist_ok=True)
+    # Ensure base workspace dir exists (per-run subdirs are created on demand)
+    WORKSPACE_ROOT.mkdir(parents=True, exist_ok=True)
     # Restore any persisted runs from previous server sessions.
-    # This re-creates RunState objects in the in-memory engine so that
-    # /board/runs, /board/runs/{id}, and /approve all work after restart.
-    # Runs that were awaiting approval at crash time are marked
-    # "interrupted" — the user can re-approve to retry the phase.
     try:
         result = get_store().restore_to_engine(engine)
         restored = result.get("restored", 0)
         interrupted = result.get("interrupted", 0)
-        if restored or interrupted:
-            print(f"[startup] restored {restored} run(s), "
-                  f"{interrupted} interrupted (awaiting approval at crash)",
+        reconciled = result.get("reconciled", 0)
+        if restored or interrupted or reconciled:
+            extras = []
+            if interrupted:
+                extras.append(f"{interrupted} interrupted (awaiting approval at crash)")
+            if reconciled:
+                extras.append(f"{reconciled} reconciled from event log")
+            print(f"[startup] restored {restored} run(s)"
+                  + (f" ({', '.join(extras)})" if extras else ""),
                   flush=True)
     except Exception as e:
         print(f"[startup] could not restore runs: {e}", flush=True)
+
+    # Surface API key availability so missing keys are visible at startup
+    # (rather than only surfacing when /board/runs is first called).
+    try:
+        from .settings import get_settings
+        providers = get_settings().get().get("providers", {})
+        for key, cfg in providers.items():
+            api_key = cfg.get("api_key") or os.environ.get(cfg.get("api_key_env", ""), "")
+            label = cfg.get("name") or key
+            if api_key:
+                print(f"[startup] provider {key} ({label}): API key OK",
+                      flush=True)
+            else:
+                print(f"[startup] provider {key} ({label}): MISSING API key — "
+                      f"edit Settings or set env var {cfg.get('api_key_env')}",
+                      flush=True)
+    except Exception as e:
+        print(f"[startup] could not check providers: {e}", flush=True)
+
+    # Spin up the SNS notification dispatcher worker (daemon thread).
+    # It subscribes to the global event bus and forwards events to any
+    # configured channels (Feishu / WeChat / DingTalk / Telegram).
+    try:
+        from .notifier import start_worker, publish
+        start_worker()
+        n_channels = len((get_settings().get() or {}).get("notification_channels") or [])
+        if n_channels:
+            print(f"[startup] notifier worker watching {n_channels} channel(s)",
+                  flush=True)
+        else:
+            print("[startup] notifier worker up (no channels configured; "
+                  "add them in Settings)", flush=True)
+    except Exception as e:
+        print(f"[startup] could not start notifier worker: {e}", flush=True)
+
     yield
 
 
-app = FastAPI(title="OpenManus Integration", lifespan=lifespan)
+app = FastAPI(title="TriForge Integration", lifespan=lifespan)
 app.include_router(board_router)
 
-# Serve dashboard static files from openmanus_server/static/
+# Serve dashboard static files from triforge_server/static/
 _STATIC_DIR = Path(__file__).parent / "static"
 if _STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")

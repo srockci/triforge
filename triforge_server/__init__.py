@@ -1,4 +1,4 @@
-"""OpenManus-style multi-agent workflow server.
+"""TriForge-style multi-agent workflow server.
 
 Exposes a FastAPI server with /workflow/start, /status, /approve endpoints
 that Hermes (Telegram coordinator) calls to run A -> B -> A pipelines

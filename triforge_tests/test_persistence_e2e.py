@@ -23,35 +23,58 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from pathlib import Path
 from typing import List
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-WORKSPACE = os.path.join(ROOT, "workspace")
-DB_PATH = os.path.join(ROOT, "data", "board.db")
-MOCK_PORT = 11520
-PORT = 8800
+ROOT = Path(__file__).resolve().parent.parent
+WORKSPACE = ROOT / "workspace"
+DB_PATH = ROOT / "data" / "board.db"
+MOCK_PORT = int(os.environ.get("MOCK_PORT", 11520))
+PORT = int(os.environ.get("PORT", 8800))
 
 
 def cleanup_db_and_workspace():
-    if os.path.exists(DB_PATH):
-        os.remove(DB_PATH)
-    if os.path.exists(WORKSPACE):
-        shutil.rmtree(WORKSPACE)
-    os.makedirs(WORKSPACE, exist_ok=True)
+    # Kill any leftover processes first
+    kill_all()
+    time.sleep(0.5)
+    if DB_PATH.exists():
+        try:
+            DB_PATH.unlink()
+        except PermissionError:
+            # File locked on Windows — try harder
+            kill_all()
+            time.sleep(1)
+            try:
+                DB_PATH.unlink()
+            except PermissionError:
+                pass  # Will be overwritten by the server anyway
+    if WORKSPACE.exists():
+        shutil.rmtree(WORKSPACE, ignore_errors=True)
+    WORKSPACE.mkdir(parents=True, exist_ok=True)
     for sub in ("design", "src", "tests"):
-        os.makedirs(os.path.join(WORKSPACE, sub), exist_ok=True)
+        (WORKSPACE / sub).mkdir(parents=True, exist_ok=True)
 
 
 def kill_all():
-    for proc_name in ("uvicorn", "mock_llm_server"):
-        subprocess.run(["pkill", "-9", "-f", proc_name], capture_output=True)
+    """Kill leftover server processes by name (cross-platform, best-effort)."""
+    if sys.platform == "win32":
+        # On Windows, use taskkill with window title filter (best-effort)
+        try:
+            subprocess.run(
+                ["taskkill", "/F", "/IM", "python.exe", "/FI", "WINDOWTITLE eq *uvicorn*"],
+                capture_output=True, timeout=5,
+            )
+        except Exception:
+            pass
+    else:
+        for proc_name in ("uvicorn", "mock_llm_server"):
+            subprocess.run(["pkill", "-9", "-f", proc_name], capture_output=True)
 
 
 def start_mock() -> subprocess.Popen:
-    py = os.path.join(ROOT, ".venv", "bin", "python")
     p = subprocess.Popen(
-        [py, "openmanus_tests/mock_llm_server.py", str(MOCK_PORT)],
-        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=ROOT,
+        [sys.executable, "-m", "triforge_tests.mock_llm_server", str(MOCK_PORT)],
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=str(ROOT),
     )
     for _ in range(50):
         try:
@@ -64,20 +87,20 @@ def start_mock() -> subprocess.Popen:
 
 
 def start_server() -> subprocess.Popen:
-    py = os.path.join(ROOT, ".venv", "bin", "python")
     env = os.environ.copy()
-    env["OPENMANUS_MINIMAX_BASE_URL"] = f"http://127.0.0.1:{MOCK_PORT}/v1"
-    env["OPENMANUS_DEEPSEEK_BASE_URL"] = f"http://127.0.0.1:{MOCK_PORT}/v1"
-    env["OPENMANUS_WORKSPACE"] = WORKSPACE
-    env["PYTHONPATH"] = ROOT
+    env["TRIFORGE_MINIMAX_BASE_URL"] = f"http://127.0.0.1:{MOCK_PORT}/v1"
+    env["TRIFORGE_DEEPSEEK_BASE_URL"] = f"http://127.0.0.1:{MOCK_PORT}/v1"
+    env["TRIFORGE_WORKSPACE"] = str(WORKSPACE)
+    env["TRIFORGE_DB_PATH"] = str(DB_PATH)
+    env["PYTHONPATH"] = str(ROOT)
     env["MINIMAX_CN_API_KEY"] = "mock-key-not-used"
     env["DEEPSEEK_API_KEY"] = "mock-key-not-used"
     p = subprocess.Popen(
-        [py, "-m", "uvicorn", "openmanus_server.server:app",
+        [sys.executable, "-m", "uvicorn", "triforge_server.server:app",
          "--host", "127.0.0.1", "--port", str(PORT),
          "--log-level", "warning", "--no-access-log"],
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-        env=env, cwd=ROOT,
+        env=env, cwd=str(ROOT),
     )
     for _ in range(80):
         try:
@@ -167,8 +190,7 @@ def main() -> int:
     print("=" * 60, flush=True)
 
     cleanup_db_and_workspace()
-    kill_all()
-    time.sleep(1)
+    time.sleep(0.5)
 
     mock: subprocess.Popen = None
     server1: subprocess.Popen = None

@@ -40,9 +40,11 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
 DEFAULT_DB_PATH = os.environ.get(
-    "OPENMANUS_DB_PATH",
-    "/root/openmanus-integration/data/board.db",
+    "TRIFORGE_DB_PATH",
+    str(_PROJECT_ROOT / "data" / "board.db"),
 )
 
 
@@ -92,6 +94,19 @@ class BoardDB:
                     ON events(run_id, ts);
             """)
 
+        # Migrations: add columns idempotently. SQLite has no IF NOT EXISTS
+        # for columns, so try/except on each ALTER.
+        for stmt in (
+            "ALTER TABLE runs ADD COLUMN working_paths TEXT",
+            "ALTER TABLE runs ADD COLUMN completed_phases TEXT",
+        ):
+            try:
+                with self._lock:
+                    self._conn.execute(stmt)
+            except Exception:
+                # Column already exists, or table missing — both fine.
+                pass
+
     def close(self) -> None:
         with self._lock:
             self._conn.close()
@@ -104,8 +119,9 @@ class BoardDB:
                 INSERT INTO runs (
                     run_id, status, phase, requirement,
                     pending_tool, pending_args, pending_preview,
-                    outputs, error, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    outputs, error, created_at, updated_at,
+                    working_paths, completed_phases
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(run_id) DO UPDATE SET
                     status=excluded.status,
                     phase=excluded.phase,
@@ -116,7 +132,9 @@ class BoardDB:
                     outputs=excluded.outputs,
                     error=excluded.error,
                     created_at=excluded.created_at,
-                    updated_at=excluded.updated_at
+                    updated_at=excluded.updated_at,
+                    working_paths=excluded.working_paths,
+                    completed_phases=excluded.completed_phases
             """, (
                 run["run_id"],
                 run.get("status", "running"),
@@ -129,6 +147,8 @@ class BoardDB:
                 run.get("error"),
                 run.get("created_at", time.time()),
                 run.get("updated_at", time.time()),
+                json.dumps(run.get("working_paths") or []),
+                json.dumps(run.get("completed_phases") or []),
             ))
 
     def load_runs(self) -> List[Dict[str, Any]]:
@@ -137,7 +157,8 @@ class BoardDB:
             cur = self._conn.execute("""
                 SELECT run_id, status, phase, requirement,
                        pending_tool, pending_args, pending_preview,
-                       outputs, error, created_at, updated_at
+                       outputs, error, created_at, updated_at,
+                       working_paths, completed_phases
                 FROM runs
                 ORDER BY updated_at DESC
             """)
@@ -146,6 +167,8 @@ class BoardDB:
         for r in rows:
             args = json.loads(r[5]) if r[5] else None
             outputs = json.loads(r[7]) if r[7] else {}
+            wp = json.loads(r[11]) if r[11] else []
+            cp = json.loads(r[12]) if r[12] else []
             out.append({
                 "run_id": r[0],
                 "status": r[1],
@@ -158,6 +181,8 @@ class BoardDB:
                 "error": r[8],
                 "created_at": r[9],
                 "updated_at": r[10],
+                "working_paths": wp,
+                "completed_phases": cp,
             })
         return out
 
@@ -166,7 +191,8 @@ class BoardDB:
             cur = self._conn.execute("""
                 SELECT run_id, status, phase, requirement,
                        pending_tool, pending_args, pending_preview,
-                       outputs, error, created_at, updated_at
+                       outputs, error, created_at, updated_at,
+                       working_paths, completed_phases
                 FROM runs WHERE run_id = ?
             """, (run_id,))
             row = cur.fetchone()
@@ -174,6 +200,8 @@ class BoardDB:
             return None
         args = json.loads(row[5]) if row[5] else None
         outputs = json.loads(row[7]) if row[7] else {}
+        wp = json.loads(row[11]) if row[11] else []
+        cp = json.loads(row[12]) if row[12] else []
         return {
             "run_id": row[0],
             "status": row[1],
@@ -186,6 +214,8 @@ class BoardDB:
             "error": row[8],
             "created_at": row[9],
             "updated_at": row[10],
+            "working_paths": wp,
+            "completed_phases": cp,
         }
 
     # ----- events -----

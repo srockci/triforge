@@ -11,35 +11,46 @@ For DeepSeek (api.deepseek.com/v1) valid model ids include:
 import os
 from pathlib import Path
 
-# Where workspace files land. Workspace is structured as:
-#   <root>/design/   -> architecture.md, review_report.md
-#   <root>/src/      -> *.py implementation
-#   <root>/tests/    -> test_*.py
+# Where workspace files land. Default: <project_root>/workspace
+# Override via TRIFORGE_WORKSPACE env var.
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
 WORKSPACE_ROOT = Path(os.environ.get(
-    "OPENMANUS_WORKSPACE",
-    "/root/openmanus-integration/workspace",
+    "TRIFORGE_WORKSPACE",
+    str(_PROJECT_ROOT / "workspace"),
 )).resolve()
+
+
+def workspace_for_run(run_id: str) -> Path:
+    """Return a per-run workspace directory, creating subdirs if needed.
+
+    Each run gets its own isolated workspace under WORKSPACE_ROOT/<run_id>/
+    so that concurrent runs never overwrite each other's files.
+    """
+    run_ws = (WORKSPACE_ROOT / run_id).resolve()
+    for sub in ("design", "src", "tests"):
+        (run_ws / sub).mkdir(parents=True, exist_ok=True)
+    return run_ws
 
 # Two LLM providers. Each must have an OpenAI-compatible /v1/chat/completions endpoint.
 LLM_PROVIDERS = {
     "minimax": {
         # Source: ~/.hermes/.env  MINIMAX_CN_BASE_URL=https://api.minimaxi.com/anthropic
         # Strip /anthropic suffix — we want the OpenAI-compatible root.
-        # Override via OPENMANUS_MINIMAX_BASE_URL for testing (e.g. mock LLM).
+        # Override via TRIFORGE_MINIMAX_BASE_URL for testing (e.g. mock LLM).
         "base_url": os.environ.get(
-            "OPENMANUS_MINIMAX_BASE_URL",
+            "TRIFORGE_MINIMAX_BASE_URL",
             "https://api.minimaxi.com/v1",
         ),
         "api_key_env": "MINIMAX_CN_API_KEY",
-        "model": os.environ.get("OPENMANUS_ARCHITECT_MODEL", "MiniMax-Text-01"),
+        "model": os.environ.get("TRIFORGE_ARCHITECT_MODEL", "MiniMax-Text-01"),
     },
     "deepseek": {
         "base_url": os.environ.get(
-            "OPENMANUS_DEEPSEEK_BASE_URL",
+            "TRIFORGE_DEEPSEEK_BASE_URL",
             os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1"),
         ),
         "api_key_env": "DEEPSEEK_API_KEY",
-        "model": os.environ.get("OPENMANUS_CODER_MODEL", "deepseek-chat"),
+        "model": os.environ.get("TRIFORGE_CODER_MODEL", "deepseek-chat"),
     },
 }
 

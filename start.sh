@@ -1,12 +1,55 @@
-#!/bin/bash
-# Start the OpenManus FastAPI server in the background.
-# Logs go to logs/server.log, PID written to logs/server.pid.
-cd /root/openmanus-integration
+#!/usr/bin/env bash
+# ============================================================
+# Start the TriForge FastAPI server in the background.
+# ============================================================
+# Usage:
+#   ./start.sh [port]            default port: 8000
+#   PORT=9000 ./start.sh         custom port via env
+#   TRIFORGE_VENV=/path ./start.sh   custom venv location
+#
+# Env vars:
+#   PORT             bind port        (default 8000)
+#   TRIFORGE_VENV    path to venv     (default <script_dir>/.venv)
+#   TRIFORGE_HOST    bind host        (default 127.0.0.1)
+# ============================================================
+
+set -e
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR"
+
+PORT="${PORT:-${1:-8000}}"
+TRIFORGE_VENV="${TRIFORGE_VENV:-$SCRIPT_DIR/.venv}"
+TRIFORGE_HOST="${TRIFORGE_HOST:-127.0.0.1}"
+
 mkdir -p logs
-source .venv/bin/activate
-nohup uvicorn openmanus_server.server:app --host 127.0.0.1 --port 8000 > logs/server.log 2>&1 &
+
+# Activate the venv if it exists; otherwise expect python to already be on PATH.
+if [ -f "$TRIFORGE_VENV/bin/activate" ]; then
+    # shellcheck disable=SC1091
+    source "$TRIFORGE_VENV/bin/activate"
+    PYTHON_BIN="$TRIFORGE_VENV/bin/python"
+elif command -v python3 >/dev/null 2>&1; then
+    PYTHON_BIN="$(command -v python3)"
+else
+    echo "[ERROR] No venv at $TRIFORGE_VENV and no python3 on PATH" >&2
+    exit 1
+fi
+
+export PYTHONUTF8=1
+export PYTHONIOENCODING=utf-8
+
+echo "Starting TriForge server on $TRIFORGE_HOST:$PORT..."
+echo "Dashboard:  http://$TRIFORGE_HOST:$PORT"
+echo "venv:        $TRIFORGE_VENV"
+
+nohup "$PYTHON_BIN" -X utf8 -m uvicorn triforge_server.server:app \
+    --host "$TRIFORGE_HOST" --port "$PORT" \
+    > logs/server.log 2>&1 &
+
 echo $! > logs/server.pid
-echo "OpenManus API server started, PID $(cat logs/server.pid)"
-echo "Logs: tail -f logs/server.log"
+PID=$(cat logs/server.pid)
+echo "PID:         $PID"
+echo "Logs:        tail -f logs/server.log"
 sleep 1
-curl -s http://127.0.0.1:8000/health
+curl -s "http://$TRIFORGE_HOST:$PORT/health" || true
+echo
