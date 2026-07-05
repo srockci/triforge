@@ -2381,7 +2381,7 @@ input:checked + .slider:before {
       <span class="live-dot"></span>
       <span data-i18n="connected">connected</span>
     </div>
-    <button class="icon-btn theme-toggle" id="theme-toggle" data-i18n-title="Toggle theme">Toggle theme (dark → light → system)
+    <button class="icon-btn theme-toggle" id="theme-toggle" data-i18n-title="Toggle theme">
       <!-- Moon icon (dark mode, default) -->
       <svg class="icon theme-icon theme-icon-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
       <!-- Sun icon (light mode) -->
@@ -4424,9 +4424,12 @@ const App = {
   },
 
   bindRunCardClicks(selector = '.run-card') {
-    document.querySelectorAll(selector).forEach(el => {
+    const els = document.querySelectorAll(selector);
+    console.log('bindRunCardClicks:', selector, 'found', els.length);
+    els.forEach(el => {
       el.addEventListener('click', () => {
         const rid = el.dataset.runId;
+        console.log('run-row clicked:', rid);
         this.selectRun(rid);
       });
     });
