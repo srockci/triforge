@@ -48,8 +48,6 @@ class EventBus:
         self._subs: Dict[str, List[asyncio.Queue]] = defaultdict(list)
         # global subscribers (sync queues, for background workers)
         self._global_subs: List["queue.Queue[BoardEvent]"] = []
-        # bookkeeping
-        self._lock = asyncio.Lock()
 
     def subscribe(self, run_id: str) -> asyncio.Queue:
         """Create a new per-run asyncio subscription queue. Caller MUST

@@ -311,6 +311,16 @@ class SettingsManager:
         self.save()
         return self._data
 
+    def __getattr__(self, name: str) -> Any:
+        """Allow attribute-style access to settings keys.
+
+        e.g. settings.pipeline_params → self._data["pipeline_params"]
+        """
+        try:
+            return self._data[name]
+        except KeyError:
+            raise AttributeError(f"SettingsManager has no key {name!r}")
+
     def update(self, patch: Dict[str, Any]) -> Dict[str, Any]:
         """Apply a partial update and save."""
         self._data = _deep_merge(self._data, patch)

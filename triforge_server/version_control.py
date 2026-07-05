@@ -275,6 +275,24 @@ class VersionControlManager:
                         logger.error(f"Failed to set user config for repository: {repo_name}")
                         return False
                 
+                # 写入 .gitignore 防止泄露凭证
+                _GITIGNORE_CONTENT = (
+                    "data/settings.json\n"
+                    "data/settings.json.bak\n"
+                    "data/*.db\n"
+                    "data/*.db-journal\n"
+                    "data/*.db-wal\n"
+                    "data/*.db-shm\n"
+                    ".env\n"
+                    ".env.local\n"
+                    "*.key\n"
+                    "*.pem\n"
+                    "*.p12\n"
+                    "__pycache__/\n"
+                    "*.pyc\n"
+                )
+                (temp_path / ".gitignore").write_text(_GITIGNORE_CONTENT, encoding="utf-8")
+
                 # 复制项目文件到仓库（保留.git目录）
                 git_dir = temp_path / ".git"
                 for item in project_path.iterdir():
@@ -316,12 +334,21 @@ class VersionControlManager:
                 logger.error(f"Repository not found: {repo_name}")
                 return False
             
+            # 安全校验: 只允许在工作区根目录内拉取
+            abs_path = Path(local_path).resolve()
+            from .config import WORKSPACE_ROOT
+            try:
+                abs_path.relative_to(WORKSPACE_ROOT.resolve())
+            except ValueError:
+                logger.error(f"Pull target path {abs_path} is outside workspace root {WORKSPACE_ROOT}")
+                return False
+            
             # 清空目标目录
-            if local_path.exists():
-                shutil.rmtree(local_path)
+            if abs_path.exists():
+                shutil.rmtree(abs_path)
             
             # 克隆仓库
-            if not GitOperations.clone(repo.clone_url, local_path, branch):
+            if not GitOperations.clone(repo.clone_url, abs_path, branch):
                 logger.error(f"Failed to clone repository: {repo_name}")
                 return False
             

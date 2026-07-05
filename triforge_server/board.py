@@ -595,15 +595,26 @@ def _format_sse(ev: BoardEvent) -> bytes:
 # Settings API
 # -----------------------------------------------------------------------
 _API_KEY_MASK = "********"
+_MASK_FIELDS = {"api_key", "auth_token", "bot_token", "secret", "ilink_bot_id", "chat_id"}
 
 
 def _mask_settings(data: Dict[str, Any]) -> Dict[str, Any]:
-    """Return a copy of settings with api_key values masked."""
+    """Return a copy of settings with sensitive credential fields masked."""
     import copy
     masked = copy.deepcopy(data)
-    for prov in masked.get("providers", {}).values():
-        if prov.get("api_key"):
-            prov["api_key"] = _API_KEY_MASK
+
+    def _mask(obj: Any) -> None:
+        if isinstance(obj, dict):
+            for k, v in list(obj.items()):
+                if k in _MASK_FIELDS and v:
+                    obj[k] = _API_KEY_MASK
+                else:
+                    _mask(v)
+        elif isinstance(obj, list):
+            for item in obj:
+                _mask(item)
+
+    _mask(masked)
     return masked
 
 

@@ -181,7 +181,7 @@ class BoardDB:
                 "pending_args": args,
                 "pending_preview": r[6],
                 "outputs": outputs,
-            "error": row[8],
+                "error": r[8],
                 "created_at": r[9],
                 "updated_at": r[10],
                 "working_paths": wp,
