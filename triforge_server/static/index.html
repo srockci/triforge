@@ -2021,6 +2021,42 @@
   </div>
 </div>
 
+<!-- ====================== ITERATION MODAL ====================== -->
+<div class="modal-bg" id="iter-modal-bg" style="display: none;">
+  <div class="modal" style="width: 640px;">
+    <div class="modal-head">
+      <div class="modal-title">提出新需求</div>
+      <button class="icon-btn" id="iter-modal-close">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:13px; color:var(--text); line-height:1.6; margin-bottom: 10px;">
+        <strong>原需求：</strong>
+      </div>
+      <div id="iter-original-req"
+           style="background: var(--bg-elev-2); border:1px solid var(--border); border-radius: var(--r-sm); padding: 8px 10px; font-size:12px; color:var(--text-dim); max-height: 80px; overflow-y: auto; margin-bottom: 12px; white-space: pre-wrap;"></div>
+      <div id="iter-addenda-list-wrap" style="display:none; margin-bottom: 10px;">
+        <div style="font-size:13px; color:var(--text); line-height:1.6;">
+          <strong>已追加的需求（<span id="iter-addenda-count">0</span>）</strong>
+        </div>
+        <div id="iter-addenda-list"
+             style="background: var(--bg-elev-2); border:1px solid var(--border); border-radius: var(--r-sm); padding: 8px 10px; font-size:12px; color:var(--text-dim); max-height: 120px; overflow-y: auto; margin-top: 6px; white-space: pre-wrap;"></div>
+      </div>
+      <label class="form-label" style="margin-top: 14px;">追加的新需求</label>
+      <textarea class="form-input" id="iter-requirement" rows="4"
+                placeholder="例如：登录页要支持短信验证码；导出按钮要加权限判断；…"></textarea>
+      <div style="font-size: 11px; color: var(--text-faint); margin-top: 8px; line-height: 1.5;">
+        💡 追加后，设计→编码→测试 整个循环会<strong>重新跑</strong>。已完成的产物（design.md / src/）会被覆盖为最新版本。
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" id="iter-modal-cancel">取消</button>
+      <button class="btn btn-primary" id="iter-modal-submit">提交，继续下一轮</button>
+    </div>
+  </div>
+</div>
+
 <style>
   /* Modal */
   .modal-bg {
@@ -2294,6 +2330,20 @@ const App = {
     // Modal
     document.getElementById('modal-close').addEventListener('click', () => this.closeModal());
     document.getElementById('modal-cancel').addEventListener('click', () => this.closeModal());
+
+    // Iteration modal (post-review addendum)
+    document.getElementById('iter-modal-close')?.addEventListener('click', () => this.closeIterationModal());
+    document.getElementById('iter-modal-cancel')?.addEventListener('click', () => this.closeIterationModal());
+    document.getElementById('iter-modal-submit')?.addEventListener('click', () => this.submitIteration());
+    document.getElementById('iter-modal-bg')?.addEventListener('click', (e) => {
+      if (e.target.id === 'iter-modal-bg') this.closeIterationModal();
+    });
+    document.getElementById('iter-requirement')?.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault();
+        this.submitIteration();
+      }
+    });
     document.getElementById('modal-bg').addEventListener('click', (e) => {
       if (e.target.id === 'modal-bg') this.closeModal();
     });
@@ -2445,7 +2495,8 @@ const App = {
   renderBoardView() {
     const runs = this.state.runs || [];
     const active = runs.filter(r =>
-      r.status === 'awaiting_approval' || r.status === 'running' || r.status === 'interrupted'
+      r.status === 'awaiting_approval' || r.status === 'awaiting_iteration'
+        || r.status === 'running' || r.status === 'interrupted'
     );
     const recent = runs.filter(r =>
       r.status === 'completed' || r.status === 'failed' || r.status === 'cancelled'
@@ -2454,6 +2505,7 @@ const App = {
     // ---- Aggregate stats ----
     const totalRuns = runs.length;
     const awaiting = runs.filter(r => r.status === 'awaiting_approval').length;
+    const awaitingIter = runs.filter(r => r.status === 'awaiting_iteration').length;
     const running = runs.filter(r => r.status === 'running').length;
     const failed = runs.filter(r => r.status === 'failed').length;
     const completed = runs.filter(r => r.status === 'completed').length;
@@ -2474,6 +2526,11 @@ const App = {
         <div class="stat-tile stat-need-attention" title="Awaiting your approval">
           <div class="stat-label">Awaiting</div>
           <div class="stat-value num">${awaiting}</div>
+        </div>` : ''}
+        ${awaitingIter > 0 ? `
+        <div class="stat-tile stat-need-attention" title="Awaiting your new requirement (post-review iteration prompt)">
+          <div class="stat-label">提需求</div>
+          <div class="stat-value num">${awaitingIter}</div>
         </div>` : ''}
         <div class="stat-tile" title="Currently running">
           <div class="stat-label">Running</div>
@@ -2527,6 +2584,7 @@ const App = {
     const counts = {
       all: all.length,
       awaiting_approval: all.filter(r => r.status === 'awaiting_approval').length,
+      awaiting_iteration: all.filter(r => r.status === 'awaiting_iteration').length,
       running: all.filter(r => r.status === 'running').length,
       failed: all.filter(r => r.status === 'failed').length,
       completed: all.filter(r => r.status === 'completed').length,
@@ -2535,7 +2593,8 @@ const App = {
     };
     const filters = [
       ['all',            'All',             counts.all],
-      ['awaiting_approval', 'Awaiting',    counts.awaiting_approval],
+      ['awaiting_approval',  'Awaiting',    counts.awaiting_approval],
+      ['awaiting_iteration', 'New Req',      counts.awaiting_iteration],
       ['running',        'Running',         counts.running],
       ['failed',         'Failed',          counts.failed],
       ['completed',      'Completed',       counts.completed],
@@ -2940,6 +2999,22 @@ const App = {
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
         Delete
       </button>`;
+    } else if (d.status === 'awaiting_iteration') {
+      // Post-review prompt: the user can either add a new requirement
+      // (re-runs design → code → review from scratch) or mark the run
+      // as done. The actual UI flow is the iteration modal; this
+      // action bar just exposes the two entry points.
+      const iterN = (d.iteration || 0) + 1;
+      const hasAddenda = (d.requirement_addenda || []).length;
+      actionsHTML = `
+        <button class="btn btn-primary" data-action="add-iteration">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:white;"><path d="M12 5v14M5 12h14"/></svg>
+          ${hasAddenda ? '继续提需求' : '提出新需求'}
+        </button>
+        <button class="btn" data-action="finish-iteration" style="color: var(--green); border-color: var(--green-line);">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="20 6 9 17 4 12"/></svg>
+          完成
+        </button>`;
     }
 
     document.getElementById('detail-root').innerHTML = `
@@ -3051,6 +3126,12 @@ const App = {
     });
     document.querySelectorAll('[data-action="resume"]').forEach(btn => {
       btn.addEventListener('click', () => this.resumeRun());
+    });
+    document.querySelectorAll('[data-action="add-iteration"]').forEach(btn => {
+      btn.addEventListener('click', () => this.openIterationModal());
+    });
+    document.querySelectorAll('[data-action="finish-iteration"]').forEach(btn => {
+      btn.addEventListener('click', () => this.finishIteration());
     });
 
     // Bind file click (view) and download
@@ -3204,7 +3285,9 @@ const App = {
 
     // On phase change / approval / run end / token usage, refresh detail
     if (['approval_requested', 'approval_resolved', 'phase_start',
-         'phase_end', 'run_end', 'tool_call', 'token_usage'].includes(kind)) {
+         'phase_end', 'run_end', 'tool_call', 'token_usage',
+         'iteration_started', 'iteration_pending', 'iteration_completed',
+         'run_resumed'].includes(kind)) {
       this.refreshDetail();
       this.refreshRuns();
     }
@@ -3445,6 +3528,70 @@ const App = {
       btn.addEventListener('click', () => this.removeDraftWorkingPath(btn.dataset.removeWp));
     });
   },
+
+  // ---- Iteration (post-review addendum) ----
+  openIterationModal() {
+    if (!this.state.selectedRunId) return;
+    const d = this.state.selectedDetail;
+    if (!d || d.status !== 'awaiting_iteration') return;
+
+    // Show original requirement (truncated to first 400 chars for sanity)
+    const orig = (d.requirement || '').split('\n\n[Iteration')[0] || d.requirement || '';
+    document.getElementById('iter-original-req').textContent =
+      orig.length > 600 ? orig.slice(0, 600) + '…' : orig;
+
+    // Show addenda list
+    const addenda = d.requirement_addenda || [];
+    const listWrap = document.getElementById('iter-addenda-list-wrap');
+    if (addenda.length) {
+      listWrap.style.display = '';
+      document.getElementById('iter-addenda-count').textContent = addenda.length;
+      document.getElementById('iter-addenda-list').textContent =
+        addenda.map((s, i) => `[#${i + 1}] ${s}`).join('\n\n');
+    } else {
+      listWrap.style.display = 'none';
+    }
+
+    document.getElementById('iter-requirement').value = '';
+    document.getElementById('iter-modal-bg').style.display = 'flex';
+    setTimeout(() => document.getElementById('iter-requirement').focus(), 50);
+  },
+
+  closeIterationModal() {
+    document.getElementById('iter-modal-bg').style.display = 'none';
+  },
+
+  async submitIteration() {
+    const text = document.getElementById('iter-requirement').value.trim();
+    if (!text) { alert('请输入要追加的需求'); return; }
+    if (!this.state.selectedRunId) return;
+    try {
+      const r = await this.api('POST',
+        `/board/runs/${this.state.selectedRunId}/iteration`,
+        { requirement: text });
+      this.closeIterationModal();
+      this.showToast(`第 ${r.iteration} 轮迭代已启动`, 'success');
+      await this.refreshDetail();
+      await this.refreshRuns();
+    } catch (e) {
+      alert('提交失败: ' + (e.message || e));
+    }
+  },
+
+  async finishIteration() {
+    if (!this.state.selectedRunId) return;
+    if (!confirm('确认完成？此 run 将被标记为 completed，后续不会再迭代。')) return;
+    try {
+      await this.api('POST',
+        `/board/runs/${this.state.selectedRunId}/iteration`,
+        { done: true });
+      this.showToast('已标记为完成', 'success');
+      await this.refreshDetail();
+      await this.refreshRuns();
+    } catch (e) {
+      alert('操作失败: ' + (e.message || e));
+    }
+  },
   async submitNewTask() {
     const req = document.getElementById('modal-req').value.trim();
     if (!req) {
@@ -3510,22 +3657,24 @@ const App = {
   },
   statusLabel(s) {
     return ({
-      'awaiting_approval': 'Awaiting Approval',
-      'running': 'Running',
-      'completed': 'Completed',
-      'failed': 'Failed',
-      'interrupted': 'Interrupted',
-      'cancelled': 'Cancelled',
+      'awaiting_approval':  'Awaiting Approval',
+      'awaiting_iteration': 'Awaiting New Requirement',
+      'running':             'Running',
+      'completed':           'Completed',
+      'failed':              'Failed',
+      'interrupted':         'Interrupted',
+      'cancelled':           'Cancelled',
     })[s] || s;
   },
   statusBadgeClass(s) {
     return ({
-      'awaiting_approval': 'b-yellow',
-      'running': 'b-blue',
-      'completed': 'b-green',
-      'failed': 'b-red',
-      'interrupted': 'b-orange',
-      'cancelled': 'b-neutral',
+      'awaiting_approval':  'b-yellow',
+      'awaiting_iteration': 'b-yellow',
+      'running':             'b-blue',
+      'completed':           'b-green',
+      'failed':              'b-red',
+      'interrupted':         'b-orange',
+      'cancelled':           'b-neutral',
     })[s] || 'b-neutral';
   },
 

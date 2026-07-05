@@ -301,6 +301,123 @@ async def resume(run_id: str) -> Dict[str, Any]:
     return {"status": "resumed", "run_id": run_id, "phase": run.phase}
 
 
+# ---------------------------------------------------------------------------
+# Iteration loop (P5): after each review, the user can add a new
+# requirement (or mark the run as done). The pipeline re-runs from
+# scratch with the cumulative requirement; all previously-completed
+# phases are cleared so iteration 1+ doesn't skip design/coder/review.
+# ---------------------------------------------------------------------------
+class IterationBody(BaseModel):
+    requirement: Optional[str] = None   # new requirement text → start next iteration
+    done:        bool = False            # → mark the run as completed
+    # (Sending {"done": true} without a requirement is the canonical
+    # way to end the loop. Sending only a requirement starts the next
+    # iteration. Sending both is rejected as ambiguous.)
+
+
+@router.post("/runs/{run_id}/iteration")
+async def post_iteration(run_id: str, body: IterationBody) -> Dict[str, Any]:
+    """User response to the post-review iteration prompt.
+
+    Two mutually-exclusive shapes:
+      {"requirement": "..."}  → append to requirement, re-run
+                                  design/coder/review from scratch
+      {"done": true}            → mark run as completed (terminal)
+    """
+    run = engine.get(run_id)
+    if not run:
+        raise HTTPException(404, f"unknown run_id: {run_id}")
+    if not run.awaiting_iteration_input:
+        raise HTTPException(409,
+            f"run is not awaiting iteration input (status={run.status}, "
+            f"phase={run.phase}). Iteration prompt only appears after a "
+            f"review cycle completes.")
+    if run.status != "awaiting_iteration":
+        # Defense in depth — the two flags should be in sync but the
+        # pipeline loop sets them together. If they ever drift, the
+        # run is in a weird state and we shouldn't accept input.
+        raise HTTPException(500, f"state drift: status={run.status} but "
+                                f"awaiting_iteration_input=True")
+
+    if body.done and body.requirement:
+        raise HTTPException(400, "send either {requirement} OR {done: true}, "
+                                "not both")
+
+    # ----- DONE branch: mark run as completed -----
+    if body.done:
+        run.status = "completed"
+        run.phase = "done"
+        run.awaiting_iteration_input = False
+        run.updated_at = time.time()
+        try:
+            ev = BoardEvent(
+                run_id=run_id, kind="iteration_completed",
+                data={"iteration": run.iteration},
+            )
+            get_store().append(ev); bus.emit(ev)
+        except Exception:
+            pass
+        try:
+            get_store().update_snapshot(run_id, _snapshot_for_board(run))
+        except Exception:
+            pass
+        return {"status": "completed", "iteration": run.iteration}
+
+    # ----- NEW REQUIREMENT branch: re-launch pipeline -----
+    new_req = (body.requirement or "").strip()
+    if not new_req:
+        raise HTTPException(400,
+            "requirement is empty. Send non-empty text or "
+            "{'done': true} to end the loop.")
+
+    # Append the new requirement to the cumulative history. The agent
+    # sees the full string in subsequent runs; the addenda list
+    # preserves the audit log of every user change.
+    run.requirement_addenda.append(new_req)
+    run.requirement = (
+        run.requirement
+        + "\n\n"
+        + f"[Iteration {run.iteration + 1} addendum, "
+        + time.strftime("%Y-%m-%d %H:%M") + "]"
+        + f"\n{new_req}"
+    )
+    run.iteration += 1
+    run.awaiting_iteration_input = False
+    run.completed_phases = set()         # full re-run
+    run.phase = "design"                  # explicit (matches pipeline start)
+    run.status = "running"
+    run.error = None
+    run.pending_tool = None
+    run.pending_args = None
+    run.pending_preview = ""
+    run.cancelled = False
+    run.resume_event.clear()
+    run.outputs = {}                      # wipe prior artifacts
+    run.approved_paths = set()
+    run.updated_at = time.time()
+
+    try:
+        ev = BoardEvent(
+            run_id=run_id, kind="iteration_started",
+            data={"iteration": run.iteration, "addendum": new_req[:200]},
+        )
+        get_store().append(ev); bus.emit(ev)
+    except Exception:
+        pass
+    try:
+        get_store().update_snapshot(run_id, _snapshot_for_board(run))
+    except Exception:
+        pass
+
+    # Re-launch the full design → code → review cycle.
+    asyncio.create_task(run_pipeline_async(run))
+    return {
+        "status":    "iterating",
+        "iteration": run.iteration,
+        "phase":     run.phase,
+    }
+
+
 # -----------------------------------------------------------------------
 # Delete a run (must be in terminal state)
 # -----------------------------------------------------------------------

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  TriForge favicon — browser tab icon.
+  Simplified version of assets/logo.svg, optimized for small sizes.
+  No "TRIFORGE" wordmark (illegible at 16-32px), just the icon.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <rect x="0" y="0" width="64" height="64" rx="12" ry="12" fill="#6E5BD3"/>
+  <g fill="#111111" transform="translate(32 22)">
+    <g transform="rotate(-40)">
+      <rect x="-9" y="-4" width="10" height="7" rx="1"/>
+      <rect x="0" y="-1.5" width="13" height="2" rx="0.5"/>
+    </g>
+    <g transform="rotate(40)">
+      <rect x="-9" y="-4" width="10" height="7" rx="1"/>
+      <rect x="0" y="-1.5" width="13" height="2" rx="0.5"/>
+    </g>
+  </g>
+  <g fill="#111111" transform="translate(32 41)">
+    <path d="M -15 -4
+             L  15 -4
+             L  15 -1
+             L  13 -1
+             L  12  2
+             L   7  5
+             L  -7  5
+             L -12  2
+             L -13 -1
+             L -15 -1 Z"/>
+  </g>
+</svg>

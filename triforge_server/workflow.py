@@ -155,6 +155,19 @@ class RunState:
     # so the pipeline continues from the next incomplete phase instead of
     # restarting from design.
     completed_phases: set = field(default_factory=set)
+    # ---- Iteration loop (P5) ----
+    # How many design→code→review cycles have completed. 0 means the
+    # original run; 1+ means at least one user addendum was folded in.
+    iteration: int = 0
+    # Cumulative history of requirement addenda, in order. The original
+    # requirement is run.requirement; each new user-submitted requirement
+    # during the awaiting_iteration prompt is appended here so the
+    # audit log preserves every change.
+    requirement_addenda: List[str] = field(default_factory=list)
+    # When True, the run has finished the latest review cycle and is
+    # waiting for the user to either add another requirement or mark
+    # the run as done. While True, the pipeline loop is suspended.
+    awaiting_iteration_input: bool = False
 
 
 class WorkflowEngine:
@@ -350,12 +363,37 @@ async def run_pipeline_async(run: RunState, settings: Optional[Dict[str, Any]] =
                 _emit("phase_start", phase="design", agent="architect_design",
                       model=role_cfg.get("model", "MiniMax"))
                 architect = make_agent("architect_design", workspace_root=ws, settings=settings)
-                user_msg = (
+                # Base user_msg always includes the cumulative requirement
+                # (run.requirement is the original PLUS all addenda appended
+                # by the iteration endpoint).
+                design_user_msg = (
                     f"User requirement:\n{run.requirement}\n\n"
                     f"Workspace root: {ws}\n"
                     f"Write your architecture design to: design/architecture.md "
                     f"(relative to workspace root)."
                 )
+                # When this is an iteration (i.e. the user has added new
+                # requirements after the last review), tell the agent
+                # what's new and point at the prior artifacts so it can
+                # update rather than rewrite from scratch.
+                if run.iteration > 0 and run.requirement_addenda:
+                    last_add = run.requirement_addenda[-1]
+                    design_user_msg += (
+                        f"\n\n---\n"
+                        f"## Iteration {run.iteration}\n"
+                        f"This is iteration #{run.iteration} of the same "
+                        f"run. Previous design is at "
+                        f"design/architecture.md and previous review at "
+                        f"design/review_report.md — read both first to "
+                        f"understand what was already decided.\n"
+                        f"The user just added this new requirement:\n\n"
+                        f"> {last_add}\n\n"
+                        f"Update design/architecture.md to address the new "
+                        f"requirement (don't rewrite history; add a new "
+                        f"section, update the affected modules, and bump "
+                        f"the version header). Then call finish()."
+                    )
+                user_msg = design_user_msg
                 result = await _drive_agent(run, architect, user_msg,
                                             max_steps=design_steps,
                                             working_paths=working_paths,
@@ -497,10 +535,19 @@ async def run_pipeline_async(run: RunState, settings: Optional[Dict[str, Any]] =
                 _emit("phase_end", phase=phase, ok=True,
                       summary=result.get("summary", ""))
 
-        run.status = "completed"
+        # After a successful review cycle, the pipeline pauses for the
+        # user to add a new requirement (or mark done). The user can
+        # trigger the next iteration by POSTing to
+        # /board/runs/{id}/iteration with a new requirement, which
+        # clears completed_phases and re-launches the pipeline. Or
+        # they can POST {"done": true} to mark the run as completed.
+        run.status = "awaiting_iteration"
         run.phase = "done"
+        run.awaiting_iteration_input = True
         run.updated_at = time.time()
-        _emit("run_end", status="completed", outputs=run.outputs)
+        _emit("iteration_pending",
+              iteration=run.iteration,
+              run_id=run.run_id)
         try:
             get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
         except Exception:
@@ -538,6 +585,11 @@ def _snapshot_for_board(run: RunState) -> Dict[str, Any]:
         "working_paths": list(run.working_paths or []),
         "approved_paths": sorted(run.approved_paths or set()),
         "completed_phases": sorted(run.completed_phases or set()),
+        # Iteration loop (P5) — exposed so the UI can show "iteration N"
+        # and pre-fill the "what's new" textarea in the iteration modal.
+        "iteration": run.iteration,
+        "requirement_addenda": list(run.requirement_addenda or []),
+        "awaiting_iteration_input": run.awaiting_iteration_input,
     }
 
 
