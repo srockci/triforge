@@ -195,7 +195,9 @@ async def create_run(req: StartRequest) -> Dict[str, Any]:
     seen: set = set()
     for wp in (req.working_paths or []):
         norm = wp.strip().strip("/\\")
-        if norm and norm not in seen:
+        if not norm:
+            norm = '.'
+        if norm not in seen:
             seen.add(norm)
             clean_wp.append(norm)
     run = engine.create(req.requirement, working_paths=clean_wp)

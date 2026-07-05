@@ -100,6 +100,9 @@ def _should_request_approval(phase: str, tool: str, args: Dict[str, Any],
             wp_n = _normalize_path(wp)
             if not wp_n:
                 continue
+            # '.' means the workspace root — auto-approve all writes
+            if wp_n == '.':
+                return False
             # Match exactly, or as a directory prefix
             if path == wp_n or path.startswith(wp_n.rstrip("/") + "/"):
                 return False

@@ -5394,8 +5394,8 @@ const App = {
     // Allow comma-separated bulk paste: "src/, tests/, design/"
     const parts = raw.split(',').map(s => s.trim()).filter(Boolean);
     for (const p of parts) {
-      const norm = p.replace(/^[.\/\\]+|[.\/\\]+$/g, '');
-      if (!norm) continue;
+      let norm = p.replace(/^[.\/\\]+|[.\/\\]+$/g, '');
+      if (!norm) norm = '.';
       if (!this.state.draftWorkingPaths.includes(norm)) {
         this.state.draftWorkingPaths.push(norm);
       }
