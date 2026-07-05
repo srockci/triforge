@@ -33,5 +33,28 @@ echo Starting TriForge server on %TRIFORGE_HOST%:%PORT%...
 echo Dashboard: http://%TRIFORGE_HOST%:%PORT%
 echo venv:       %TRIFORGE_VENV%
 
+echo Checking venv python... "%TRIFORGE_VENV%\Scripts\python.exe"
+if not exist "%TRIFORGE_VENV%\Scripts\python.exe" (
+    echo [ERROR] python.exe not found at "%TRIFORGE_VENV%\Scripts\python.exe"
+    echo         Run: python -m venv .venv
+    pause
+    exit /b 1
+)
+
+"%TRIFORGE_VENV%\Scripts\python.exe" -c "import qrcode" 2>nul
+if errorlevel 1 (
+    echo [WARNING] qrcode package not found. Run: .venv\Scripts\python -m pip install -r requirements.txt
+)
+
+echo Server starting... open http://%TRIFORGE_HOST%:%PORT% in your browser.
+echo.
 "%TRIFORGE_VENV%\Scripts\python.exe" -X utf8 -m uvicorn triforge_server.server:app --host %TRIFORGE_HOST% --port %PORT% --log-level info
+if errorlevel 1 (
+    echo [ERROR] Server exited with code %errorlevel%. Check the error above.
+    echo         Make sure .venv has all dependencies: .venv\Scripts\python -m pip install -r requirements.txt
+    pause
+    exit /b 1
+)
+echo [INFO] Server stopped.
+pause
 endlocal
