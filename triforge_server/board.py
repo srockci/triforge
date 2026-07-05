@@ -825,13 +825,22 @@ async def pw_pair_start() -> Dict[str, Any]:
             "status":     "pending",
             "qrcode":     qr["qrcode"],
         }
+    # iLink's qrcode_img_content is a URL (HTML page), not an image.
+    # Generate the QR code PNG locally from the qrcode string.
+    try:
+        import io, base64
+        import qrcode
+        qr_img = qrcode.make(qr["qrcode"])
+        buf = io.BytesIO()
+        qr_img.save(buf, format="PNG")
+        b64 = base64.b64encode(buf.getvalue()).decode("ascii")
+        qrcode_data_url = f"data:image/png;base64,{b64}"
+    except Exception as e:
+        raise HTTPException(502, f"QR generation failed: {e}")
     return {
         "code":              code,
         "expires_in_seconds": _PAIR_TTL_SECONDS,
-        # qrcode_img_content is a data:image/png;base64,... URL the
-        # UI can drop directly into <img src=...>. Saves us from
-        # bundling a QR generator client-side.
-        "qrcode_img_content": qr["qrcode_img_content"],
+        "qrcode_img_content": qrcode_data_url,
     }
 
 
