@@ -5431,14 +5431,15 @@ const App = {
     let pathToAdd = '';
     if (topPath) {
       pathToAdd = topPath.replace(/^[.\/\\]+|[.\/\\]+$/g, '');
+    } else {
+      // All files are at root of selected directory — use '.' for "this directory"
+      pathToAdd = '.';
     }
-    // If no subdirectory was found, all files are at root level — not much we can do
 
-    if (pathToAdd && !this.state.draftWorkingPaths.includes(pathToAdd)) {
+    if (!this.state.draftWorkingPaths.includes(pathToAdd)) {
       this.state.draftWorkingPaths.push(pathToAdd);
-      // Also fill the input for reference
       const inp = document.getElementById('modal-wp-input');
-      if (inp) inp.value = pathToAdd + '/';
+      if (inp) inp.value = pathToAdd === '.' ? './' : pathToAdd + '/';
     }
 
     this.renderDraftWorkingPaths();
