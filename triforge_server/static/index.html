@@ -5415,26 +5415,35 @@ const App = {
 
   handleFileSelection(e) {
     const fileInput = e.target;
-    if (!fileInput.files || fileInput.files.length === 0) {
-      return;
+    if (!fileInput.files || fileInput.files.length === 0) return;
+
+    // Collect all unique subdirectory paths from the selected directory
+    const dirs = new Set();
+    for (const f of fileInput.files) {
+      const rel = f.webkitRelativePath || f.name;
+      const idx = rel.lastIndexOf('/');
+      if (idx >= 0) {
+        dirs.add(rel.substring(0, idx));
+      } else {
+        // File is directly in the selected directory — use '.' as root
+        dirs.add('.');
+      }
     }
 
-    // Get the first file's path (directory path)
-    const firstFile = fileInput.files[0];
-    const filePath = firstFile.webkitRelativePath || firstFile.name;
-    
-    // Extract the directory path
-    const dirPath = filePath.split('/').slice(0, -1).join('/');
-    
-    // Normalize the path
-    const normalizedPath = dirPath.replace(/^[.\/\\]+|[.\/\\]+$/g, '');
-    
-    if (normalizedPath && !this.state.draftWorkingPaths.includes(normalizedPath)) {
-      this.state.draftWorkingPaths.push(normalizedPath);
-      this.renderDraftWorkingPaths();
+    for (const d of dirs) {
+      if (d === '.') {
+        if (!this.state.draftWorkingPaths.includes('.')) {
+          this.state.draftWorkingPaths.push('.');
+        }
+      } else {
+        const norm = d.replace(/^[.\/\\]+|[.\/\\]+$/g, '');
+        if (norm && !this.state.draftWorkingPaths.includes(norm)) {
+          this.state.draftWorkingPaths.push(norm);
+        }
+      }
     }
-    
-    // Reset the file input
+
+    this.renderDraftWorkingPaths();
     fileInput.value = '';
   },
   removeDraftWorkingPath(path) {
@@ -5448,12 +5457,13 @@ const App = {
       container.innerHTML = '';
       return;
     }
-    container.innerHTML = this.state.draftWorkingPaths.map(p => `
-      <span class="wp-chip" title="${this.escape(p)}">
-        <code>${this.escape(p)}</code>
+    container.innerHTML = this.state.draftWorkingPaths.map(p => {
+      const display = p === '.' ? './' : p;
+      return `<span class="wp-chip" title="${this.escape(p)}">
+        <code>${this.escape(display)}</code>
         <button class="wp-chip-remove" data-remove-wp="${this.escape(p)}" title="Remove">×</button>
-      </span>
-    `).join('');
+      </span>`;
+    }).join('');
     container.querySelectorAll('[data-remove-wp]').forEach(btn => {
       btn.addEventListener('click', () => this.removeDraftWorkingPath(btn.dataset.removeWp));
     });
