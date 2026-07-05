@@ -477,9 +477,7 @@ input:checked + .slider:before {
     border-right: none;
   }
   .main.dashboard-mode #dashboard-root {
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 24px 32px;
+    padding: 20px 24px;
   }
   .col {
     overflow-y: auto;
@@ -1199,7 +1197,7 @@ input:checked + .slider:before {
   }
 
   /* ============ Dashboard ============ */
-  #dashboard-root { padding: 0 4px; }
+  #dashboard-root { padding: 16px 20px; }
 
   .dash-header {
     display: flex; align-items: center; justify-content: space-between;
@@ -1227,78 +1225,92 @@ input:checked + .slider:before {
     background: var(--accent); color: #fff;
   }
 
-  .dash-section { margin-bottom: 20px; }
+  .dash-section { margin-bottom: 16px; }
+  .dash-section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 10px;
+  }
   .dash-section-title {
-    font-size: 14px; font-weight: 600; color: var(--text);
-    margin: 0 0 10px;
+    font-size: 13px; font-weight: 600; color: var(--text);
   }
-  .dash-section-head {
-    display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px;
-  }
+  .dash-section-meta { font-size: 11px; color: var(--text-faint); }
   .dash-section-subtitle { font-size: 11px; color: var(--text-faint); }
+
+  /* Overview panel: groups summary + aggregate rows */
+  .dash-overview-panel {
+    background: var(--bg-elev-1);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: 14px 16px;
+    margin-bottom: 16px;
+  }
+  .dash-section-divider {
+    height: 1px; background: var(--divider); margin: 10px 0;
+  }
 
   /* Summary cards row */
   .dash-summary {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 8px; margin-bottom: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 6px;
   }
   .dash-summary-card {
-    display: flex; flex-direction: column;
+    display: flex; align-items: center; gap: 8px;
     background: var(--bg-elev-2);
     border: 1px solid var(--border);
     border-radius: var(--r-md);
-    padding: 12px;
-    transition: all .15s;
+    padding: 10px 12px;
+    transition: all .12s;
   }
   .dash-summary-card:hover {
     border-color: var(--border-strong);
-    background: var(--bg-elev-3);
   }
   .dash-summary-card .dsc-icon {
-    width: 20px; height: 20px; margin-bottom: 6px;
+    flex-shrink: 0; width: 22px; height: 22px;
+    color: var(--text-mute);
+  }
+  .dash-summary-card .dsc-icon svg { width: 22px; height: 22px; stroke-width: 2; }
+  .dash-summary-card .dsc-body { min-width: 0; }
+  .dash-summary-card .dsc-label {
+    font-size: 9px; text-transform: uppercase; letter-spacing: .4px;
     color: var(--text-faint);
   }
-  .dash-summary-card .dsc-icon svg { width: 20px; height: 20px; stroke-width: 2; }
-  .dash-summary-card .dsc-label {
-    font-size: 10px; text-transform: uppercase; letter-spacing: .5px;
-    color: var(--text-faint); margin-bottom: 4px;
-  }
   .dash-summary-card .dsc-value {
-    font-size: 22px; font-weight: 700; color: var(--text);
+    font-size: 18px; font-weight: 700; color: var(--text);
     font-family: 'Consolas', 'Monaco', monospace;
+    line-height: 1.2;
   }
 
   /* Aggregate row */
   .dash-agg-row {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 8px;
   }
   .dash-agg-card {
     background: var(--bg-elev-2);
     border: 1px solid var(--border);
     border-radius: var(--r-md);
-    padding: 14px 16px;
+    padding: 10px 14px;
   }
   .dash-agg-card-label {
-    font-size: 10px; text-transform: uppercase; letter-spacing: .5px;
-    color: var(--text-faint); margin-bottom: 4px;
+    font-size: 9px; text-transform: uppercase; letter-spacing: .4px;
+    color: var(--text-faint); margin-bottom: 2px;
   }
   .dash-agg-card-val {
-    font-size: 20px; font-weight: 700; color: var(--text);
+    font-size: 17px; font-weight: 700; color: var(--text);
     font-family: 'Consolas','Monaco',monospace;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
   }
   .dash-agg-card-bar {
-    height: 4px; background: var(--bg-elev-1);
-    border-radius: 2px; margin-bottom: 4px; overflow: hidden;
+    height: 3px; background: var(--bg-elev-3);
+    border-radius: 2px; margin-bottom: 3px; overflow: hidden;
   }
   .dash-agg-card-bar-fill {
     height: 100%; border-radius: 2px; transition: width .4s ease;
   }
   .dash-agg-card-sub {
-    font-size: 11px; color: var(--text-mute);
+    font-size: 10px; color: var(--text-mute);
   }
 
   /* Model stats table */
@@ -1345,7 +1357,7 @@ input:checked + .slider:before {
   /* Project cards */
   .dash-project-card {
     display: flex; align-items: center; gap: 10px;
-    padding: 8px 10px;
+    padding: 10px 12px;
     background: var(--bg-elev-1);
     border: 1px solid var(--border);
     border-radius: var(--r-md);
@@ -1390,6 +1402,9 @@ input:checked + .slider:before {
   }
   .dpc-progress-fill { height: 100%; border-radius: 2px; transition: width .4s ease; }
 
+  .dpc-timeago {
+    margin-left: auto; font-size: 10px; color: var(--text-faint);
+  }
   .dash-project-card .dpc-model {
     font-size: 10px; color: var(--text-mute);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -2508,24 +2523,26 @@ input:checked + .slider:before {
         </div>
       </div>
 
-      <!-- Summary cards -->
-      <div class="dash-summary" id="dash-summary"></div>
-
-      <!-- Aggregate stats row -->
-      <div class="dash-section">
-        <div id="dash-aggregate"></div>
+      <!-- Overview panel: summary + aggregate -->
+      <div class="dash-overview-panel">
+        <div class="dash-summary" id="dash-summary"></div>
+        <div class="dash-section-divider"></div>
+        <div class="dash-agg-row" id="dash-aggregate"></div>
       </div>
 
       <!-- Per-model time period stats -->
       <div class="dash-section">
-        <h2 class="dash-section-title" data-i18n="Token Usage by Model">Token Usage by Model</h2>
+        <div class="dash-section-header">
+          <h2 class="dash-section-title" style="margin:0;" data-i18n="Token Usage by Model">Token Usage by Model</h2>
+          <span class="dash-section-meta" id="dash-model-meta"></span>
+        </div>
         <div id="dash-model-stats"></div>
       </div>
 
       <!-- Project list -->
       <div class="dash-section">
-        <div class="dash-section-head">
-          <h2 class="dash-section-title" data-i18n="Projects">Projects</h2>
+        <div class="dash-section-header">
+          <h2 class="dash-section-title" style="margin:0;" data-i18n="Projects">Projects</h2>
           <span class="dash-section-subtitle" id="dash-project-count"></span>
         </div>
         <div id="dash-project-list"></div>
@@ -3238,14 +3255,20 @@ input:checked + .slider:before {
   .kbd-hints {
     position: sticky;
     bottom: 0;
-    background: var(--bg-elev-1);
-    border-top: 1px solid var(--divider);
-    padding: 8px 16px;
+    background: var(--bg-elev-2);
+    border-top: 1px solid var(--border);
+    padding: 7px 16px;
     display: flex;
     gap: 16px;
     font-size: 11px;
     color: var(--text-faint);
     z-index: 2;
+    box-shadow: 0 -1px 0 var(--border);
+  }
+  .main.dashboard-mode .kbd-hints {
+    background: var(--bg);
+    border-top-color: var(--border-strong);
+    padding: 7px 24px;
   }
   .kbd-hints kbd {
     display: inline-block;
@@ -3592,6 +3615,7 @@ const _t = {
     'just now': 'just now',
     'ago': 'ago',
     'Active': 'Active',
+    'models': 'models',
   },
   'zh-CN': {
     // General UI
@@ -3844,6 +3868,7 @@ const _t = {
     'just now': '刚刚',
     'ago': '前',
     'Active': '活跃',
+    'models': '模型',
     // Version control placeholders
     'Enter your API token': '输入你的 API 令牌',
     'Your username': '你的用户名',
@@ -4168,8 +4193,10 @@ const App = {
     const statusIcon = (label, val, color, icon) =>
       `<div class="dash-summary-card" style="border-left: 3px solid ${color};">
         <div class="dsc-icon">${icon}</div>
-        <div class="dsc-label">${label}</div>
-        <div class="dsc-value">${val}</div>
+        <div class="dsc-body">
+          <div class="dsc-label">${label}</div>
+          <div class="dsc-value">${val}</div>
+        </div>
       </div>`;
 
     // ---- Render summary cards ----
@@ -4277,10 +4304,13 @@ const App = {
   _renderModelStatsTable(modelStats, filteredRunCount) {
     const entries = Object.entries(modelStats);
     const container = document.getElementById('dash-model-stats');
+    const metaEl = document.getElementById('dash-model-meta');
     if (entries.length === 0) {
+      if (metaEl) metaEl.textContent = '';
       container.innerHTML = `<div class="dash-empty">${__('No model usage data for this period.')}</div>`;
       return;
     }
+    if (metaEl) metaEl.textContent = `${entries.length} ${__('models')} · ${filteredRunCount} ${__('runs')}`;
 
     const maxTotal = Math.max(...entries.map(([, s]) => s.tokens_in + s.tokens_out), 1);
 
@@ -4318,10 +4348,7 @@ const App = {
       </tr>`;
     });
 
-    html += `</tbody></table>
-      <div style="font-size:10px;color:var(--text-faint);margin-top:6px;">
-        ${__('Showing')} <strong>${entries.length}</strong> ${__('models across')} <strong>${filteredRunCount}</strong> ${__('run(s) in the selected period.')}
-      </div>`;
+    html += `</tbody></table>`;
 
     container.innerHTML = html;
   },
@@ -4361,7 +4388,10 @@ const App = {
             ${this.escape(r.run_id)}
             ${r.phase ? ` &middot; ${r.phase}` : ''}
           </div>
-          <div class="dpc-model">${this.escape(modelNames)}</div>
+          <div class="dpc-model">
+            ${this.escape(modelNames)}
+            ${timeAgo ? `<span class="dpc-timeago">${timeAgo}</span>` : ''}
+          </div>
           <div class="dpc-progress-bar">
             <div class="dpc-progress-fill" style="width:${tokenBarPct.toFixed(0)}%;background:${barColor};"></div>
           </div>
@@ -4379,7 +4409,6 @@ const App = {
             <div class="dpc-stat-val">${duration}</div>
             <div class="dpc-stat-lbl">${__('duration')}</div>
           </div>
-          ${timeAgo ? `<div class="dpc-stat"><div class="dpc-stat-val" style="font-size:10px;font-weight:400;color:var(--text-faint)">${timeAgo}</div><div class="dpc-stat-lbl"></div></div>` : ''}
         </div>
       </div>`;
     }).join('');
