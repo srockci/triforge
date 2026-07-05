@@ -2371,17 +2371,17 @@ input:checked + .slider:before {
     <span class="brand-sub">三元锻造</span>
   </div>
   <div class="topbar-nav">
-    <div class="tab active" data-nav="board">Board</div>
-    <div class="tab" data-nav="runs">All Runs</div>
-    <div class="tab" data-nav="settings">Settings</div>
+    <div class="tab active" data-nav="board" data-i18n="Board">Board</div>
+    <div class="tab" data-nav="runs" data-i18n="All Runs">All Runs</div>
+    <div class="tab" data-nav="settings" data-i18n="Settings">Settings</div>
   </div>
   <div class="spacer"></div>
   <div class="topbar-right">
     <div class="conn-pill" id="conn-pill">
       <span class="live-dot"></span>
-      <span>connected</span>
+      <span data-i18n="connected">connected</span>
     </div>
-    <button class="icon-btn theme-toggle" id="theme-toggle" title="Toggle theme (dark → light → system)">
+    <button class="icon-btn theme-toggle" id="theme-toggle" data-i18n-title="Toggle theme">Toggle theme (dark → light → system)
       <!-- Moon icon (dark mode, default) -->
       <svg class="icon theme-icon theme-icon-dark" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
       <!-- Sun icon (light mode) -->
@@ -2391,7 +2391,7 @@ input:checked + .slider:before {
     </button>
     <button class="btn btn-primary" data-action="new-task">
       <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14"/></svg>
-      New Task
+      <span data-i18n="New Task">New Task</span>
     </button>
   </div>
 </div>
@@ -2406,7 +2406,7 @@ input:checked + .slider:before {
 
     <div id="board-sections">
       <div class="col-title" style="margin: 18px 4px 8px;">
-        <span class="label">Recent</span>
+        <span class="label" data-i18n="Recent">Recent</span>
         <span class="count" id="recent-count">0</span>
       </div>
       <div class="col-body" id="recent-list"></div>
@@ -2418,14 +2418,14 @@ input:checked + .slider:before {
     <!-- Dashboard (shown by default) -->
     <div id="dashboard-root">
       <div class="dash-header">
-        <h1 class="dash-title">Overview</h1>
+        <h1 class="dash-title" data-i18n="Overview">Overview</h1>
         <div class="dash-header-right">
           <div class="dash-period-tabs" id="period-tabs">
             <button class="period-tab active" data-period="today" data-i18n="Today">Today</button>
             <button class="period-tab" data-period="week" data-i18n="This Week">This Week</button>
             <button class="period-tab" data-period="month" data-i18n="This Month">This Month</button>
           </div>
-          <button class="btn btn-sm" id="dash-refresh" title="Refresh">
+          <button class="btn btn-sm" id="dash-refresh" data-i18n-title="Refresh" title="Refresh">
             <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
           </button>
         </div>
@@ -2436,14 +2436,14 @@ input:checked + .slider:before {
 
       <!-- Per-model time period stats -->
       <div class="dash-section">
-        <h2 class="dash-section-title">Token Usage by Model</h2>
+        <h2 class="dash-section-title" data-i18n="Token Usage by Model">Token Usage by Model</h2>
         <div id="dash-model-stats"></div>
       </div>
 
       <!-- Project list -->
       <div class="dash-section">
         <div class="dash-section-head">
-          <h2 class="dash-section-title">Projects</h2>
+          <h2 class="dash-section-title" data-i18n="Projects">Projects</h2>
           <span class="dash-section-subtitle" id="dash-project-count"></span>
         </div>
         <div id="dash-project-list"></div>
@@ -2458,11 +2458,11 @@ input:checked + .slider:before {
           <path d="M9 9h6M9 13h6M9 17h4"/>
         </svg>
       </div>
-      <div class="empty-title">No run selected</div>
-      <div class="empty-hint">Start a new task from the top bar, or click a run on the left to view its progress.</div>
+      <div class="empty-title" data-i18n="No run selected">No run selected</div>
+      <div class="empty-hint" data-i18n="Start a new task from the top bar, or click a run on the left to view its progress.">Start a new task from the top bar, or click a run on the left to view its progress.</div>
       <button class="btn btn-primary" id="empty-new-task" style="margin-top: 16px;">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14"/></svg>
-        New Task
+        <span data-i18n="New Task">New Task</span>
       </button>
     </div>
 
@@ -2471,9 +2471,9 @@ input:checked + .slider:before {
 
     <!-- Keyboard hints strip (always visible) -->
     <div class="kbd-hints">
-      <span><kbd>Ctrl</kbd>+<kbd>N</kbd> new</span>
-      <span><kbd>↑</kbd>/<kbd>↓</kbd> switch run</span>
-      <span><kbd>A</kbd> approve · <kbd>R</kbd> reject · <kbd>M</kbd> modify</span>
+      <span data-i18n-html="Ctrl+N new"><kbd>Ctrl</kbd>+<kbd>N</kbd> new</span>
+      <span data-i18n-html="Up/Down switch run"><kbd>↑</kbd>/<kbd>↓</kbd> switch run</span>
+      <span data-i18n-html="A approve · R reject · M modify"><kbd>A</kbd> approve · <kbd>R</kbd> reject · <kbd>M</kbd> modify</span>
     </div>
   </div>
 
@@ -2481,17 +2481,17 @@ input:checked + .slider:before {
   <div class="col col-right">
     <div class="col-header">
       <div class="col-title">
-        <span class="label">Live Stream</span>
+        <span class="label" data-i18n="Live Stream">Live Stream</span>
         <div class="conn-pill" id="sse-status" style="padding: 2px 7px; font-size: 10px;">
           <span class="live-dot" id="sse-dot"></span>
-          <span id="sse-text">idle</span>
+          <span id="sse-text" data-i18n="idle">idle</span>
         </div>
       </div>
-      <div class="col-subtitle" id="sse-sub">No run selected</div>
+      <div class="col-subtitle" id="sse-sub" data-i18n="No run selected">No run selected</div>
     </div>
 
     <div class="live-stream" id="live-stream">
-      <div style="padding: 32px; text-align: center; color: var(--text-faint); font-size: 12px;">
+      <div style="padding: 32px; text-align: center; color: var(--text-faint); font-size: 12px;" data-i18n="Live events will stream here when a run is selected.">
         Live events will stream here when a run is selected.
       </div>
     </div>
@@ -2505,19 +2505,19 @@ input:checked + .slider:before {
     <div class="file-viewer-head">
       <div class="file-viewer-title">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        <span id="file-viewer-name">filename</span>
+        <span id="file-viewer-name" data-i18n="filename">filename</span>
       </div>
       <div class="file-viewer-actions">
         <button class="btn" id="file-viewer-download">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Download
+          <span data-i18n="Download">Download</span>
         </button>
         <button class="icon-btn" id="file-viewer-close">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
     </div>
-    <div class="file-viewer-body" id="file-viewer-body">Loading...</div>
+    <div class="file-viewer-body" id="file-viewer-body" data-i18n="Loading...">Loading...</div>
   </div>
 </div>
 
@@ -2781,15 +2781,15 @@ input:checked + .slider:before {
                 </div>
                 <div class="settings-field">
                   <label data-i18n="Authentication Token">Authentication Token</label>
-                  <input type="password" id="vc-auth-token" placeholder="Enter your API token">
+                  <input type="password" id="vc-auth-token" data-i18n-placeholder="Enter your API token" placeholder="Enter your API token">
                 </div>
                 <div class="settings-field">
                   <label data-i18n="Username (Optional)">Username (Optional)</label>
-                  <input type="text" id="vc-username" placeholder="Your username">
+                  <input type="text" id="vc-username" data-i18n-placeholder="Your username" placeholder="Your username">
                 </div>
                 <div class="settings-field">
                   <label data-i18n="Email (Optional)">Email (Optional)</label>
-                  <input type="email" id="vc-email" placeholder="your@email.com">
+                  <input type="email" id="vc-email" data-i18n-placeholder="your@email.com" placeholder="your@email.com">
                 </div>
                 <div class="settings-field" id="vc-git-url-field" style="display: none;">
                   <label data-i18n="Git URL">Git URL</label>
@@ -2933,14 +2933,14 @@ input:checked + .slider:before {
       </button>
     </div>
     <div class="modal-body">
-      <label class="form-label">Requirement</label>
-      <textarea class="form-input" id="modal-req" rows="5" placeholder="Describe what you want to build. e.g.&#10;Build a JWT auth system with refresh tokens, stateless, Python FastAPI"></textarea>
+      <label class="form-label" data-i18n="Requirement">Requirement</label>
+      <textarea class="form-input" id="modal-req" rows="5" data-i18n-placeholder="Describe what you want to build. e.g. Build a JWT auth system with refresh tokens, stateless, Python FastAPI" placeholder="Describe what you want to build. e.g. Build a JWT auth system with refresh tokens, stateless, Python FastAPI"></textarea>
 
       <!-- Working paths: prominent, with presets to make the value obvious. -->
       <div class="wp-section">
         <label class="form-label">
-          <span style="color:var(--accent); font-weight:700;">⚡ Working paths</span>
-          <span style="text-transform:none; letter-spacing:0; font-weight:400; color:var(--text-faint); margin-left: 6px;">
+          <span style="color:var(--accent); font-weight:700;" data-i18n="⚡ Working paths">⚡ Working paths</span>
+          <span style="text-transform:none; letter-spacing:0; font-weight:400; color:var(--text-faint); margin-left: 6px;" data-i18n="Writes here skip approval. Per-project (only this run).">
             Writes here skip approval. Per-project (only this run).
           </span>
         </label>
@@ -2951,27 +2951,27 @@ input:checked + .slider:before {
           <button class="wp-preset" data-preset="docs/">+ docs/</button>
         </div>
         <div class="wp-input-row">
-          <input class="form-input" id="modal-wp-input" type="text" placeholder="e.g. src/, tests/, design/architecture.md" />
-          <button class="btn" id="modal-wp-browse" type="button" title="Browse file system">Browse</button>
-          <button class="btn" id="modal-wp-add" type="button">Add</button>
+          <input class="form-input" id="modal-wp-input" type="text" data-i18n-placeholder="e.g. src/, tests/, design/architecture.md" placeholder="e.g. src/, tests/, design/architecture.md" />
+          <button class="btn" id="modal-wp-browse" type="button" data-i18n-title="Browse file system" title="Browse file system" data-i18n="Browse">Browse</button>
+          <button class="btn" id="modal-wp-add" type="button" data-i18n="Add">Add</button>
         </div>
         <div class="wp-chips" id="modal-wp-chips"></div>
-        <div class="wp-hint">
+        <div class="wp-hint" data-i18n="Tip: if approval popups keep appearing for the same kind of file, add that directory here. Click a preset above or paste a list separated by commas.">
           <strong>Tip:</strong> if approval popups keep appearing for the same kind of file,
           add that directory here. Click a preset above or paste a list separated by commas.
         </div>
       </div>
 
-      <label class="form-label" style="margin-top: 14px;">Priority</label>
+      <label class="form-label" style="margin-top: 14px;" data-i18n="Priority">Priority</label>
       <div class="priority-row">
-        <button class="priority-pill selected" data-priority="medium">Medium</button>
-        <button class="priority-pill" data-priority="high">High</button>
-        <button class="priority-pill" data-priority="low">Low</button>
+        <button class="priority-pill selected" data-priority="medium" data-i18n="Medium">Medium</button>
+        <button class="priority-pill" data-priority="high" data-i18n="High">High</button>
+        <button class="priority-pill" data-priority="low" data-i18n="Low">Low</button>
       </div>
     </div>
     <div class="modal-foot">
-      <button class="btn" id="modal-cancel">Cancel</button>
-      <button class="btn btn-primary" id="modal-submit">Start Run</button>
+      <button class="btn" id="modal-cancel" data-i18n="Cancel">Cancel</button>
+      <button class="btn btn-primary" id="modal-submit" data-i18n="Start Run">Start Run</button>
     </div>
   </div>
   <!-- Hidden file input for directory selection -->
@@ -3460,6 +3460,47 @@ const _t = {
     'Enter provider name (e.g. "openai"):': 'Enter provider name (e.g. "openai"):',
     'Provider "{0}" already exists': 'Provider "{0}" already exists',
     'Reset all settings to defaults?': 'Reset all settings to defaults?',
+    // Topbar
+    'Board': 'Board',
+    'All Runs': 'All Runs',
+    'connected': 'connected',
+    'Toggle theme': 'Toggle theme (dark → light → system)',
+    // Dashboard
+    'Overview': 'Overview',
+    'Token Usage by Model': 'Token Usage by Model',
+    'Projects': 'Projects',
+    'Refresh': 'Refresh',
+    'Recent': 'Recent',
+    'Ctrl+N new': '<kbd>Ctrl</kbd>+<kbd>N</kbd> new',
+    'Up/Down switch run': '<kbd>↑</kbd>/<kbd>↓</kbd> switch run',
+    'A approve · R reject · M modify': '<kbd>A</kbd> approve · <kbd>R</kbd> reject · <kbd>M</kbd> modify',
+    // Empty state
+    'No run selected': 'No run selected',
+    'Start a new task from the top bar, or click a run on the left to view its progress.': 'Start a new task from the top bar, or click a run on the left to view its progress.',
+    // Live stream
+    'Live Stream': 'Live Stream',
+    'idle': 'idle',
+    'Live events will stream here when a run is selected.': 'Live events will stream here when a run is selected.',
+    // File viewer
+    'filename': 'filename',
+    'Download': 'Download',
+    'Loading...': 'Loading...',
+    // New Task modal
+    'Requirement': 'Requirement',
+    'Describe what you want to build. e.g. Build a JWT auth system with refresh tokens, stateless, Python FastAPI': 'Describe what you want to build. e.g. Build a JWT auth system with refresh tokens, stateless, Python FastAPI',
+    '⚡ Working paths': '⚡ Working paths',
+    'Writes here skip approval. Per-project (only this run).': 'Writes here skip approval. Per-project (only this run).',
+    'Browse file system': 'Browse file system',
+    'Browse': 'Browse',
+    'Add': 'Add',
+    'e.g. src/, tests/, design/architecture.md': 'e.g. src/, tests/, design/architecture.md',
+    'Tip: if approval popups keep appearing for the same kind of file, add that directory here. Click a preset above or paste a list separated by commas.': 'Tip: if approval popups keep appearing for the same kind of file, add that directory here. Click a preset above or paste a list separated by commas.',
+    'Priority': 'Priority',
+    'Medium': 'Medium',
+    'High': 'High',
+    'Low': 'Low',
+    'Cancel': 'Cancel',
+    'Start Run': 'Start Run',
   },
   'zh-CN': {
     // General UI
@@ -3662,6 +3703,52 @@ const _t = {
     'Enter provider name (e.g. "openai"):': '输入提供商名称（例如 "openai"）：',
     'Provider "{0}" already exists': '提供商 "{0}" 已存在',
     'Reset all settings to defaults?': '将所有设置重置为默认值？',
+    // Topbar
+    'Board': '看板',
+    'All Runs': '所有运行',
+    'connected': '已连接',
+    'Toggle theme': '切换主题（深色 → 浅色 → 系统）',
+    // Dashboard
+    'Overview': '概览',
+    'Token Usage by Model': '按模型令牌用量',
+    'Projects': '项目',
+    'Refresh': '刷新',
+    'Recent': '最近',
+    'Ctrl+N new': '<kbd>Ctrl</kbd>+<kbd>N</kbd> 新建',
+    'Up/Down switch run': '<kbd>↑</kbd>/<kbd>↓</kbd> 切换运行',
+    'A approve · R reject · M modify': '<kbd>A</kbd> 批准 · <kbd>R</kbd> 拒绝 · <kbd>M</kbd> 修改',
+    // Empty state
+    'No run selected': '未选择运行',
+    'Start a new task from the top bar, or click a run on the left to view its progress.': '从顶栏开始新任务，或点击左侧的运行查看进度。',
+    // Live stream
+    'Live Stream': '实时流',
+    'idle': '空闲',
+    'Live events will stream here when a run is selected.': '选择运行后，实时事件将显示在此处。',
+    // File viewer
+    'filename': '文件名',
+    'Download': '下载',
+    'Loading...': '加载中...',
+    // New Task modal
+    'Requirement': '需求',
+    'Describe what you want to build. e.g. Build a JWT auth system with refresh tokens, stateless, Python FastAPI': '描述你要构建的内容。例如：用 Python FastAPI 构建带刷新令牌的 JWT 认证系统',
+    '⚡ Working paths': '⚡ 工作路径',
+    'Writes here skip approval. Per-project (only this run).': '写入此处可跳过审批。仅限当前项目（仅此运行）。',
+    'Browse file system': '浏览文件系统',
+    'Browse': '浏览',
+    'Add': '添加',
+    'e.g. src/, tests/, design/architecture.md': '例如：src/, tests/, design/architecture.md',
+    'Tip: if approval popups keep appearing for the same kind of file, add that directory here. Click a preset above or paste a list separated by commas.': '提示：如果同一类文件的审批弹窗反复出现，请将该目录添加到这里。点击上方的预设按钮或粘贴逗号分隔的列表。',
+    'Priority': '优先级',
+    'Medium': '中',
+    'High': '高',
+    'Low': '低',
+    'Cancel': '取消',
+    'Start Run': '开始运行',
+    // Version control placeholders
+    'Enter your API token': '输入你的 API 令牌',
+    'Your username': '你的用户名',
+    'your@email.com': 'your@email.com',
+    'https://your-git-server.com': 'https://your-git-server.com',
   },
 };
 // __() returns translated string or English fallback
@@ -3701,6 +3788,15 @@ const App = {
       const key = el.dataset.i18n;
       el.textContent = __(key);
     });
+    document.querySelectorAll('[data-i18n-html]').forEach(el => {
+      el.innerHTML = __(el.dataset.i18nHtml);
+    });
+    document.querySelectorAll('[data-i18n-title]').forEach(el => {
+      el.title = __(el.dataset.i18nTitle);
+    });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+      el.placeholder = __(el.dataset.i18nPlaceholder);
+    });
   },
 
   // ---- Init ----
@@ -3708,6 +3804,8 @@ const App = {
     ThemeManager.init();
     this.bindUI();
     this.bindSettingsSidebar(); // Bind settings sidebar navigation
+    // Load settings (includes language preference) and apply i18n to static HTML
+    await this.loadSettings();
     await this.refreshRuns();
     this.startPolling();
   },

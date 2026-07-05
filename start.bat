@@ -47,14 +47,27 @@ if errorlevel 1 (
 )
 
 echo Server starting... open http://%TRIFORGE_HOST%:%PORT% in your browser.
+echo Press Ctrl+C to stop the server. Close this window = server dies.
 echo.
-"%TRIFORGE_VENV%\Scripts\python.exe" -X utf8 -m uvicorn triforge_server.server:app --host %TRIFORGE_HOST% --port %PORT% --log-level info
-if errorlevel 1 (
-    echo [ERROR] Server exited with code %errorlevel%. Check the error above.
-    echo         Make sure .venv has all dependencies: .venv\Scripts\python -m pip install -r requirements.txt
+
+:: Log stdout+stderr to a file so we can see what happened after a crash
+set "LOGFILE=%~dp0logs\server.log"
+if not exist "%~dp0logs" mkdir "%~dp0logs"
+echo [%DATE% %TIME%] Starting server... >> "%LOGFILE%"
+
+"%TRIFORGE_VENV%\Scripts\python.exe" -X utf8 -m uvicorn triforge_server.server:app --host %TRIFORGE_HOST% --port %PORT% --log-level info >> "%LOGFILE%" 2>&1
+set EXIT_CODE=%ERRORLEVEL%
+
+echo [%DATE% %TIME%] Server exited with code %EXIT_CODE% >> "%LOGFILE%"
+
+if %EXIT_CODE% NEQ 0 (
+    echo [ERROR] Server exited with code %EXIT_CODE%. See logs\server.log for details.
+    type "%LOGFILE%"
+    echo.
+    echo Make sure .venv has all dependencies: .venv\Scripts\python -m pip install -r requirements.txt
     pause
     exit /b 1
 )
-echo [INFO] Server stopped.
+echo [INFO] Server stopped normally.
 pause
 endlocal
