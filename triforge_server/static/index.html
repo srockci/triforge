@@ -3035,6 +3035,17 @@ input:checked + .slider:before {
       <label class="form-label" data-i18n="Requirement">Requirement</label>
       <textarea class="form-input" id="modal-req" rows="5" data-i18n-placeholder="Describe what you want to build. e.g. Build a JWT auth system with refresh tokens, stateless, Python FastAPI" placeholder="Describe what you want to build. e.g. Build a JWT auth system with refresh tokens, stateless, Python FastAPI"></textarea>
 
+      <!-- Project path: where files are saved on the server. -->
+      <label class="form-label" style="margin-top:14px;">
+        <span data-i18n="Project Path">Project Path</span>
+        <span style="text-transform:none; letter-spacing:0; font-weight:400; color:var(--text-faint); margin-left:6px;" data-i18n="Files are saved to this path on the server.">
+          Files are saved to this path on the server.
+        </span>
+      </label>
+      <div class="wp-input-row">
+        <input class="form-input" id="modal-project-path" type="text" data-i18n-placeholder="e.g. D:/projects/myapp or /home/user/project" placeholder="e.g. D:/projects/myapp or /home/user/project" />
+      </div>
+
       <!-- Working paths: prominent, with presets to make the value obvious. -->
       <div class="wp-section">
         <label class="form-label">
@@ -3593,6 +3604,9 @@ const _t = {
     // New Task modal
     'Requirement': 'Requirement',
     'Describe what you want to build. e.g. Build a JWT auth system with refresh tokens, stateless, Python FastAPI': 'Describe what you want to build. e.g. Build a JWT auth system with refresh tokens, stateless, Python FastAPI',
+    'Project Path': 'Project Path',
+    'Files are saved to this path on the server.': 'Files are saved to this path on the server.',
+    'e.g. D:/projects/myapp or /home/user/project': 'e.g. D:/projects/myapp or /home/user/project',
     '⚡ Working paths': '⚡ Working paths',
     'Writes here skip approval. Per-project (only this run).': 'Writes here skip approval. Per-project (only this run).',
     'Browse file system': 'Browse file system',
@@ -3846,6 +3860,9 @@ const _t = {
     // New Task modal
     'Requirement': '需求',
     'Describe what you want to build. e.g. Build a JWT auth system with refresh tokens, stateless, Python FastAPI': '描述你要构建的内容。例如：用 Python FastAPI 构建带刷新令牌的 JWT 认证系统',
+    'Project Path': '项目路径',
+    'Files are saved to this path on the server.': '文件将保存到服务器上的此路径。',
+    'e.g. D:/projects/myapp or /home/user/project': '例如：D:/projects/myapp 或 /home/user/project',
     '⚡ Working paths': '⚡ 工作路径',
     'Writes here skip approval. Per-project (only this run).': '写入此处可跳过审批。仅限当前项目（仅此运行）。',
     'Browse file system': '浏览文件系统',
@@ -5380,6 +5397,7 @@ const App = {
     this.state.draftWorkingPaths = [];
     this.renderDraftWorkingPaths();
     document.getElementById('modal-wp-input').value = '';
+    document.getElementById('modal-project-path').value = '';
     document.getElementById('modal-bg').style.display = 'flex';
     document.getElementById('modal-req').value = '';
     document.getElementById('modal-req').focus();
@@ -5567,10 +5585,11 @@ const App = {
     }
     const priority = document.querySelector('.priority-pill.selected')?.dataset.priority || 'medium';
     const workingPaths = Array.from(this.state.draftWorkingPaths || []);
+    const projectPath = document.getElementById('modal-project-path').value.trim();
     try {
       this.closeModal();
       const result = await this.api('POST', '/board/runs', {
-        requirement: req, priority, working_paths: workingPaths,
+        requirement: req, priority, working_paths: workingPaths, project_path: projectPath,
       });
       await this.refreshRuns();
       this.selectRun(result.run_id);

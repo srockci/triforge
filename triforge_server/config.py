@@ -31,6 +31,19 @@ def workspace_for_run(run_id: str) -> Path:
         (run_ws / sub).mkdir(parents=True, exist_ok=True)
     return run_ws
 
+
+def workspace_from_path(path: str) -> Path:
+    """Use the given absolute path as the workspace root directly.
+
+    Unlike workspace_for_run, this does NOT create a run_id subfolder —
+    files are written straight to <path>/<rel_file>. This is used when
+    the user specifies a project path in the New Task modal.
+    """
+    ws = Path(path).resolve()
+    for sub in ("design", "src", "tests"):
+        (ws / sub).mkdir(parents=True, exist_ok=True)
+    return ws
+
 # Two LLM providers. Each must have an OpenAI-compatible /v1/chat/completions endpoint.
 LLM_PROVIDERS = {
     "minimax": {

@@ -88,6 +88,7 @@ class RunStore:
                 "updated_at": snapshot.get("updated_at", time.time()),
                 "working_paths": snapshot.get("working_paths") or [],
                 "completed_phases": list(snapshot.get("completed_phases") or []),
+                "project_path": snapshot.get("project_path") or "",
             }
             self._db.upsert_run(row)
         except Exception:
@@ -192,17 +193,18 @@ class RunStore:
                     "updated_at": time.time(),
                 })
                 snap = self._db.get_run(run_id) or snap
-            # Backfill completed_phases on restore: prefer the stored
-            # value; if empty (legacy runs that pre-date the field),
-            # infer from outputs so "Continue" can skip phases that
-            # visibly finished. Imported lazily to avoid circular import
-            # (workflow -> store -> workflow at module load).
             # Backfill completed_phases on restore: union stored values
             # with whatever can be inferred from outputs. Imported lazily
             # to avoid circular import (workflow -> store -> workflow at
             # module load).
             from .workflow import _backfill_completed_phases
+            from .config import workspace_from_path
             outputs = snap.get("outputs") or {}
+            project_path = (snap.get("project_path") or "").strip()
+            if project_path:
+                workspace_root = workspace_from_path(project_path)
+            else:
+                workspace_root = workspace_for_run(run_id)
             run = RunState(
                 run_id=run_id,
                 requirement=snap.get("requirement", ""),
@@ -215,9 +217,10 @@ class RunStore:
                 error=snap.get("error"),
                 created_at=snap.get("created_at") or time.time(),
                 updated_at=snap.get("updated_at") or time.time(),
-                workspace_root=workspace_for_run(run_id),
+                workspace_root=workspace_root,
                 working_paths=list(snap.get("working_paths") or []),
                 completed_phases=set(snap.get("completed_phases") or []),
+                project_path=project_path,
             )
             # Backfill any phases the outputs prove finished. If backfill
             # actually changed the set, persist so future restarts don't

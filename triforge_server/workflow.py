@@ -166,6 +166,9 @@ class RunState:
     # so the pipeline continues from the next incomplete phase instead of
     # restarting from design.
     completed_phases: set = field(default_factory=set)
+    # User-specified project path where files are written directly.
+    # When empty, files go to the default WORKSPACE_ROOT/<run_id>/.
+    project_path: str = ""
     # ---- Iteration loop (P5) ----
     # How many design→code→review cycles have completed. 0 means the
     # original run; 1+ means at least one user addendum was folded in.
@@ -186,13 +189,21 @@ class WorkflowEngine:
         self.runs: Dict[str, RunState] = {}
 
     def create(self, requirement: str,
-               working_paths: Optional[List[str]] = None) -> RunState:
+               working_paths: Optional[List[str]] = None,
+               project_path: str = "") -> RunState:
         run_id = f"run_{uuid.uuid4().hex[:10]}"
+        pp = project_path.strip() if project_path else ""
+        if pp:
+            from .config import workspace_from_path
+            ws = workspace_from_path(pp)
+        else:
+            ws = workspace_for_run(run_id)
         run = RunState(
             run_id=run_id,
             requirement=requirement,
-            workspace_root=workspace_for_run(run_id),
+            workspace_root=ws,
             working_paths=list(working_paths or []),
+            project_path=pp,
         )
         self.runs[run.run_id] = run
         return run
@@ -607,6 +618,7 @@ def _snapshot_for_board(run: RunState) -> Dict[str, Any]:
         "window_tokens_out": run.window_tokens_out,
         "project_tokens_in": run.project_tokens_in,
         "project_tokens_out": run.project_tokens_out,
+        "project_path": run.project_path or "",
     }
 
 

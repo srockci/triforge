@@ -40,6 +40,7 @@ class StartRequest(BaseModel):
     requirement: str
     priority: str = "medium"   # "low" | "medium" | "high"
     working_paths: List[str] = []  # per-project paths where writes skip approval
+    project_path: str = ""  # absolute path on server; files go directly here
 
 
 class ApproveRequest(BaseModel):
@@ -86,7 +87,15 @@ def _run_workspace(run_id: str) -> Path:
     run = engine.get(run_id)
     if run and run.workspace_root:
         return run.workspace_root
-    # Fallback: per-run subdirectory under WORKSPACE_ROOT
+    # Fallback: check stored snapshot for project_path
+    try:
+        snap = get_store().snapshot(run_id)
+        if snap and snap.get("project_path"):
+            from .config import workspace_from_path
+            return workspace_from_path(snap["project_path"])
+    except Exception:
+        pass
+    # Last fallback: per-run subdirectory under WORKSPACE_ROOT
     return (WORKSPACE_ROOT / run_id).resolve()
 
 
@@ -200,7 +209,8 @@ async def create_run(req: StartRequest) -> Dict[str, Any]:
         if norm not in seen:
             seen.add(norm)
             clean_wp.append(norm)
-    run = engine.create(req.requirement, working_paths=clean_wp)
+    run = engine.create(req.requirement, working_paths=clean_wp,
+                        project_path=req.project_path)
     asyncio.create_task(run_pipeline_async(run))
     try:
         get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
@@ -211,6 +221,7 @@ async def create_run(req: StartRequest) -> Dict[str, Any]:
         "status": "started",
         "phase": run.phase,
         "working_paths": clean_wp,
+        "project_path": req.project_path or "",
     }
 
 
