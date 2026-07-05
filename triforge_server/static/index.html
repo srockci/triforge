@@ -5404,10 +5404,34 @@ const App = {
     this.renderDraftWorkingPaths();
   },
 
-  browseWorkingPath() {
+  async browseWorkingPath() {
+    // Modern File System Access API — shows "选择文件夹" instead of "上传"
+    if (window.showDirectoryPicker) {
+      try {
+        const handle = await window.showDirectoryPicker({ mode: 'read' });
+        // Use the directory name directly as a working path
+        const name = handle.name;
+        if (name && !this.state.draftWorkingPaths.includes(name)) {
+          this.state.draftWorkingPaths.push(name);
+          const inp = document.getElementById('modal-wp-input');
+          if (inp) inp.value = name + '/';
+          this.renderDraftWorkingPaths();
+        }
+        return;
+      } catch (e) {
+        // User cancelled — ignore silently
+        if (e.name !== 'AbortError' && e.name !== 'SecurityError') {
+          console.error('showDirectoryPicker failed:', e);
+        }
+      }
+    }
+    // Fallback: hidden <input type="file" webkitdirectory>
+    this._legacyBrowse();
+  },
+
+  _legacyBrowse() {
     const fileInput = document.getElementById('modal-wp-file-input');
     if (fileInput) {
-      // Reset to allow re-selecting the same directory
       fileInput.value = '';
       fileInput.click();
     }
@@ -5432,7 +5456,7 @@ const App = {
     if (topPath) {
       pathToAdd = topPath.replace(/^[.\/\\]+|[.\/\\]+$/g, '');
     } else {
-      // All files are at root of selected directory — use '.' for "this directory"
+      // All files at root of selected dir — '.' means "this directory"
       pathToAdd = '.';
     }
 
