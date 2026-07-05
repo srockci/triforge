@@ -34,15 +34,17 @@ def workspace_for_run(run_id: str) -> Path:
 # Two LLM providers. Each must have an OpenAI-compatible /v1/chat/completions endpoint.
 LLM_PROVIDERS = {
     "minimax": {
-        # Source: ~/.hermes/.env  MINIMAX_CN_BASE_URL=https://api.minimaxi.com/anthropic
-        # Strip /anthropic suffix — we want the OpenAI-compatible root.
+        # Source: ~/.hermes/.env  MINIMAX_CN_BASE_URL=https://api.minimax.chat/v1
         # Override via TRIFORGE_MINIMAX_BASE_URL for testing (e.g. mock LLM).
         "base_url": os.environ.get(
             "TRIFORGE_MINIMAX_BASE_URL",
-            "https://api.minimaxi.com/v1",
+            "https://api.minimax.chat/v1",
         ),
         "api_key_env": "MINIMAX_CN_API_KEY",
         "model": os.environ.get("TRIFORGE_ARCHITECT_MODEL", "MiniMax-Text-01"),
+        "rate_in": 0.0,
+        "rate_out": 0.0,
+        "token_plan": True,
     },
     "deepseek": {
         "base_url": os.environ.get(
@@ -51,7 +53,16 @@ LLM_PROVIDERS = {
         ),
         "api_key_env": "DEEPSEEK_API_KEY",
         "model": os.environ.get("TRIFORGE_CODER_MODEL", "deepseek-chat"),
+        "rate_in": 0.5,
+        "rate_out": 1.5,
+        "token_plan": False,
     },
+}
+
+# Token plan models - models that use token-plan pricing instead of per-token cost
+TOKEN_PLAN_MODELS = {
+    "minimax": ["MiniMax-Text-01", "MiniMax-M3", "MiniMax-M2.7", "MiniMax-M2.5", "abab6.5s-chat", "abab6.5s"],
+    "other": []  # Add other token-plan providers here
 }
 
 # Agent system prompts. Three roles in the pipeline:

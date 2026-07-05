@@ -141,6 +141,14 @@ class RunState:
     cost_estimate: float = 0.0
     # Model names actually used per phase (set at pipeline start)
     models: Dict[str, str] = field(default_factory=dict)
+    
+    # Token plan specific tracking
+    token_plan_models: Dict[str, bool] = field(default_factory=dict)  # model_name: is_token_plan
+    window_tokens_in: int = 0
+    window_tokens_out: int = 0
+    window_start_time: float = 0.0
+    project_tokens_in: int = 0
+    project_tokens_out: int = 0
     # Paths approved for write in this run (remember_approved feature)
     approved_paths: set = field(default_factory=set)
     # Cancellation: when set, _drive_agent checks between steps
@@ -590,6 +598,12 @@ def _snapshot_for_board(run: RunState) -> Dict[str, Any]:
         "iteration": run.iteration,
         "requirement_addenda": list(run.requirement_addenda or []),
         "awaiting_iteration_input": run.awaiting_iteration_input,
+        # Token plan tracking for dashboard
+        "token_plan_models": dict(run.token_plan_models or {}),
+        "window_tokens_in": run.window_tokens_in,
+        "window_tokens_out": run.window_tokens_out,
+        "project_tokens_in": run.project_tokens_in,
+        "project_tokens_out": run.project_tokens_out,
     }
 
 
@@ -644,11 +658,36 @@ async def _drive_agent(
         run.tokens_in += ev.tokens_in
         run.tokens_out += ev.tokens_out
         run.cost_estimate += ev.cost
+        
+        # Check if model is token-plan
+        is_token_plan = run.token_plan_models.get(ev.model, False)
+        
+        if is_token_plan:
+            # Token-plan models: track window and project usage
+            run.window_tokens_in += ev.tokens_in
+            run.window_tokens_out += ev.tokens_out
+            run.project_tokens_in += ev.tokens_in
+            run.project_tokens_out += ev.tokens_out
+            
+            # Check if we need to reset window usage (at specified hours)
+            current_hour = time.localtime().tm_hour
+            window_hours = get_settings().pipeline_params.token_plan.window_hours
+            if current_hour in window_hours and run.window_start_time < time.time() - 3600:  # Reset if more than an hour has passed
+                run.window_tokens_in = ev.tokens_in
+                run.window_tokens_out = ev.tokens_out
+                run.window_start_time = time.time()
+        
         try:
             bev = BoardEvent(run_id=run.run_id, kind="token_usage",
                              data={"tokens_in": ev.tokens_in,
                                    "tokens_out": ev.tokens_out,
-                                   "cost": ev.cost, "model": ev.model})
+                                   "cost": ev.cost, 
+                                   "model": ev.model,
+                                   "is_token_plan": is_token_plan,
+                                   "window_tokens_in": run.window_tokens_in if is_token_plan else 0,
+                                   "window_tokens_out": run.window_tokens_out if is_token_plan else 0,
+                                   "project_tokens_in": run.project_tokens_in if is_token_plan else 0,
+                                   "project_tokens_out": run.project_tokens_out if is_token_plan else 0})
             get_store().append(bev)
             bus.emit(bev)
         except Exception:

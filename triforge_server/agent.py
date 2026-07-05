@@ -248,8 +248,18 @@ class Agent:
             return None
         t_in = getattr(usage, "prompt_tokens", 0) or 0
         t_out = getattr(usage, "completion_tokens", 0) or 0
-        rate_in, rate_out = COST_PER_1K.get(self.provider_key, (0.01, 0.01))
-        cost = (t_in * rate_in + t_out * rate_out) / 1000.0
+        
+        # Check if this model uses token-plan pricing
+        is_token_plan = self.provider_config.get("token_plan", False)
+        
+        if is_token_plan:
+            # Token-plan models: no cost calculation, only track token usage
+            cost = 0.0
+        else:
+            # Regular models: calculate cost based on rates
+            rate_in, rate_out = COST_PER_1K.get(self.provider_key, (0.01, 0.01))
+            cost = (t_in * rate_in + t_out * rate_out) / 1000.0
+
         self.total_tokens_in += t_in
         self.total_tokens_out += t_out
         self.total_cost += cost

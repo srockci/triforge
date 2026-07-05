@@ -25,10 +25,11 @@ _SETTINGS_PATH = _PROJECT_ROOT / "data" / "settings.json"
 # Default settings — used on first launch or when settings.json is missing
 # ---------------------------------------------------------------------------
 DEFAULT_SETTINGS: Dict[str, Any] = {
+    "language": "zh-CN",  # "en" | "zh-CN"
     "providers": {
         "minimax": {
             "name": "MiniMax",
-            "base_url": "https://api.minimaxi.com/v1",
+            "base_url": "https://api.minimax.chat/v1",
             "api_key": "",
             "api_key_env": "MINIMAX_CN_API_KEY",
         },
@@ -125,6 +126,13 @@ write a review report to `workspace/design/review_report.md`.
         "design": {"max_steps": 12, "temperature": 0.2, "max_tokens": 4096},
         "implement": {"max_steps": 25, "temperature": 0.2, "max_tokens": 4096},
         "review": {"max_steps": 12, "temperature": 0.2, "max_tokens": 4096},
+        
+        # Token plan settings
+        "token_plan": {
+            "enabled": False,
+            "window_hours": [0, 5, 10, 15, 20],  # 0:00, 5:00, 10:00, 15:00, 20:00
+            "models": {}  # model_name: is_token_plan
+        },
     },
     "approval": {
         # Paths where writes are auto-approved (no confirmation needed).
@@ -240,6 +248,11 @@ class SettingsManager:
         LLM servers without modifying the settings file.
         """
         cfg = dict(self._data.get("providers", {}).get(key, {}))
+        # Resolve api_key from env var if not set
+        if not cfg.get("api_key"):
+            api_key_env = cfg.get("api_key_env", "")
+            if api_key_env:
+                cfg["api_key"] = os.environ.get(api_key_env, "")
         # Check for env var override: TRIFORGE_{KEY}_BASE_URL
         env_key = f"TRIFORGE_{key.upper()}_BASE_URL"
         override_url = os.environ.get(env_key)

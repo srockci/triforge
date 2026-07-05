@@ -57,6 +57,137 @@
     --r-lg: 8px;
     --r-xl: 12px;
 
+/* ============== Switch ============== */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 34px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 34px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: var(--accent);
+}
+
+input:checked + .slider:before {
+  transform: translateX(26px);
+}
+
+.switch-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.switch-label span {
+  font-size: 14px;
+  color: var(--text);
+}
+
+/* ============== Token Statistics Panel ============== */
+.token-stats-section {
+  margin-bottom: 24px;
+}
+
+.token-stats-section h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--text);
+}
+
+.token-stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.token-stats-table thead {
+  background: var(--bg-elev-2);
+}
+
+.token-stats-table th {
+  text-align: left;
+  padding: 10px 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border);
+}
+
+.token-stats-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--divider);
+  color: var(--text);
+}
+
+.token-stats-table tr:hover {
+  background: var(--bg-hover);
+}
+
+.token-stats-table .model-name {
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 12px;
+}
+
+.token-stats-table .model-type {
+  font-weight: 600;
+}
+
+.token-stats-table .model-type.token-plan {
+  color: var(--accent);
+}
+
+.token-stats-table .model-type.per-token {
+  color: var(--green);
+}
+
+.token-stats-table .run-count {
+  text-align: center;
+}
+
+.token-stats-table .tokens-total,
+.token-stats-table .tokens-window,
+.token-stats-table .tokens-project {
+  font-family: 'Consolas', 'Monaco', monospace;
+  text-align: right;
+}
+
+.token-stats-table .cost {
+  font-family: 'Consolas', 'Monaco', monospace;
+  text-align: right;
+  font-weight: 600;
+}
+
     /* Theme mode indicator */
     color-scheme: dark;
   }
@@ -1051,6 +1182,162 @@
     50%      { box-shadow: 0 0 12px 0 hsla(40 95% 60% / 0.30); }
   }
 
+  /* ============ Dashboard ============ */
+  #dashboard-root { padding: 0 4px; }
+
+  .dash-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px; padding-bottom: 12px;
+    border-bottom: 1px solid var(--divider);
+  }
+  .dash-title { font-size: 18px; font-weight: 700; color: var(--text); margin: 0; }
+  .dash-header-right { display: flex; align-items: center; gap: 8px; }
+
+  .dash-period-tabs {
+    display: flex; gap: 0;
+    background: var(--bg-elev-2);
+    border-radius: var(--r-md);
+    padding: 2px;
+  }
+  .period-tab {
+    background: none; border: none;
+    padding: 4px 12px; font-size: 11px; font-weight: 500;
+    color: var(--text-faint); cursor: pointer;
+    border-radius: var(--r-sm);
+    transition: all .15s;
+  }
+  .period-tab:hover { color: var(--text-dim); }
+  .period-tab.active {
+    background: var(--accent); color: #fff;
+  }
+
+  .dash-section { margin-bottom: 20px; }
+  .dash-section-title {
+    font-size: 14px; font-weight: 600; color: var(--text);
+    margin: 0 0 10px;
+  }
+  .dash-section-head {
+    display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px;
+  }
+  .dash-section-subtitle { font-size: 11px; color: var(--text-faint); }
+
+  /* Summary cards row */
+  .dash-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 8px; margin-bottom: 20px;
+  }
+  .dash-summary-card {
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 12px;
+  }
+  .dash-summary-card .dsc-label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: .5px;
+    color: var(--text-faint); margin-bottom: 4px;
+  }
+  .dash-summary-card .dsc-value {
+    font-size: 20px; font-weight: 700; color: var(--text);
+    font-family: 'Consolas', 'Monaco', monospace;
+  }
+  .dash-summary-card .dsc-sub {
+    font-size: 11px; color: var(--text-mute); margin-top: 2px;
+  }
+
+  /* Model stats table */
+  .dash-model-table {
+    width: 100%; border-collapse: collapse;
+    background: var(--bg-elev-1);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    font-size: 12px;
+  }
+  .dash-model-table thead {
+    background: var(--bg-elev-2);
+    border-bottom: 1px solid var(--border);
+  }
+  .dash-model-table th {
+    text-align: left; padding: 8px 10px;
+    font-weight: 600; color: var(--text-dim);
+    font-size: 10px; text-transform: uppercase; letter-spacing: .4px;
+  }
+  .dash-model-table th.num { text-align: right; }
+  .dash-model-table td {
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--divider);
+    color: var(--text);
+  }
+  .dash-model-table td.num { text-align: right; font-family: 'Consolas','Monaco',monospace; }
+  .dash-model-table tr:hover { background: var(--bg-hover); }
+  .dash-model-table .model-name { font-weight: 600; }
+  .dash-model-table .model-plan-tag {
+    display: inline-block; padding: 1px 6px; border-radius: 8px;
+    font-size: 9px; font-weight: 600; text-transform: uppercase;
+  }
+  .dash-model-table .model-plan-tag.token-plan { background: var(--accent-soft); color: var(--accent); }
+  .dash-model-table .model-plan-tag.per-token { background: var(--green-soft); color: var(--green); }
+  .dash-model-table .cost-na { color: var(--text-faint); font-style: italic; }
+
+  /* Project cards */
+  .dash-project-card {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px;
+    background: var(--bg-elev-1);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: all .12s;
+  }
+  .dash-project-card:hover {
+    border-color: var(--accent-line);
+    background: var(--bg-elev-2);
+  }
+  .dash-project-card .dpc-status {
+    flex-shrink: 0; width: 6px; height: 6px;
+    border-radius: 50%;
+  }
+  .dash-project-card .dpc-status.running { background: var(--blue); }
+  .dash-project-card .dpc-status.waiting { background: var(--yellow); }
+  .dash-project-card .dpc-status.done { background: var(--green); }
+  .dash-project-card .dpc-status.failed { background: var(--red); }
+  .dash-project-card .dpc-status.other { background: var(--text-faint); }
+
+  .dash-project-card .dpc-body { flex: 1; min-width: 0; }
+  .dash-project-card .dpc-req {
+    font-size: 12px; font-weight: 500; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .dash-project-card .dpc-meta {
+    font-size: 10px; color: var(--text-faint); margin-top: 2px;
+  }
+  .dash-project-card .dpc-model {
+    font-size: 10px; color: var(--text-mute);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  .dash-project-card .dpc-stats {
+    display: flex; gap: 12px; flex-shrink: 0;
+  }
+  .dash-project-card .dpc-stat {
+    text-align: right;
+  }
+  .dash-project-card .dpc-stat .dpc-stat-val {
+    font-size: 12px; font-weight: 600; color: var(--text);
+    font-family: 'Consolas','Monaco',monospace;
+  }
+  .dash-project-card .dpc-stat .dpc-stat-lbl {
+    font-size: 9px; color: var(--text-faint);
+  }
+
+  /* No data empty state for dashboard */
+  .dash-empty {
+    text-align: center; padding: 32px; color: var(--text-faint);
+    font-size: 12px;
+  }
+
   /* ============ All Runs tab: filter pills + dense rows ============ */
   .allruns-header { padding: 4px 4px 8px; }
   .allruns-title {
@@ -1184,7 +1471,7 @@
     background: var(--bg);
   }
   .settings-container {
-    max-width: 800px;
+    max-width: 1400px;
     margin: 0 auto;
     padding: 32px 24px 64px;
   }
@@ -1201,6 +1488,50 @@
   .settings-subtitle {
     font-size: 13px;
     color: var(--text-dim);
+  }
+  .settings-layout {
+    display: flex;
+    gap: 24px;
+    height: calc(100% - 80px);
+  }
+  .settings-sidebar {
+    width: 180px;
+    flex-shrink: 0;
+  }
+  .settings-category {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    border-radius: var(--r-md);
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .settings-category:hover {
+    background: var(--bg-hover);
+  }
+  .settings-category.active {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+  .settings-category svg {
+    width: 20px;
+    height: 20px;
+  }
+  .settings-content {
+    flex: 1;
+    overflow-y: auto;
+  }
+  .settings-help {
+    width: 280px;
+    flex-shrink: 0;
+    overflow-y: auto;
+  }
+  .settings-content-section {
+    display: none;
+  }
+  .settings-content-section.active {
+    display: block;
   }
   .settings-section {
     background: var(--bg-elev-1);
@@ -1227,6 +1558,40 @@
   }
   .settings-field.full {
     grid-column: 1 / -1;
+  }
+  .help-content {
+    background: var(--bg-elev-1);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .help-content h3 {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--accent);
+  }
+  .help-content p {
+    font-size: 13px;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+  .help-content ul {
+    padding-left: 20px;
+    margin-bottom: 8px;
+  }
+  .help-content li {
+    font-size: 13px;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .help-content a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+  .help-content a:hover {
+    text-decoration: underline;
   }
   .settings-field label {
     font-size: 11px;
@@ -1687,20 +2052,321 @@
     0%, 100% { box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px var(--yellow-line), 0 0 24px hsla(40 95% 60% / 0.15); }
     50%       { box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px var(--yellow-line), 0 0 48px hsla(40 95% 60% / 0.30); }
   }
+  .settings-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 24px;
+  }
 </style>
 </head>
 <body>
 <!-- ====================== TOPBAR ====================== -->
 <div class="topbar">
   <div class="brand">
-    <div class="brand-mark">
-      <!-- TriForge Logo -->
-      <svg viewBox="0 0 24 24" fill="none">
-        <circle cx="12" cy="12" r="11" fill="#6E5BD3"/>
-        <circle cx="12" cy="12" r="9" fill="#FFFFFF"/>
-        <text x="12" y="17" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#6E5BD3">T</text>
-      </svg>
-    </div>
+<div class="brand-mark">
+        <!-- TriForge Logo -->
+        <svg viewBox="0 0 713 704" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <style>
+              .purple-fill { fill: #7B4AE0; }
+            </style>
+          </defs>
+          <rect x="100" y="0" width="516" height="116" class="purple-fill"/>
+          <rect x="88" y="4" width="12" height="248" class="purple-fill"/>
+          <rect x="616" y="4" width="12" height="696" class="purple-fill"/>
+          <rect x="76" y="8" width="12" height="688" class="purple-fill"/>
+          <rect x="628" y="8" width="8" height="688" class="purple-fill"/>
+          <rect x="68" y="12" width="8" height="680" class="purple-fill"/>
+          <rect x="636" y="12" width="8" height="680" class="purple-fill"/>
+          <rect x="60" y="16" width="8" height="672" class="purple-fill"/>
+          <rect x="644" y="16" width="8" height="672" class="purple-fill"/>
+          <rect x="56" y="20" width="4" height="664" class="purple-fill"/>
+          <rect x="652" y="20" width="8" height="664" class="purple-fill"/>
+          <rect x="48" y="24" width="8" height="656" class="purple-fill"/>
+          <rect x="660" y="24" width="4" height="656" class="purple-fill"/>
+          <rect x="44" y="28" width="4" height="648" class="purple-fill"/>
+          <rect x="664" y="28" width="4" height="648" class="purple-fill"/>
+          <rect x="40" y="32" width="4" height="640" class="purple-fill"/>
+          <rect x="668" y="32" width="4" height="640" class="purple-fill"/>
+          <rect x="36" y="36" width="4" height="632" class="purple-fill"/>
+          <rect x="672" y="36" width="4" height="632" class="purple-fill"/>
+          <rect x="32" y="40" width="4" height="628" class="purple-fill"/>
+          <rect x="676" y="40" width="4" height="624" class="purple-fill"/>
+          <rect x="28" y="44" width="4" height="616" class="purple-fill"/>
+          <rect x="680" y="44" width="4" height="616" class="purple-fill"/>
+          <rect x="24" y="48" width="4" height="608" class="purple-fill"/>
+          <rect x="684" y="48" width="4" height="608" class="purple-fill"/>
+          <rect x="20" y="52" width="4" height="600" class="purple-fill"/>
+          <rect x="688" y="52" width="4" height="600" class="purple-fill"/>
+          <rect x="16" y="60" width="4" height="584" class="purple-fill"/>
+          <rect x="692" y="60" width="4" height="588" class="purple-fill"/>
+          <rect x="696" y="64" width="4" height="576" class="purple-fill"/>
+          <rect x="12" y="68" width="4" height="572" class="purple-fill"/>
+          <rect x="8" y="72" width="4" height="560" class="purple-fill"/>
+          <rect x="700" y="72" width="4" height="560" class="purple-fill"/>
+          <rect x="704" y="80" width="4" height="544" class="purple-fill"/>
+          <rect x="4" y="84" width="4" height="536" class="purple-fill"/>
+          <rect x="708" y="92" width="4" height="520" class="purple-fill"/>
+          <rect x="0" y="96" width="4" height="512" class="purple-fill"/>
+          <rect x="100" y="116" width="188" height="4" class="purple-fill"/>
+          <rect x="308" y="116" width="308" height="4" class="purple-fill"/>
+          <rect x="712" y="116" width="1" height="472" class="purple-fill"/>
+          <rect x="100" y="120" width="184" height="52" class="purple-fill"/>
+          <rect x="424" y="120" width="192" height="48" class="purple-fill"/>
+          <rect x="424" y="168" width="32" height="124" class="purple-fill"/>
+          <rect x="504" y="168" width="112" height="4" class="purple-fill"/>
+          <rect x="100" y="172" width="92" height="4" class="purple-fill"/>
+          <rect x="252" y="172" width="32" height="120" class="purple-fill"/>
+          <rect x="456" y="172" width="12" height="108" class="purple-fill"/>
+          <rect x="520" y="172" width="96" height="4" class="purple-fill"/>
+          <rect x="100" y="176" width="80" height="4" class="purple-fill"/>
+          <rect x="248" y="176" width="4" height="112" class="purple-fill"/>
+          <rect x="468" y="176" width="8" height="96" class="purple-fill"/>
+          <rect x="532" y="176" width="84" height="4" class="purple-fill"/>
+          <rect x="100" y="180" width="72" height="4" class="purple-fill"/>
+          <rect x="232" y="180" width="16" height="92" class="purple-fill"/>
+          <rect x="476" y="180" width="8" height="84" class="purple-fill"/>
+          <rect x="536" y="180" width="80" height="4" class="purple-fill"/>
+          <rect x="100" y="184" width="64" height="4" class="purple-fill"/>
+          <rect x="220" y="184" width="12" height="76" class="purple-fill"/>
+          <rect x="284" y="184" width="4" height="136" class="purple-fill"/>
+          <rect x="316" y="184" width="92" height="16" class="purple-fill"/>
+          <rect x="484" y="184" width="8" height="72" class="purple-fill"/>
+          <rect x="544" y="184" width="72" height="4" class="purple-fill"/>
+          <rect x="100" y="188" width="56" height="4" class="purple-fill"/>
+          <rect x="212" y="188" width="8" height="64" class="purple-fill"/>
+          <rect x="288" y="188" width="28" height="136" class="purple-fill"/>
+          <rect x="408" y="188" width="16" height="132" class="purple-fill"/>
+          <rect x="492" y="188" width="4" height="64" class="purple-fill"/>
+          <rect x="552" y="188" width="64" height="4" class="purple-fill"/>
+          <rect x="100" y="192" width="52" height="4" class="purple-fill"/>
+          <rect x="208" y="192" width="4" height="56" class="purple-fill"/>
+          <rect x="496" y="192" width="4" height="56" class="purple-fill"/>
+          <rect x="556" y="192" width="60" height="4" class="purple-fill"/>
+          <rect x="100" y="196" width="48" height="4" class="purple-fill"/>
+          <rect x="204" y="196" width="4" height="48" class="purple-fill"/>
+          <rect x="500" y="196" width="4" height="48" class="purple-fill"/>
+          <rect x="560" y="196" width="56" height="4" class="purple-fill"/>
+          <rect x="100" y="200" width="44" height="4" class="purple-fill"/>
+          <rect x="200" y="200" width="4" height="24" class="purple-fill"/>
+          <rect x="316" y="200" width="24" height="80" class="purple-fill"/>
+          <rect x="368" y="200" width="40" height="76" class="purple-fill"/>
+          <rect x="504" y="200" width="4" height="20" class="purple-fill"/>
+          <rect x="564" y="200" width="52" height="4" class="purple-fill"/>
+          <rect x="100" y="204" width="40" height="4" class="purple-fill"/>
+          <rect x="568" y="204" width="48" height="4" class="purple-fill"/>
+          <rect x="100" y="208" width="36" height="4" class="purple-fill"/>
+          <rect x="572" y="208" width="44" height="4" class="purple-fill"/>
+          <rect x="100" y="212" width="32" height="4" class="purple-fill"/>
+          <rect x="576" y="212" width="40" height="4" class="purple-fill"/>
+          <rect x="100" y="216" width="28" height="24" class="purple-fill"/>
+          <rect x="580" y="216" width="36" height="24" class="purple-fill"/>
+          <rect x="200" y="228" width="4" height="20" class="purple-fill"/>
+          <rect x="504" y="228" width="4" height="20" class="purple-fill"/>
+          <rect x="196" y="232" width="4" height="20" class="purple-fill"/>
+          <rect x="508" y="232" width="4" height="16" class="purple-fill"/>
+          <rect x="192" y="236" width="4" height="20" class="purple-fill"/>
+          <rect x="512" y="236" width="4" height="16" class="purple-fill"/>
+          <rect x="100" y="240" width="24" height="4" class="purple-fill"/>
+          <rect x="188" y="240" width="4" height="20" class="purple-fill"/>
+          <rect x="516" y="240" width="4" height="16" class="purple-fill"/>
+          <rect x="584" y="240" width="32" height="4" class="purple-fill"/>
+          <rect x="100" y="244" width="20" height="4" class="purple-fill"/>
+          <rect x="184" y="244" width="4" height="176" class="purple-fill"/>
+          <rect x="520" y="244" width="4" height="176" class="purple-fill"/>
+          <rect x="588" y="244" width="28" height="4" class="purple-fill"/>
+          <rect x="180" y="248" width="4" height="172" class="purple-fill"/>
+          <rect x="524" y="248" width="4" height="172" class="purple-fill"/>
+          <rect x="608" y="248" width="8" height="4" class="purple-fill"/>
+          <rect x="88" y="252" width="8" height="4" class="purple-fill"/>
+          <rect x="176" y="252" width="4" height="168" class="purple-fill"/>
+          <rect x="216" y="252" width="4" height="4" class="purple-fill"/>
+          <rect x="528" y="252" width="4" height="168" class="purple-fill"/>
+          <rect x="612" y="252" width="4" height="4" class="purple-fill"/>
+          <rect x="88" y="256" width="4" height="444" class="purple-fill"/>
+          <rect x="172" y="256" width="4" height="164" class="purple-fill"/>
+          <rect x="484" y="256" width="4" height="4" class="purple-fill"/>
+          <rect x="532" y="256" width="4" height="164" class="purple-fill"/>
+          <rect x="152" y="260" width="20" height="160" class="purple-fill"/>
+          <rect x="224" y="260" width="8" height="4" class="purple-fill"/>
+          <rect x="536" y="260" width="24" height="160" class="purple-fill"/>
+          <rect x="92" y="264" width="4" height="436" class="purple-fill"/>
+          <rect x="148" y="264" width="4" height="440" class="purple-fill"/>
+          <rect x="228" y="264" width="4" height="4" class="purple-fill"/>
+          <rect x="476" y="264" width="4" height="4" class="purple-fill"/>
+          <rect x="560" y="264" width="4" height="440" class="purple-fill"/>
+          <rect x="612" y="264" width="4" height="436" class="purple-fill"/>
+          <rect x="96" y="268" width="4" height="432" class="purple-fill"/>
+          <rect x="144" y="268" width="4" height="436" class="purple-fill"/>
+          <rect x="188" y="268" width="4" height="152" class="purple-fill"/>
+          <rect x="516" y="268" width="4" height="152" class="purple-fill"/>
+          <rect x="608" y="268" width="4" height="436" class="purple-fill"/>
+          <rect x="100" y="272" width="4" height="432" class="purple-fill"/>
+          <rect x="192" y="272" width="4" height="148" class="purple-fill"/>
+          <rect x="236" y="272" width="12" height="4" class="purple-fill"/>
+          <rect x="468" y="272" width="4" height="4" class="purple-fill"/>
+          <rect x="512" y="272" width="4" height="148" class="purple-fill"/>
+          <rect x="564" y="272" width="4" height="12" class="purple-fill"/>
+          <rect x="604" y="272" width="4" height="432" class="purple-fill"/>
+          <rect x="104" y="276" width="4" height="428" class="purple-fill"/>
+          <rect x="196" y="276" width="4" height="144" class="purple-fill"/>
+          <rect x="240" y="276" width="8" height="4" class="purple-fill"/>
+          <rect x="372" y="276" width="36" height="60" class="purple-fill"/>
+          <rect x="508" y="276" width="4" height="144" class="purple-fill"/>
+          <rect x="200" y="280" width="4" height="140" class="purple-fill"/>
+          <rect x="244" y="280" width="4" height="4" class="purple-fill"/>
+          <rect x="316" y="280" width="20" height="72" class="purple-fill"/>
+          <rect x="456" y="280" width="8" height="4" class="purple-fill"/>
+          <rect x="504" y="280" width="4" height="140" class="purple-fill"/>
+          <rect x="600" y="280" width="4" height="424" class="purple-fill"/>
+          <rect x="108" y="284" width="4" height="420" class="purple-fill"/>
+          <rect x="204" y="284" width="4" height="136" class="purple-fill"/>
+          <rect x="456" y="284" width="4" height="4" class="purple-fill"/>
+          <rect x="500" y="284" width="4" height="136" class="purple-fill"/>
+          <rect x="596" y="284" width="4" height="420" class="purple-fill"/>
+          <rect x="112" y="288" width="4" height="416" class="purple-fill"/>
+          <rect x="208" y="288" width="4" height="132" class="purple-fill"/>
+          <rect x="496" y="288" width="4" height="132" class="purple-fill"/>
+          <rect x="564" y="288" width="4" height="416" class="purple-fill"/>
+          <rect x="592" y="288" width="4" height="416" class="purple-fill"/>
+          <rect x="116" y="292" width="4" height="412" class="purple-fill"/>
+          <rect x="140" y="292" width="4" height="412" class="purple-fill"/>
+          <rect x="212" y="292" width="4" height="128" class="purple-fill"/>
+          <rect x="260" y="292" width="24" height="4" class="purple-fill"/>
+          <rect x="424" y="292" width="24" height="4" class="purple-fill"/>
+          <rect x="492" y="292" width="4" height="128" class="purple-fill"/>
+          <rect x="568" y="292" width="4" height="412" class="purple-fill"/>
+          <rect x="588" y="292" width="4" height="412" class="purple-fill"/>
+          <rect x="120" y="296" width="4" height="408" class="purple-fill"/>
+          <rect x="136" y="296" width="4" height="408" class="purple-fill"/>
+          <rect x="216" y="296" width="4" height="124" class="purple-fill"/>
+          <rect x="264" y="296" width="20" height="4" class="purple-fill"/>
+          <rect x="424" y="296" width="20" height="4" class="purple-fill"/>
+          <rect x="488" y="296" width="4" height="124" class="purple-fill"/>
+          <rect x="572" y="296" width="4" height="408" class="purple-fill"/>
+          <rect x="584" y="296" width="4" height="408" class="purple-fill"/>
+          <rect x="124" y="300" width="12" height="404" class="purple-fill"/>
+          <rect x="220" y="300" width="4" height="120" class="purple-fill"/>
+          <rect x="268" y="300" width="16" height="4" class="purple-fill"/>
+          <rect x="424" y="300" width="16" height="4" class="purple-fill"/>
+          <rect x="484" y="300" width="4" height="120" class="purple-fill"/>
+          <rect x="576" y="300" width="8" height="404" class="purple-fill"/>
+          <rect x="224" y="304" width="4" height="116" class="purple-fill"/>
+          <rect x="272" y="304" width="12" height="4" class="purple-fill"/>
+          <rect x="424" y="304" width="12" height="4" class="purple-fill"/>
+          <rect x="480" y="304" width="4" height="116" class="purple-fill"/>
+          <rect x="228" y="308" width="4" height="112" class="purple-fill"/>
+          <rect x="276" y="308" width="8" height="4" class="purple-fill"/>
+          <rect x="424" y="308" width="8" height="4" class="purple-fill"/>
+          <rect x="476" y="308" width="4" height="112" class="purple-fill"/>
+          <rect x="232" y="312" width="4" height="108" class="purple-fill"/>
+          <rect x="280" y="312" width="4" height="4" class="purple-fill"/>
+          <rect x="424" y="312" width="4" height="4" class="purple-fill"/>
+          <rect x="472" y="312" width="4" height="108" class="purple-fill"/>
+          <rect x="236" y="316" width="4" height="104" class="purple-fill"/>
+          <rect x="408" y="320" width="12" height="4" class="purple-fill"/>
+          <rect x="468" y="320" width="4" height="100" class="purple-fill"/>
+          <rect x="240" y="324" width="4" height="96" class="purple-fill"/>
+          <rect x="292" y="324" width="24" height="4" class="purple-fill"/>
+          <rect x="408" y="324" width="8" height="4" class="purple-fill"/>
+          <rect x="464" y="324" width="4" height="96" class="purple-fill"/>
+          <rect x="244" y="328" width="4" height="92" class="purple-fill"/>
+          <rect x="296" y="328" width="20" height="4" class="purple-fill"/>
+          <rect x="408" y="328" width="4" height="4" class="purple-fill"/>
+          <rect x="460" y="328" width="4" height="92" class="purple-fill"/>
+          <rect x="248" y="332" width="4" height="88" class="purple-fill"/>
+          <rect x="300" y="332" width="16" height="4" class="purple-fill"/>
+          <rect x="456" y="332" width="4" height="88" class="purple-fill"/>
+          <rect x="252" y="336" width="4" height="84" class="purple-fill"/>
+          <rect x="304" y="336" width="12" height="4" class="purple-fill"/>
+          <rect x="372" y="336" width="32" height="4" class="purple-fill"/>
+          <rect x="452" y="336" width="4" height="84" class="purple-fill"/>
+          <rect x="256" y="340" width="4" height="80" class="purple-fill"/>
+          <rect x="308" y="340" width="8" height="4" class="purple-fill"/>
+          <rect x="372" y="340" width="28" height="4" class="purple-fill"/>
+          <rect x="448" y="340" width="4" height="80" class="purple-fill"/>
+          <rect x="260" y="344" width="4" height="76" class="purple-fill"/>
+          <rect x="312" y="344" width="4" height="4" class="purple-fill"/>
+          <rect x="372" y="344" width="24" height="4" class="purple-fill"/>
+          <rect x="444" y="344" width="4" height="76" class="purple-fill"/>
+          <rect x="264" y="348" width="4" height="72" class="purple-fill"/>
+          <rect x="372" y="348" width="20" height="4" class="purple-fill"/>
+          <rect x="440" y="348" width="4" height="72" class="purple-fill"/>
+          <rect x="268" y="352" width="4" height="68" class="purple-fill"/>
+          <rect x="372" y="352" width="16" height="68" class="purple-fill"/>
+          <rect x="436" y="352" width="4" height="68" class="purple-fill"/>
+          <rect x="272" y="356" width="4" height="64" class="purple-fill"/>
+          <rect x="432" y="356" width="4" height="64" class="purple-fill"/>
+          <rect x="276" y="360" width="4" height="60" class="purple-fill"/>
+          <rect x="428" y="360" width="4" height="60" class="purple-fill"/>
+          <rect x="280" y="364" width="4" height="56" class="purple-fill"/>
+          <rect x="424" y="364" width="4" height="56" class="purple-fill"/>
+          <rect x="284" y="368" width="4" height="52" class="purple-fill"/>
+          <rect x="420" y="368" width="4" height="52" class="purple-fill"/>
+          <rect x="288" y="372" width="4" height="48" class="purple-fill"/>
+          <rect x="416" y="372" width="4" height="48" class="purple-fill"/>
+          <rect x="292" y="376" width="4" height="44" class="purple-fill"/>
+          <rect x="412" y="376" width="4" height="44" class="purple-fill"/>
+          <rect x="296" y="380" width="4" height="40" class="purple-fill"/>
+          <rect x="408" y="380" width="4" height="40" class="purple-fill"/>
+          <rect x="300" y="384" width="4" height="36" class="purple-fill"/>
+          <rect x="404" y="384" width="4" height="36" class="purple-fill"/>
+          <rect x="304" y="388" width="4" height="32" class="purple-fill"/>
+          <rect x="336" y="388" width="4" height="32" class="purple-fill"/>
+          <rect x="368" y="388" width="4" height="32" class="purple-fill"/>
+          <rect x="308" y="392" width="4" height="28" class="purple-fill"/>
+          <rect x="340" y="392" width="28" height="28" class="purple-fill"/>
+          <rect x="400" y="392" width="4" height="28" class="purple-fill"/>
+          <rect x="312" y="396" width="8" height="24" class="purple-fill"/>
+          <rect x="388" y="396" width="12" height="24" class="purple-fill"/>
+          <rect x="152" y="420" width="16" height="284" class="purple-fill"/>
+          <rect x="552" y="420" width="8" height="284" class="purple-fill"/>
+          <rect x="168" y="448" width="12" height="256" class="purple-fill"/>
+          <rect x="540" y="448" width="12" height="256" class="purple-fill"/>
+          <rect x="180" y="452" width="16" height="252" class="purple-fill"/>
+          <rect x="528" y="452" width="12" height="252" class="purple-fill"/>
+          <rect x="196" y="456" width="12" height="248" class="purple-fill"/>
+          <rect x="516" y="456" width="12" height="248" class="purple-fill"/>
+          <rect x="208" y="460" width="16" height="244" class="purple-fill"/>
+          <rect x="504" y="460" width="12" height="244" class="purple-fill"/>
+          <rect x="224" y="464" width="12" height="240" class="purple-fill"/>
+          <rect x="492" y="464" width="12" height="240" class="purple-fill"/>
+          <rect x="236" y="468" width="12" height="92" class="purple-fill"/>
+          <rect x="484" y="468" width="8" height="236" class="purple-fill"/>
+          <rect x="248" y="472" width="8" height="88" class="purple-fill"/>
+          <rect x="472" y="472" width="12" height="92" class="purple-fill"/>
+          <rect x="256" y="476" width="8" height="80" class="purple-fill"/>
+          <rect x="460" y="476" width="12" height="84" class="purple-fill"/>
+          <rect x="264" y="480" width="4" height="72" class="purple-fill"/>
+          <rect x="452" y="480" width="8" height="76" class="purple-fill"/>
+          <rect x="268" y="484" width="4" height="64" class="purple-fill"/>
+          <rect x="448" y="484" width="4" height="68" class="purple-fill"/>
+          <rect x="444" y="488" width="4" height="64" class="purple-fill"/>
+          <rect x="272" y="492" width="4" height="52" class="purple-fill"/>
+          <rect x="440" y="492" width="4" height="56" class="purple-fill"/>
+          <rect x="276" y="500" width="4" height="32" class="purple-fill"/>
+          <rect x="436" y="500" width="4" height="40" class="purple-fill"/>
+          <rect x="432" y="512" width="4" height="16" class="purple-fill"/>
+          <rect x="456" y="556" width="4" height="4" class="purple-fill"/>
+          <rect x="236" y="560" width="8" height="4" class="purple-fill"/>
+          <rect x="468" y="560" width="4" height="4" class="purple-fill"/>
+          <rect x="476" y="564" width="8" height="140" class="purple-fill"/>
+          <rect x="344" y="572" width="24" height="132" class="purple-fill"/>
+          <rect x="328" y="576" width="16" height="128" class="purple-fill"/>
+          <rect x="368" y="576" width="16" height="128" class="purple-fill"/>
+          <rect x="316" y="580" width="12" height="124" class="purple-fill"/>
+          <rect x="384" y="580" width="12" height="124" class="purple-fill"/>
+          <rect x="308" y="584" width="8" height="120" class="purple-fill"/>
+          <rect x="396" y="584" width="8" height="120" class="purple-fill"/>
+          <rect x="300" y="588" width="8" height="116" class="purple-fill"/>
+          <rect x="404" y="588" width="8" height="116" class="purple-fill"/>
+          <rect x="236" y="592" width="64" height="112" class="purple-fill"/>
+          <rect x="412" y="592" width="64" height="112" class="purple-fill"/>
+          <rect x="52" y="680" width="4" height="4" class="purple-fill"/>
+          <rect x="84" y="696" width="4" height="4" class="purple-fill"/>
+        </svg>
+      </div>
     <span class="brand-name">TriForge</span>
     <span class="brand-sub">三元锻造</span>
   </div>
@@ -1747,9 +2413,45 @@
     </div>
   </div>
 
-  <!-- ============ MIDDLE: DETAIL ============ -->
+  <!-- ============ MIDDLE: DASHBOARD / DETAIL ============ -->
   <div class="col col-mid" id="detail-col">
-    <div class="empty-state" id="empty-detail">
+    <!-- Dashboard (shown by default) -->
+    <div id="dashboard-root">
+      <div class="dash-header">
+        <h1 class="dash-title">Overview</h1>
+        <div class="dash-header-right">
+          <div class="dash-period-tabs" id="period-tabs">
+            <button class="period-tab active" data-period="today" data-i18n="Today">Today</button>
+            <button class="period-tab" data-period="week" data-i18n="This Week">This Week</button>
+            <button class="period-tab" data-period="month" data-i18n="This Month">This Month</button>
+          </div>
+          <button class="btn btn-sm" id="dash-refresh" title="Refresh">
+            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Summary cards -->
+      <div class="dash-summary" id="dash-summary"></div>
+
+      <!-- Per-model time period stats -->
+      <div class="dash-section">
+        <h2 class="dash-section-title">Token Usage by Model</h2>
+        <div id="dash-model-stats"></div>
+      </div>
+
+      <!-- Project list -->
+      <div class="dash-section">
+        <div class="dash-section-head">
+          <h2 class="dash-section-title">Projects</h2>
+          <span class="dash-section-subtitle" id="dash-project-count"></span>
+        </div>
+        <div id="dash-project-list"></div>
+      </div>
+    </div>
+
+    <!-- Empty state (no run selected) -->
+    <div class="empty-state" id="empty-detail" style="display: none;">
       <div class="empty-icon">
         <svg class="icon-lg" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:32px;height:32px;stroke-width:1.5;">
           <rect x="3" y="3" width="18" height="18" rx="2"/>
@@ -1764,7 +2466,7 @@
       </button>
     </div>
 
-    <!-- Detail (filled by JS) -->
+    <!-- Detail (filled by JS when a run is clicked) -->
     <div id="detail-root" style="display: none;"></div>
 
     <!-- Keyboard hints strip (always visible) -->
@@ -1902,182 +2604,305 @@
 <div id="settings-panel" style="display:none;" class="settings-panel">
   <div class="settings-container">
     <div class="settings-header">
-      <h2 class="settings-title">Settings</h2>
-      <p class="settings-subtitle">Configure providers, roles, and pipeline parameters</p>
+      <h2 class="settings-title" data-i18n="Settings">Settings</h2>
+      <p class="settings-subtitle" data-i18n="Configure providers, roles, and pipeline parameters">Configure providers, roles, and pipeline parameters</p>
     </div>
 
-    <!-- API Key Help -->
-    <div class="api-help">
-      <h3>🔑 Getting API Keys</h3>
-      <p><strong>Need API keys? Get them here:</strong></p>
-      <ul>
-        <li><strong>MiniMax:</strong> <a href="https://api.minimaxi.com" target="_blank">https://api.minimaxi.com</a></li>
-        <li><strong>DeepSeek:</strong> <a href="https://platform.deepseek.com" target="_blank">https://platform.deepseek.com</a></li>
-      </ul>
-      <p><strong>💡 Tip:</strong> If you leave API keys empty, the system will show common models as fallback options.</p>
-    </div>
-
-    <!-- Section A: Providers -->
-    <div class="settings-section">
-      <div class="settings-section-head">
-        <div class="section-title">
+    <div class="settings-layout">
+      <!-- Left Sidebar: Categories -->
+      <div class="settings-sidebar">
+        <div class="settings-category" data-category="general">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          <span data-i18n="General">General</span>
+        </div>
+        <div class="settings-category active" data-category="providers">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
-          Providers
+          <span data-i18n="API Providers">API Providers</span>
         </div>
-        <button class="btn" id="settings-add-provider">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14"/></svg>
-          Add Provider
-        </button>
-      </div>
-      <div id="settings-providers-list"></div>
-    </div>
-
-    <!-- Section B: Roles -->
-    <div class="settings-section">
-      <div class="settings-section-head">
-        <div class="section-title">
+        <div class="settings-category" data-category="roles">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          Roles
+          <span data-i18n="Agent Roles">Agent Roles</span>
         </div>
-      </div>
-      <div id="settings-roles-list"></div>
-    </div>
-
-    <!-- Section C: Pipeline Parameters -->
-    <div class="settings-section">
-      <div class="settings-section-head">
-        <div class="section-title">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-          Pipeline Parameters
+        <div class="settings-category" data-category="pipeline">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span data-i18n="Pipeline Parameters">Pipeline Parameters</span>
         </div>
-      </div>
-      <div id="settings-pipeline-list"></div>
-    </div>
-
-    <!-- Section D: Approval -->
-    <div class="settings-section">
-      <div class="settings-section-head">
-        <div class="section-title">
+        <div class="settings-category" data-category="approval">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-          Approval
+          <span data-i18n="Approval Settings">Approval Settings</span>
         </div>
-      </div>
-      <div id="settings-approval-content"></div>
-    </div>
-
-    <!-- Section E: Notifications (SNS dispatch) -->
-    <div class="settings-section">
-      <div class="settings-section-head">
-        <div class="section-title">
+        <div class="settings-category" data-category="notifications">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-          Notifications  ·  飞书/企微/钉钉/Telegram
+          <span data-i18n="Notifications">Notifications</span>
         </div>
-        <button class="btn" id="settings-add-channel">
-          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14"/></svg>
-          Add Channel
-        </button>
-      </div>
-      <div id="settings-channels-list"></div>
-      <details class="notif-history-block">
-        <summary>最近 50 条推送记录</summary>
-        <div id="notif-history" class="notif-history"></div>
-      </details>
-    </div>
-
-    <!-- Section D: Version Control -->
-    <div class="settings-section">
-      <div class="settings-section-head">
-        <div class="section-title">
+        <div class="settings-category" data-category="version-control">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6"/><path d="M23 12h-6"/></svg>
-          Version Control
+          <span data-i18n="Version Control">Version Control</span>
         </div>
       </div>
-      <div id="version-control-content">
-        <div class="version-control-overview">
-          <p>Configure version control platforms to push and pull projects from GitHub, Gitee, GitLab, or custom Git servers.</p>
+
+      <!-- Middle Content: Settings -->
+      <div class="settings-content">
+        <!-- General Content -->
+        <div id="general-content" class="settings-content-section">
+          <div class="settings-section">
+            <div class="settings-section-head">
+              <div class="section-title">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                <span data-i18n="General">General</span>
+              </div>
+            </div>
+            <div id="settings-general-content">
+              <div class="settings-card">
+                <div class="settings-card-head">
+                  <span class="settings-card-title" data-i18n="Language">Language</span>
+                </div>
+                <div class="settings-grid">
+                  <div class="settings-field full">
+                    <label>Language / 语言</label>
+                    <select id="settings-language-select" style="max-width: 240px;">
+                      <option value="zh-CN">中文（简体）</option>
+                      <option value="en">English</option>
+                    </select>
+                    <div class="settings-help">
+                      <p class="text-sm text-muted">Display language for the interface / 界面显示语言</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Providers Content -->
+        <div id="providers-content" class="settings-content-section active">
+          <div class="settings-section">
+            <div class="settings-section-head">
+              <div class="section-title">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                <span data-i18n="API Providers">API Providers</span>
+              </div>
+              <button class="btn" id="settings-add-provider">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14"/></svg>
+                <span data-i18n="Add Provider">Add Provider</span>
+              </button>
+            </div>
+            <div id="settings-providers-list"></div>
+          </div>
+        </div>
+
+        <!-- Roles Content -->
+        <div id="roles-content" class="settings-content-section">
+          <div class="settings-section">
+            <div class="settings-section-head">
+              <div class="section-title">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <span data-i18n="Agent Roles">Agent Roles</span>
+              </div>
+            </div>
+            <div id="settings-roles-list"></div>
+          </div>
+        </div>
+
+        <!-- Pipeline Content -->
+        <div id="pipeline-content" class="settings-content-section">
+          <div class="settings-section">
+            <div class="settings-section-head">
+              <div class="section-title">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                <span data-i18n="Pipeline Parameters">Pipeline Parameters</span>
+              </div>
+            </div>
+            <div id="settings-pipeline-list"></div>
+          </div>
+        </div>
+
+        <!-- Approval Content -->
+        <div id="approval-content" class="settings-content-section">
+          <div class="settings-section">
+            <div class="settings-section-head">
+              <div class="section-title">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                <span data-i18n="Approval Settings">Approval Settings</span>
+              </div>
+            </div>
+            <div id="settings-approval-content"></div>
+          </div>
+        </div>
+
+        <!-- Notifications Content -->
+        <div id="notifications-content" class="settings-content-section">
+          <div class="settings-section">
+            <div class="settings-section-head">
+              <div class="section-title">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                <span data-i18n="Notifications">Notifications</span>
+              </div>
+              <button class="btn" id="settings-add-channel">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14"/></svg>
+                <span data-i18n="Add Channel">Add Channel</span>
+              </button>
+            </div>
+            <div id="settings-channels-list"></div>
+            <details class="notif-history-block">
+              <summary>最近 50 条推送记录</summary>
+              <div id="notif-history" class="notif-history"></div>
+            </details>
+          </div>
+        </div>
+
+        <!-- Version Control Content -->
+        <div id="version-control-content" class="settings-content-section">
+          <div class="settings-section">
+            <div class="settings-section-head">
+              <div class="section-title">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6"/><path d="M23 12h-6"/></svg>
+                <span data-i18n="Version Control">Version Control</span>
+              </div>
+            </div>
+            <div class="version-control-overview">
+              <p data-i18n="Configure version control platforms to push and pull projects from GitHub, Gitee, GitLab, or custom Git servers.">Configure version control platforms to push and pull projects from GitHub, Gitee, GitLab, or custom Git servers.</p>
+            </div>
+            
+            <!-- Platform Configuration -->
+            <div class="settings-card">
+              <div class="settings-card-head">
+                <span class="settings-card-title" data-i18n="Platform Configuration">Platform Configuration</span>
+              </div>
+              <div class="settings-grid">
+                <div class="settings-field">
+                  <label data-i18n="Platform">Platform</label>
+                  <select id="vc-platform-select">
+                    <option value="github">GitHub</option>
+                    <option value="gitee">Gitee</option>
+                    <option value="gitlab">GitLab</option>
+                    <option value="custom_git">Custom Git</option>
+                  </select>
+                </div>
+                <div class="settings-field">
+                  <label data-i18n="Authentication Token">Authentication Token</label>
+                  <input type="password" id="vc-auth-token" placeholder="Enter your API token">
+                </div>
+                <div class="settings-field">
+                  <label data-i18n="Username (Optional)">Username (Optional)</label>
+                  <input type="text" id="vc-username" placeholder="Your username">
+                </div>
+                <div class="settings-field">
+                  <label data-i18n="Email (Optional)">Email (Optional)</label>
+                  <input type="email" id="vc-email" placeholder="your@email.com">
+                </div>
+                <div class="settings-field" id="vc-git-url-field" style="display: none;">
+                  <label data-i18n="Git URL">Git URL</label>
+                  <input type="text" id="vc-git-url" placeholder="https://your-git-server.com">
+                </div>
+              </div>
+              <div class="settings-actions">
+                <button class="btn" id="vc-test-connection"><span data-i18n="Test Connection">Test Connection</span></button>
+                <button class="btn btn-primary" id="vc-save-platform"><span data-i18n="Save Platform">Save Platform</span></button>
+              </div>
+            </div>
+
+            <!-- Repository Management -->
+            <div class="settings-card">
+              <div class="settings-card-head">
+                <span class="settings-card-title" data-i18n="Repository Management">Repository Management</span>
+                <button class="btn" id="vc-add-repository">
+                  <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14"/></svg>
+                  <span data-i18n="Add Repository">Add Repository</span>
+                </button>
+              </div>
+              <div id="vc-repositories-list"></div>
+            </div>
+
+            <!-- Project Operations -->
+            <div class="settings-card">
+              <div class="settings-card-head">
+                <span class="settings-card-title" data-i18n="Project Operations">Project Operations</span>
+              </div>
+              <div class="settings-grid">
+                <div class="settings-field">
+                  <label data-i18n="Repository">Repository</label>
+                  <select id="vc-repo-select">
+                    <option value="">Select a repository</option>
+                  </select>
+                </div>
+                <div class="settings-field">
+                  <label data-i18n="Commit Message">Commit Message</label>
+                  <input type="text" id="vc-commit-message" placeholder="TriForge auto push" value="TriForge auto push">
+                </div>
+              </div>
+              <div class="settings-actions">
+                <button class="btn" id="vc-push-project"><span data-i18n="Push Project">Push Project</span></button>
+                <button class="btn" id="vc-pull-project"><span data-i18n="Pull Project">Pull Project</span></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Sidebar: Help & Tips -->
+      <div class="settings-help">
+        <div class="help-content" id="providers-help">
+          <h3>🔑 Getting API Keys</h3>
+          <p><strong>Need API keys? Get them here:</strong></p>
+          <ul>
+            <li><strong>MiniMax:</strong> <a href="https://api.minimaxi.com" target="_blank">https://api.minimaxi.com</a></li>
+            <li><strong>DeepSeek:</strong> <a href="https://platform.deepseek.com" target="_blank">https://platform.deepseek.com</a></li>
+          </ul>
+          <p><strong>💡 Tip:</strong> If you leave API keys empty, the system will show common models as fallback options.</p>
         </div>
         
-        <!-- Platform Configuration -->
-        <div class="settings-card">
-          <div class="settings-card-head">
-            <span class="settings-card-title">Platform Configuration</span>
-          </div>
-          <div class="settings-grid">
-            <div class="settings-field">
-              <label>Platform</label>
-              <select id="vc-platform-select">
-                <option value="github">GitHub</option>
-                <option value="gitee">Gitee</option>
-                <option value="gitlab">GitLab</option>
-                <option value="custom_git">Custom Git</option>
-              </select>
-            </div>
-            <div class="settings-field">
-              <label>Authentication Token</label>
-              <input type="password" id="vc-auth-token" placeholder="Enter your API token">
-            </div>
-            <div class="settings-field">
-              <label>Username (Optional)</label>
-              <input type="text" id="vc-username" placeholder="Your username">
-            </div>
-            <div class="settings-field">
-              <label>Email (Optional)</label>
-              <input type="email" id="vc-email" placeholder="your@email.com">
-            </div>
-            <div class="settings-field" id="vc-git-url-field" style="display: none;">
-              <label>Git URL</label>
-              <input type="text" id="vc-git-url" placeholder="https://your-git-server.com">
-            </div>
-          </div>
-          <div class="settings-actions">
-            <button class="btn" id="vc-test-connection">Test Connection</button>
-            <button class="btn btn-primary" id="vc-save-platform">Save Platform</button>
-          </div>
-        </div>
-
-        <!-- Repository Management -->
-        <div class="settings-card">
-          <div class="settings-card-head">
-            <span class="settings-card-title">Repository Management</span>
-            <button class="btn" id="vc-add-repository">
-              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14"/></svg>
-              Add Repository
-            </button>
-          </div>
-          <div id="vc-repositories-list"></div>
-        </div>
-
-        <!-- Project Operations -->
-        <div class="settings-card">
-          <div class="settings-card-head">
-            <span class="settings-card-title">Project Operations</span>
-          </div>
-          <div class="settings-grid">
-            <div class="settings-field">
-              <label>Repository</label>
-              <select id="vc-repo-select">
-                <option value="">Select a repository</option>
-              </select>
-            </div>
-            <div class="settings-field">
-              <label>Commit Message</label>
-              <input type="text" id="vc-commit-message" placeholder="TriForge auto push" value="TriForge auto push">
-            </div>
-          </div>
-          <div class="settings-actions">
-            <button class="btn" id="vc-push-project">Push Project</button>
-            <button class="btn" id="vc-pull-project">Pull Project</button>
-          </div>
-        </div>
-
-        <!-- Platform Help -->
-        <div class="api-help">
-          <h3>🔑 Getting API Tokens</h3>
-          <p><strong>Need API tokens? Get them here:</strong></p>
+        <div class="help-content" id="roles-help">
+          <h3>📝 Agent Roles Configuration</h3>
+          <p><strong>Configure agent roles:</strong></p>
           <ul>
-            <li><strong>GitHub:</strong> <a href="https://github.com/settings/tokens" target="_blank">GitHub Personal Access Tokens</a></li>
-            <li><strong>Gitee:</strong> <a href="https://gitee.com/profile/personal_access_tokens" target="_blank">Gitee Personal Access Tokens</a></li>
-            <li><strong>GitLab:</strong> <a href="https://gitlab.com/-/profile/personal_access_tokens" target="_blank">GitLab Personal Access Tokens</a></li>
+            <li>Set display name for each role</li>
+            <li>Select provider for each role</li>
+            <li>Choose model from available options</li>
+            <li>Customize system prompts</li>
+          </ul>
+          <p><strong>💡 Tip:</strong> Models can be fetched directly from providers using the "Get Models" button.</p>
+        </div>
+        
+        <div class="help-content" id="pipeline-help">
+          <h3>⚙️ Pipeline Parameters</h3>
+          <p><strong>Configure pipeline parameters:</strong></p>
+          <ul>
+            <li>Max steps for each pipeline phase</li>
+            <li>Temperature settings</li>
+            <li>Max tokens limits</li>
+          </ul>
+          <p><strong>💡 Tip:</strong> Adjust these parameters to control the behavior of your AI pipeline.</p>
+        </div>
+        
+        <div class="help-content" id="approval-help">
+          <h3>🔒 Approval Settings</h3>
+          <p><strong>Configure auto-approval paths:</strong></p>
+          <ul>
+            <li>Set working paths for auto-approval</li>
+            <li>Remember approved files</li>
+          </ul>
+          <p><strong>💡 Tip:</strong> Use this to automatically approve writes to specific paths.</p>
+        </div>
+        
+        <div class="help-content" id="notifications-help">
+          <h3>📢 Notifications</h3>
+          <p><strong>Configure notification channels:</strong></p>
+          <ul>
+            <li>Add Feishu/DingTalk/WeChat/Telegram channels</li>
+            <li>Choose notification modes</li>
+            <li>Test channel connectivity</li>
+          </ul>
+          <p><strong>💡 Tip:</strong> Use simple mode for key events, complex mode for real-time updates.</p>
+        </div>
+        
+        <div class="help-content" id="version-control-help">
+          <h3>📦 Version Control</h3>
+          <p><strong>Configure version control:</strong></p>
+          <ul>
+            <li>Set up GitHub/Gitee/GitLab accounts</li>
+            <li>Create repositories</li>
+            <li>Push/pull projects</li>
           </ul>
           <p><strong>💡 Tip:</strong> Use tokens with 'repo' scope for full repository access.</p>
         </div>
@@ -2088,11 +2913,11 @@
     <div class="settings-actions">
       <button class="btn" id="settings-reset">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-        Reset to Defaults
+        <span data-i18n="Reset">Reset</span>
       </button>
       <button class="btn btn-primary" id="settings-save">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1-2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-        Save Settings
+        <span data-i18n="Save">Save</span>
       </button>
     </div>
   </div>
@@ -2102,7 +2927,7 @@
 <div class="modal-bg" id="modal-bg" style="display: none;">
   <div class="modal">
     <div class="modal-head">
-      <div class="modal-title">New Task</div>
+      <div class="modal-title" data-i18n="New Task">New Task</div>
       <button class="icon-btn" id="modal-close">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
@@ -2127,6 +2952,7 @@
         </div>
         <div class="wp-input-row">
           <input class="form-input" id="modal-wp-input" type="text" placeholder="e.g. src/, tests/, design/architecture.md" />
+          <button class="btn" id="modal-wp-browse" type="button" title="Browse file system">Browse</button>
           <button class="btn" id="modal-wp-add" type="button">Add</button>
         </div>
         <div class="wp-chips" id="modal-wp-chips"></div>
@@ -2148,6 +2974,8 @@
       <button class="btn btn-primary" id="modal-submit">Start Run</button>
     </div>
   </div>
+  <!-- Hidden file input for directory selection -->
+  <input type="file" id="modal-wp-file-input" style="display: none;" webkitdirectory directory />
 </div>
 
 <!-- ====================== ITERATION MODAL ====================== -->
@@ -2249,6 +3077,16 @@
   .wp-input-row { display: flex; gap: 6px; }
   .wp-input-row .form-input { flex: 1; }
   .wp-input-row .btn { white-space: nowrap; }
+  .wp-input-row #modal-wp-browse {
+    background: var(--bg-elev-2);
+    border-color: var(--border);
+    color: var(--text-dim);
+  }
+  .wp-input-row #modal-wp-browse:hover {
+    background: var(--bg-hover);
+    border-color: var(--border-strong);
+    color: var(--text);
+  }
   .wp-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; min-height: 4px; }
 
   /* ---- Personal WeChat pair wizard ---- */
@@ -2419,6 +3257,425 @@ const ThemeManager = {
 };
 
 // ====================== DASHBOARD APP ======================
+// I18n dictionary
+const _t = {
+  en: {
+    // General UI
+    'Settings': 'Settings',
+    'Configure providers, roles, and pipeline parameters': 'Configure providers, roles, and pipeline parameters',
+    'General': 'General',
+    'API Providers': 'API Providers',
+    'Agent Roles': 'Agent Roles',
+    'Pipeline Parameters': 'Pipeline Parameters',
+    'Approval Settings': 'Approval Settings',
+    'Notifications': 'Notifications',
+    'Version Control': 'Version Control',
+    'Language': 'Language',
+    'Display language for the interface': 'Display language for the interface',
+    'Save': 'Save',
+    'Reset': 'Reset',
+    // Dashboard
+    'Total runs': 'Total runs',
+    'Awaiting': 'Awaiting',
+    'Awaiting Approval': 'Awaiting Approval',
+    'Awaiting New Requirement': 'Awaiting New Requirement',
+    '提需求': '提需求',
+    'Running': 'Running',
+    'Completed': 'Completed',
+    'Failed': 'Failed',
+    'Paused': 'Paused',
+    'No active runs': 'No active runs',
+    'No history': 'No history',
+    'Projects': 'Projects',
+    'Total Tokens': 'Total Tokens',
+    'Total Cost': 'Total Cost',
+    'Avg Duration': 'Avg Duration',
+    'Failure Rate': 'Failure Rate',
+    'active': 'active',
+    'done': 'done',
+    'completed runs': 'completed runs',
+    'runs': 'runs',
+    'in': 'in',
+    'out': 'out',
+    'total': 'total',
+    'tokens': 'tokens',
+    'cost': 'cost',
+    'duration': 'duration',
+    // Dashboard - model stats
+    'Model': 'Model',
+    'Type': 'Type',
+    'Runs': 'Runs',
+    'Tokens In': 'Tokens In',
+    'Tokens Out': 'Tokens Out',
+    'Token Plan': 'Token Plan',
+    'Per-Token': 'Per-Token',
+    'N/A': 'N/A',
+    'Showing': 'Showing',
+    'models across': 'models across',
+    'run(s) in the selected period.': 'run(s) in the selected period.',
+    'No model usage data for this period.': 'No model usage data for this period.',
+    'No projects yet. Start a new task!': 'No projects yet. Start a new task!',
+    'Click to view details': 'Click to view details',
+    'Today': 'Today',
+    'This Week': 'This Week',
+    'This Month': 'This Month',
+    // All runs view
+    'All runs': 'All runs',
+    'Click any row to inspect.': 'Click any row to inspect.',
+    'total.': 'total.',
+    'All': 'All',
+    'New Req': 'New Req',
+    'Interrupted': 'Interrupted',
+    'Cancelled': 'Cancelled',
+    'No runs match this filter.': 'No runs match this filter.',
+    // Run cards
+    'Phase': 'Phase',
+    'done': 'done',
+    'tok': 'tok',
+    'Token usage': 'Token usage',
+    // Detail view
+    'Active Runs': 'Active Runs',
+    'started': 'started',
+    'Loading...': 'Loading...',
+    'Connecting...': 'Connecting...',
+    'No run selected': 'No run selected',
+    'Live events will stream here when a run is selected.': 'Live events will stream here when a run is selected.',
+    'No files yet': 'No files yet',
+    'approved': 'approved',
+    'awaiting': 'awaiting',
+    'Approval required': 'Approval required',
+    'Agent wants to write a file': 'Agent wants to write a file',
+    'Tool': 'Tool',
+    'Path': 'Path',
+    'Size': 'Size',
+    'Working paths': 'Working paths',
+    'Already approved': 'Already approved',
+    'Reject': 'Reject',
+    'Modify': 'Modify',
+    'Approve': 'Approve',
+    'Force Stop': 'Force Stop',
+    'Cancel': 'Cancel',
+    'Continue': 'Continue',
+    'Delete': 'Delete',
+    'Resume': 'Resume',
+    'No requirement': 'No requirement',
+    // Settings - Providers
+    'Provider Name': 'Provider Name',
+    'API Key': 'API Key',
+    'sk-... or leave blank to use env var': 'sk-... or leave blank to use env var',
+    'Env Var Fallback': 'Env Var Fallback',
+    'e.g. OPENAI_API_KEY': 'e.g. OPENAI_API_KEY',
+    'Base URL': 'Base URL',
+    'https://api.example.com/v1': 'https://api.example.com/v1',
+    'Remove': 'Remove',
+    'Add Provider': 'Add Provider',
+    // Settings - Roles
+    'Display Name': 'Display Name',
+    'Provider': 'Provider',
+    'Select a model...': 'Select a model...',
+    'Get Models': 'Get Models',
+    'System Prompt': 'System Prompt',
+    'Token Plan': 'Token Plan',
+    'Enable for models with token-plan pricing (no per-token cost, only usage tracking)': 'Enable for models with token-plan pricing (no per-token cost, only usage tracking)',
+    // Settings - Pipeline
+    'Max Steps': 'Max Steps',
+    'Temperature': 'Temperature',
+    'Max Tokens': 'Max Tokens',
+    // Settings - Approval
+    'Working Paths': 'Working Paths',
+    'Path prefixes where writes are auto-approved (relative to workspace root).': 'Path prefixes where writes are auto-approved (relative to workspace root).',
+    'Add Path': 'Add Path',
+    'Remember approved files within a run': 'Remember approved files within a run',
+    'e.g. src/': 'e.g. src/',
+    'Remove path': 'Remove path',
+    // Settings - Notifications
+    'Add Channel': 'Add Channel',
+    'Test': 'Test',
+    'Delete': 'Delete',
+    'Platform': 'Platform',
+    'Mode': 'Mode',
+    'Simple - only completion / failure / approval': 'Simple - only completion / failure / approval',
+    'Complex - all events in real time': 'Complex - all events in real time',
+    // Settings - Version Control
+    'Platform Configuration': 'Platform Configuration',
+    'Repository Management': 'Repository Management',
+    'Project Operations': 'Project Operations',
+    'Authentication Token': 'Authentication Token',
+    'Username (Optional)': 'Username (Optional)',
+    'Email (Optional)': 'Email (Optional)',
+    'Git URL': 'Git URL',
+    'Test Connection': 'Test Connection',
+    'Save Platform': 'Save Platform',
+    'Add Repository': 'Add Repository',
+    'Commit Message': 'Commit Message',
+    'Push Project': 'Push Project',
+    'Pull Project': 'Pull Project',
+    'Select a repository': 'Select a repository',
+    'Configure version control platforms to push and pull projects from GitHub, Gitee, GitLab, or custom Git servers.': 'Configure version control platforms to push and pull projects from GitHub, Gitee, GitLab, or custom Git servers.',
+    // Toasts
+    'Settings saved': 'Settings saved',
+    'Failed to save settings': 'Failed to save settings',
+    'Settings reset to defaults': 'Settings reset to defaults',
+    'Failed to reset settings': 'Failed to reset settings',
+    'Please select a repository': 'Please select a repository',
+    'Project pushed successfully': 'Project pushed successfully',
+    'Failed to push project': 'Failed to push project',
+    'Project pulled successfully': 'Project pulled successfully',
+    'Failed to pull project': 'Failed to pull project',
+    // Iteration modal
+    '提出新需求': '提出新需求',
+    '继续提需求': '继续提需求',
+    '完成': '完成',
+    'today': 'today',
+    'failure rate': 'failure rate',
+    'Total': 'Total',
+    'Cost': 'Cost',
+    '(no req)': '(no req)',
+    'in': 'in',
+    'out': 'out',
+    'active': 'active',
+    'done': 'done',
+    'completed runs': 'completed runs',
+    'runs': 'runs',
+    'Done': 'Done',
+    'Run': 'Run',
+    'none': 'none',
+    'none yet': 'none yet',
+    'phase': 'phase',
+    'skip': 'skip',
+    'Restart from design.': 'Restart from design.',
+    'Skip the {0} phase(s) that already completed; resume from the failed one.': 'Skip the {0} phase(s) that already completed; resume from the failed one.',
+    'Tip: add src/ or tests/ to working paths to stop seeing prompts for files in those directories.': 'Tip: add src/ or tests/ to working paths to stop seeing prompts for files in those directories.',
+    'Design system architecture': 'Design system architecture',
+    'Implement code based on spec': 'Implement code based on spec',
+    'Review architecture compliance': 'Review architecture compliance',
+    'New Task': 'New Task',
+    'Repository': 'Repository',
+    'Phase': 'Phase',
+    'tok': 'tok',
+    'Model': 'Model',
+    'Get available models from provider': 'Get available models from provider',
+    'No requirement': 'No requirement',
+    'Failed to load settings': 'Failed to load settings',
+    'Enter provider name (e.g. "openai"):': 'Enter provider name (e.g. "openai"):',
+    'Provider "{0}" already exists': 'Provider "{0}" already exists',
+    'Reset all settings to defaults?': 'Reset all settings to defaults?',
+  },
+  'zh-CN': {
+    // General UI
+    'Settings': '设置',
+    'Configure providers, roles, and pipeline parameters': '配置提供商、角色和流水线参数',
+    'General': '通用',
+    'API Providers': 'API 提供商',
+    'Agent Roles': 'Agent 角色',
+    'Pipeline Parameters': '流水线参数',
+    'Approval Settings': '审批设置',
+    'Notifications': '通知',
+    'Version Control': '版本控制',
+    'Language': '语言',
+    'Display language for the interface': '界面显示语言',
+    'Save': '保存',
+    'Reset': '重置',
+    // Dashboard
+    'Total runs': '总运行数',
+    'Awaiting': '等待审批',
+    'Awaiting Approval': '等待审批',
+    'Awaiting New Requirement': '等待新需求',
+    '提需求': '提需求',
+    'Running': '运行中',
+    'Completed': '已完成',
+    'Failed': '失败',
+    'Paused': '已暂停',
+    'No active runs': '没有活跃的运行',
+    'No history': '没有历史记录',
+    'Projects': '项目数',
+    'Total Tokens': '总 Token 数',
+    'Total Cost': '总费用',
+    'Avg Duration': '平均耗时',
+    'Failure Rate': '失败率',
+    'active': '活跃',
+    'done': '完成',
+    'completed runs': '已完成运行',
+    'runs': '运行',
+    'in': '入',
+    'out': '出',
+    'total': '合计',
+    'tokens': 'tokens',
+    'cost': '费用',
+    'duration': '耗时',
+    // Dashboard - model stats
+    'Model': '模型',
+    'Type': '类型',
+    'Runs': '运行数',
+    'Tokens In': '输入 Tokens',
+    'Tokens Out': '输出 Tokens',
+    'Token Plan': 'Token 计划',
+    'Per-Token': '按 Token',
+    'N/A': 'N/A',
+    'Showing': '显示',
+    'models across': '个模型，共',
+    'run(s) in the selected period.': '个运行（所选时段内）。',
+    'No model usage data for this period.': '该时段无模型使用数据。',
+    'No projects yet. Start a new task!': '暂无项目，开始一个新任务吧！',
+    'Click to view details': '点击查看详情',
+    'Today': '今天',
+    'This Week': '本周',
+    'This Month': '本月',
+    // All runs view
+    'All runs': '所有运行',
+    'Click any row to inspect.': '点击任意行查看详情。',
+    'total.': '总计。',
+    'All': '全部',
+    'New Req': '新需求',
+    'Interrupted': '已中断',
+    'Cancelled': '已取消',
+    'No runs match this filter.': '没有匹配该筛选条件的运行。',
+    // Run cards
+    'Phase': '阶段',
+    'done': '已完成',
+    'tok': 'tok',
+    'Token usage': 'Token 用量',
+    // Detail view
+    'Active Runs': '活跃运行',
+    'started': '开始于',
+    'Loading...': '加载中...',
+    'Connecting...': '连接中...',
+    'No run selected': '未选择运行',
+    'Live events will stream here when a run is selected.': '选择运行后，实时事件将在此显示。',
+    'No files yet': '暂无文件',
+    'approved': '已批准',
+    'awaiting': '待审批',
+    'Approval required': '需要审批',
+    'Agent wants to write a file': 'Agent 想要写入文件',
+    'Tool': '工具',
+    'Path': '路径',
+    'Size': '大小',
+    'Working paths': '工作路径',
+    'Already approved': '已批准',
+    'Reject': '拒绝',
+    'Modify': '修改',
+    'Approve': '批准',
+    'Force Stop': '强制停止',
+    'Cancel': '取消',
+    'Continue': '继续',
+    'Delete': '删除',
+    'Resume': '恢复',
+    'No requirement': '无需求',
+    // Settings - Providers
+    'Provider Name': '提供商名称',
+    'API Key': 'API 密钥',
+    'sk-... or leave blank to use env var': 'sk-... 或留空以使用环境变量',
+    'Env Var Fallback': '环境变量回退',
+    'e.g. OPENAI_API_KEY': '例如 OPENAI_API_KEY',
+    'Base URL': '基础 URL',
+    'https://api.example.com/v1': 'https://api.example.com/v1',
+    'Remove': '移除',
+    'Add Provider': '添加提供商',
+    // Settings - Roles
+    'Display Name': '显示名称',
+    'Provider': '提供商',
+    'Select a model...': '选择一个模型...',
+    'Get Models': '获取模型',
+    'System Prompt': '系统提示词',
+    'Token Plan': 'Token 计划',
+    'Enable for models with token-plan pricing (no per-token cost, only usage tracking)': '为 Token 计划定价的模型启用（不计单 Token 费用，仅跟踪用量）',
+    // Settings - Pipeline
+    'Max Steps': '最大步数',
+    'Temperature': '温度',
+    'Max Tokens': '最大 Tokens',
+    // Settings - Approval
+    'Working Paths': '工作路径',
+    'Path prefixes where writes are auto-approved (relative to workspace root).': '自动批准写入的路径前缀（相对于工作区根目录）。',
+    'Add Path': '添加路径',
+    'Remember approved files within a run': '记住运行中已批准的文件',
+    'e.g. src/': '例如 src/',
+    'Remove path': '移除路径',
+    // Settings - Notifications
+    'Add Channel': '添加通道',
+    'Test': '测试',
+    'Delete': '删除',
+    'Platform': '平台',
+    'Mode': '模式',
+    'Simple - only completion / failure / approval': '简单 — 仅完成 / 错误 / 待审批',
+    'Complex - all events in real time': '复杂 — 全部事件实时推送',
+    // Settings - Version Control
+    'Platform Configuration': '平台配置',
+    'Repository Management': '仓库管理',
+    'Project Operations': '项目操作',
+    'Authentication Token': '认证令牌',
+    'Username (Optional)': '用户名（可选）',
+    'Email (Optional)': '邮箱（可选）',
+    'Git URL': 'Git 地址',
+    'Test Connection': '测试连接',
+    'Save Platform': '保存平台',
+    'Add Repository': '添加仓库',
+    'Commit Message': '提交信息',
+    'Push Project': '推送项目',
+    'Pull Project': '拉取项目',
+    'Select a repository': '选择一个仓库',
+    'Configure version control platforms to push and pull projects from GitHub, Gitee, GitLab, or custom Git servers.': '配置版本控制平台，从 GitHub、Gitee、GitLab 或自定义 Git 服务器推送和拉取项目。',
+    // Toasts
+    'Settings saved': '设置已保存',
+    'Failed to save settings': '保存设置失败',
+    'Settings reset to defaults': '设置已重置为默认值',
+    'Failed to reset settings': '重置设置失败',
+    'Please select a repository': '请选择一个仓库',
+    'Project pushed successfully': '项目推送成功',
+    'Failed to push project': '推送项目失败',
+    'Project pulled successfully': '项目拉取成功',
+    'Failed to pull project': '拉取项目失败',
+    // Iteration modal
+    '提出新需求': '提出新需求',
+    '继续提需求': '继续提需求',
+    '完成': '完成',
+    'today': '今天',
+    'failure rate': '失败率',
+    'Total': '合计',
+    'Cost': '费用',
+    '(no req)': '(无需求)',
+    'in': '入',
+    'out': '出',
+    'active': '活跃',
+    'done': '完成',
+    'completed runs': '已完成运行',
+    'runs': '运行数',
+    'Done': '完成',
+    'Run': '运行',
+    'none': '无',
+    'none yet': '尚无',
+    'phase': '阶段',
+    'skip': '跳过',
+    'Restart from design.': '从设计阶段重新开始。',
+    'Skip the {0} phase(s) that already completed; resume from the failed one.': '跳过已完成 {0} 个阶段，从失败阶段继续。',
+    'Tip: add src/ or tests/ to working paths to stop seeing prompts for files in those directories.': '提示：添加 src/ 或 tests/ 到工作路径可避免这些目录中文件的审批提示。',
+    'Design system architecture': '设计系统架构',
+    'Implement code based on spec': '根据规格实现代码',
+    'Review architecture compliance': '审查架构合规性',
+    'New Task': '新任务',
+    'Repository': '仓库',
+    'Phase': '阶段',
+    'tok': 'tok',
+    'Model': '模型',
+    'Get available models from provider': '从提供商获取可用模型',
+    'No requirement': '无需求',
+    'Failed to load settings': '加载设置失败',
+    'Enter provider name (e.g. "openai"):': '输入提供商名称（例如 "openai"）：',
+    'Provider "{0}" already exists': '提供商 "{0}" 已存在',
+    'Reset all settings to defaults?': '将所有设置重置为默认值？',
+  },
+};
+// __() returns translated string or English fallback
+function __(key) {
+  const lang = App.state ? App.state.language || 'zh-CN' : 'zh-CN';
+  const d = _t[lang] || _t['zh-CN'];
+  return d[key] !== undefined ? d[key] : (_t.en[key] !== undefined ? _t.en[key] : key);
+}
+function __f(key, ...args) {
+  let s = __(key);
+  args.forEach((a, i) => { s = s.replace(new RegExp('\\{' + i + '\\}', 'g'), a); });
+  return s;
+}
+
 const App = {
   // State
   state: {
@@ -2433,12 +3690,24 @@ const App = {
     draftWorkingPaths: [], // user-entered paths in the new-task modal
     nav: 'board',        // 'board' | 'runs' | 'settings'
     allRunsFilter: 'all', // 'all'|'awaiting'|'running'|'failed'|'completed'|'interrupted'|'cancelled'
+    activeSettingsCategory: 'providers', // 'providers' | 'roles' | 'pipeline' | 'approval' | 'notifications' | 'version-control' | 'general'
+    dashboardPeriod: 'today', // 'today' | 'week' | 'month'
+    language: 'zh-CN',     // 'en' | 'zh-CN'
+  },
+
+  // ---- i18n ----
+  applyI18nToDOM() {
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.dataset.i18n;
+      el.textContent = __(key);
+    });
   },
 
   // ---- Init ----
   async init() {
     ThemeManager.init();
     this.bindUI();
+    this.bindSettingsSidebar(); // Bind settings sidebar navigation
     await this.refreshRuns();
     this.startPolling();
   },
@@ -2486,6 +3755,18 @@ const App = {
       }
     });
     document.getElementById('modal-wp-add').addEventListener('click', () => this.addWorkingPathFromInput());
+
+    // Browse button for working paths
+    const browseBtn = document.getElementById('modal-wp-browse');
+    if (browseBtn) {
+      browseBtn.addEventListener('click', () => this.browseWorkingPath());
+    }
+
+    // File input for directory selection
+    const fileInput = document.getElementById('modal-wp-file-input');
+    if (fileInput) {
+      fileInput.addEventListener('change', (e) => this.handleFileSelection(e));
+    }
 
     // Preset chips: click to add a common working path
     document.querySelectorAll('.wp-preset').forEach(btn => {
@@ -2565,6 +3846,27 @@ const App = {
         }
       }
     });
+
+    // Dashboard period tabs
+    document.querySelectorAll('.period-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        const period = tab.dataset.period;
+        if (period) {
+          this.state.dashboardPeriod = period;
+          document.querySelectorAll('.period-tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          this.renderDashboard();
+        }
+      });
+    });
+
+    // Dashboard refresh button
+    const refreshBtn = document.getElementById('dash-refresh');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', () => {
+        this.refreshRuns();
+      });
+    }
   },
 
   isApprovalModalVisible() {
@@ -2611,7 +3913,7 @@ const App = {
     if (this.state.nav === 'runs') {
       this.renderAllRunsView();
     } else {
-      this.renderBoardView();
+      this.renderDashboard();
     }
   },
 
@@ -2621,7 +3923,7 @@ const App = {
     if (el) el.textContent = text;
   },
 
-  renderBoardView() {
+  renderDashboard() {
     const runs = this.state.runs || [];
     const active = runs.filter(r =>
       r.status === 'awaiting_approval' || r.status === 'awaiting_iteration'
@@ -2631,7 +3933,7 @@ const App = {
       r.status === 'completed' || r.status === 'failed' || r.status === 'cancelled'
     );
 
-    // ---- Aggregate stats ----
+    // ---- Left column: stats & run list ----
     const totalRuns = runs.length;
     const awaiting = runs.filter(r => r.status === 'awaiting_approval').length;
     const awaitingIter = runs.filter(r => r.status === 'awaiting_iteration').length;
@@ -2648,36 +3950,36 @@ const App = {
     const statsHTML = `
       <div class="board-stats">
         <div class="stat-tile stat-total">
-          <div class="stat-label">Total runs</div>
+          <div class="stat-label">${__('Total runs')}</div>
           <div class="stat-value num">${totalRuns}</div>
         </div>
         ${awaiting > 0 ? `
-        <div class="stat-tile stat-need-attention" title="Awaiting your approval">
-          <div class="stat-label">Awaiting</div>
+        <div class="stat-tile stat-need-attention" title="${__('Awaiting')}">
+          <div class="stat-label">${__('Awaiting')}</div>
           <div class="stat-value num">${awaiting}</div>
         </div>` : ''}
         ${awaitingIter > 0 ? `
-        <div class="stat-tile stat-need-attention" title="Awaiting your new requirement (post-review iteration prompt)">
-          <div class="stat-label">提需求</div>
+        <div class="stat-tile stat-need-attention" title="${__('提需求')}">
+          <div class="stat-label">${__('提需求')}</div>
           <div class="stat-value num">${awaitingIter}</div>
         </div>` : ''}
         <div class="stat-tile" title="Currently running">
-          <div class="stat-label">Running</div>
+          <div class="stat-label">${__('Running')}</div>
           <div class="stat-value num">${running}</div>
         </div>
         <div class="stat-tile stat-success" title="Completed runs (all time)">
-          <div class="stat-label">Completed</div>
+          <div class="stat-label">${__('Completed')}</div>
           <div class="stat-value num">${completed}</div>
-          <div class="stat-sub">+${completedToday} today</div>
+          <div class="stat-sub">+${completedToday} ${__('today')}</div>
         </div>
         ${failed > 0 ? `
-        <div class="stat-tile stat-failed" title="Failed runs (click All Runs tab for full list)">
-          <div class="stat-label">Failed</div>
+        <div class="stat-tile stat-failed" title="Failed runs">
+          <div class="stat-label">${__('Failed')}</div>
           <div class="stat-value num">${failed}</div>
         </div>` : ''}
         ${interrupted > 0 || cancelled > 0 ? `
         <div class="stat-tile stat-paused" title="Interrupted / cancelled (resumable)">
-          <div class="stat-label">Paused</div>
+          <div class="stat-label">${__('Paused')}</div>
           <div class="stat-value num">${interrupted + cancelled}</div>
         </div>` : ''}
       </div>
@@ -2691,12 +3993,242 @@ const App = {
 
     document.getElementById('active-list').innerHTML =
       active.map(r => this.renderRunCard(r)).join('') ||
-      '<div style="padding: 12px; color: var(--text-faint); font-size: 12px; text-align: center;">No active runs</div>';
+      `<div style="padding: 12px; color: var(--text-faint); font-size: 12px; text-align: center;">${__('No active runs')}</div>`;
     document.getElementById('recent-list').innerHTML =
       recent.slice(0, 10).map(r => this.renderRunCard(r)).join('') ||
-      '<div style="padding: 12px; color: var(--text-faint); font-size: 12px; text-align: center;">No history</div>';
+      `<div style="padding: 12px; color: var(--text-faint); font-size: 12px; text-align: center;">${__('No history')}</div>`;
 
     this.bindRunCardClicks();
+
+    // ---- Dashboard: summary ----
+    const totalTokensIn = runs.reduce((s, r) => s + (r.tokens_in || 0), 0);
+    const totalTokensOut = runs.reduce((s, r) => s + (r.tokens_out || 0), 0);
+    const totalTokens = totalTokensIn + totalTokensOut;
+    const totalCost = runs.reduce((s, r) => s + (r.cost_estimate || 0), 0);
+
+    // Avg duration of completed runs
+    const completedWithTime = runs.filter(r =>
+      r.status === 'completed' && r.created_at && r.updated_at
+    );
+    let avgDuration = null;
+    if (completedWithTime.length > 0) {
+      const totalSecs = completedWithTime.reduce((s, r) =>
+        s + Math.max(0, (r.updated_at || 0) - (r.created_at || 0)), 0);
+      avgDuration = totalSecs / completedWithTime.length;
+    }
+
+    // ---- Per-model stats by selected period ----
+    const selectedPeriod = this.state.dashboardPeriod || 'today';
+    const filteredRuns = this._filterRunsByPeriod(runs, selectedPeriod);
+    const modelStats = this._computeModelStats(filteredRuns);
+
+    // ---- Render summary cards ----
+    document.getElementById('dash-summary').innerHTML = `
+      <div class="dash-summary-card">
+        <div class="dsc-label">${__('Projects')}</div>
+        <div class="dsc-value">${totalRuns}</div>
+        <div class="dsc-sub">${active.length} ${__('active')} &middot; ${completed} ${__('done')}</div>
+      </div>
+      <div class="dash-summary-card">
+        <div class="dsc-label">${__('Total Tokens')}</div>
+        <div class="dsc-value">${totalTokens.toLocaleString()}</div>
+        <div class="dsc-sub">${totalTokensIn.toLocaleString()} ${__('in')} / ${totalTokensOut.toLocaleString()} ${__('out')}</div>
+      </div>
+      <div class="dash-summary-card">
+        <div class="dsc-label">${__('Total Cost')}</div>
+        <div class="dsc-value">&yen;${totalCost.toFixed(4)}</div>
+        <div class="dsc-sub">${completed} ${__('completed runs')}</div>
+      </div>
+      <div class="dash-summary-card">
+        <div class="dsc-label">${__('Avg Duration')}</div>
+        <div class="dsc-value">${avgDuration ? this._formatDurationShort(avgDuration) : '—'}</div>
+        <div class="dsc-sub">${completedWithTime.length} ${__('runs')}</div>
+      </div>
+      <div class="dash-summary-card">
+        <div class="dsc-label">${__('Failed')}</div>
+        <div class="dsc-value" style="color: var(--red);">${failed}</div>
+        <div class="dsc-sub">${totalRuns > 0 ? (failed / totalRuns * 100).toFixed(1) : 0}% ${__('failure rate')}</div>
+      </div>
+    `;
+
+    // ---- Render model stats table ----
+    this._renderModelStatsTable(modelStats, filteredRuns.length);
+
+    // ---- Render project list ----
+    this._renderProjectList(runs);
+
+    // ---- Set project count ----
+    document.getElementById('dash-project-count').textContent = `${runs.length} ${__('total')}`;
+  },
+
+  _filterRunsByPeriod(runs, period) {
+    if (!runs || runs.length === 0) return [];
+    const now = Date.now() / 1000;
+    let cutoff;
+    switch (period) {
+      case 'today': {
+        const d = new Date();
+        cutoff = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() / 1000;
+        break;
+      }
+      case 'week': {
+        const d = new Date();
+        const dayOfWeek = d.getDay();
+        const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        cutoff = new Date(d.getFullYear(), d.getMonth(), d.getDate() - diff).getTime() / 1000;
+        break;
+      }
+      case 'month': {
+        const d = new Date();
+        cutoff = new Date(d.getFullYear(), d.getMonth(), 1).getTime() / 1000;
+        break;
+      }
+      default: return runs;
+    }
+    return runs.filter(r => (r.updated_at || 0) >= cutoff);
+  },
+
+  _computeModelStats(runs) {
+    const stats = {};
+    runs.forEach(run => {
+      if (!run.models) return;
+      Object.entries(run.models).forEach(([phase, modelName]) => {
+        if (!modelName) return;
+        if (!stats[modelName]) {
+          const isTokenPlan = run.token_plan_models && run.token_plan_models[modelName] === true;
+          stats[modelName] = {
+            tokens_in: 0, tokens_out: 0, cost: 0, run_count: 0, is_token_plan: isTokenPlan
+          };
+        }
+        stats[modelName].tokens_in += run.tokens_in || 0;
+        stats[modelName].tokens_out += run.tokens_out || 0;
+        stats[modelName].cost += run.cost_estimate || 0;
+        stats[modelName].run_count += 1;
+      });
+    });
+    return stats;
+  },
+
+  _renderModelStatsTable(modelStats, filteredRunCount) {
+    const entries = Object.entries(modelStats);
+    const container = document.getElementById('dash-model-stats');
+    if (entries.length === 0) {
+      container.innerHTML = `<div class="dash-empty">${__('No model usage data for this period.')}</div>`;
+      return;
+    }
+
+    let html = `<table class="dash-model-table">
+      <thead><tr>
+        <th>${__('Model')}</th>
+        <th>${__('Type')}</th>
+        <th class="num">${__('Runs')}</th>
+        <th class="num">${__('Tokens In')}</th>
+        <th class="num">${__('Tokens Out')}</th>
+        <th class="num">${__('Total')}</th>
+        <th class="num">${__('Cost')}</th>
+      </tr></thead><tbody>`;
+
+    entries.forEach(([name, s]) => {
+      const total = s.tokens_in + s.tokens_out;
+      const typeLabel = s.is_token_plan ? __('Token Plan') : __('Per-Token');
+      const typeClass = s.is_token_plan ? 'token-plan' : 'per-token';
+      const costDisplay = s.is_token_plan
+        ? `<span class="cost-na">${__('N/A')}</span>`
+        : `&yen;${s.cost.toFixed(4)}`;
+
+      html += `<tr>
+        <td class="model-name">${this.escape(name)}</td>
+        <td><span class="model-plan-tag ${typeClass}">${typeLabel}</span></td>
+        <td class="num">${s.run_count}</td>
+        <td class="num">${s.tokens_in.toLocaleString()}</td>
+        <td class="num">${s.tokens_out.toLocaleString()}</td>
+        <td class="num">${total.toLocaleString()}</td>
+        <td class="num">${costDisplay}</td>
+      </tr>`;
+    });
+
+    html += `</tbody></table>
+      <div style="font-size:10px;color:var(--text-faint);margin-top:6px;">
+        ${__('Showing')} <strong>${entries.length}</strong> ${__('models across')} <strong>${filteredRunCount}</strong> ${__('run(s) in the selected period.')}
+      </div>`;
+
+    container.innerHTML = html;
+  },
+
+  _renderProjectList(runs) {
+    const sorted = [...runs].sort((a, b) => (b.updated_at || 0) - (a.updated_at || 0));
+    const container = document.getElementById('dash-project-list');
+
+    if (sorted.length === 0) {
+      container.innerHTML = `<div class="dash-empty">${__('No projects yet. Start a new task!')}</div>`;
+      return;
+    }
+
+    container.innerHTML = sorted.map(r => {
+      const statusClass = this._dashStatusClass(r.status);
+      const tokenTotal = (r.tokens_in || 0) + (r.tokens_out || 0);
+      const modelNames = r.models ? Object.values(r.models).filter(Boolean).join(', ') : '—';
+      const duration = (r.created_at && r.updated_at)
+        ? this._formatDurationShort(Math.max(0, (r.updated_at || 0) - (r.created_at || 0)))
+        : '—';
+      const cost = r.cost_estimate || 0;
+      const isTokenPlanRun = r.token_plan_models && Object.values(r.token_plan_models).some(v => v === true);
+
+      return `<div class="dash-project-card" data-run-id="${this.escape(r.run_id)}" title="${__('Click to view details')}">
+        <div class="dpc-status ${statusClass}"></div>
+        <div class="dpc-body">
+          <div class="dpc-req">${this.escape(r.requirement || __('(no req)'))}</div>
+          <div class="dpc-meta">
+            ${this.escape(r.run_id)} &middot; ${this.statusLabel(r.status)}
+            ${r.phase ? ` &middot; ${r.phase}` : ''}
+          </div>
+          <div class="dpc-model">${this.escape(modelNames)}</div>
+        </div>
+        <div class="dpc-stats">
+          <div class="dpc-stat">
+            <div class="dpc-stat-val">${tokenTotal > 0 ? tokenTotal.toLocaleString() : '—'}</div>
+            <div class="dpc-stat-lbl">${__('tokens')}</div>
+          </div>
+          <div class="dpc-stat">
+            <div class="dpc-stat-val">${isTokenPlanRun ? __('N/A') : '¥' + cost.toFixed(2)}</div>
+            <div class="dpc-stat-lbl">${__('cost')}</div>
+          </div>
+          <div class="dpc-stat">
+            <div class="dpc-stat-val">${duration}</div>
+            <div class="dpc-stat-lbl">${__('duration')}</div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+
+    // Bind click to select run
+    container.querySelectorAll('.dash-project-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const runId = card.dataset.runId;
+        if (runId) this.selectRun(runId);
+      });
+    });
+  },
+
+  _dashStatusClass(status) {
+    const map = {
+      'awaiting_approval': 'waiting',
+      'awaiting_iteration': 'waiting',
+      'running': 'running',
+      'interrupted': 'other',
+      'completed': 'done',
+      'failed': 'failed',
+      'cancelled': 'other',
+    };
+    return map[status] || 'other';
+  },
+
+  _formatDurationShort(seconds) {
+    if (!seconds || seconds < 0) return '—';
+    if (seconds < 60) return '<1m';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
+    if (seconds < 86400) return `${(seconds / 3600).toFixed(1)}h`;
+    return `${(seconds / 86400).toFixed(1)}d`;
   },
 
   renderAllRunsView() {
@@ -2721,14 +4253,14 @@ const App = {
       cancelled: all.filter(r => r.status === 'cancelled').length,
     };
     const filters = [
-      ['all',            'All',             counts.all],
-      ['awaiting_approval',  'Awaiting',    counts.awaiting_approval],
-      ['awaiting_iteration', 'New Req',      counts.awaiting_iteration],
-      ['running',        'Running',         counts.running],
-      ['failed',         'Failed',          counts.failed],
-      ['completed',      'Completed',       counts.completed],
-      ['interrupted',    'Interrupted',     counts.interrupted],
-      ['cancelled',      'Cancelled',       counts.cancelled],
+      ['all',            __('All'),             counts.all],
+      ['awaiting_approval',  __('Awaiting'),    counts.awaiting_approval],
+      ['awaiting_iteration', __('New Req'),      counts.awaiting_iteration],
+      ['running',        __('Running'),         counts.running],
+      ['failed',         __('Failed'),          counts.failed],
+      ['completed',      __('Completed'),       counts.completed],
+      ['interrupted',    __('Interrupted'),     counts.interrupted],
+      ['cancelled',      __('Cancelled'),       counts.cancelled],
     ];
     const pillsHTML = filters.map(([key, label, n]) => `
       <button class="filter-pill ${filter === key ? 'selected' : ''}" data-filter="${key}">
@@ -2738,14 +4270,14 @@ const App = {
 
     // ----- Full run list rows -----
     const rowsHTML = filtered.length === 0
-      ? '<div style="padding: 24px; color: var(--text-faint); font-size: 12px; text-align: center;">No runs match this filter.</div>'
+      ? `<div style="padding: 24px; color: var(--text-faint); font-size: 12px; text-align: center;">${__('No runs match this filter.')}</div>`
       : filtered.map(r => this.renderAllRunsRow(r)).join('');
 
     document.getElementById('board-stats').innerHTML = `
       <div class="allruns-header">
         <div>
-          <div class="allruns-title">All runs</div>
-          <div class="allruns-sub">Click any row to inspect. ${all.length} total.</div>
+          <div class="allruns-title">${__('All runs')}</div>
+          <div class="allruns-sub">${__('Click any row to inspect.')} ${all.length} ${__('total.')}</div>
         </div>
       </div>
       <div class="filter-pills">${pillsHTML}</div>
@@ -2782,12 +4314,12 @@ const App = {
           <span class="run-row-id mono">${this.escape(r.run_id)}</span>
           <span class="run-row-when mono">${this.escape(updated)}</span>
         </div>
-        <div class="run-row-req">${this.escape((r.requirement || '(no requirement)').slice(0, 140))}</div>
+        <div class="run-row-req">${this.escape((r.requirement || __('No requirement')).slice(0, 140))}</div>
         <div class="run-row-meta">
-          <span class="meta-chip">Phase ${phaseLabel}</span>
-          ${cpCount > 0 ? `<span class="meta-chip meta-done">${cpCount} done</span>` : ''}
+          <span class="meta-chip">${__('Phase')} ${phaseLabel}</span>
+          ${cpCount > 0 ? `<span class="meta-chip meta-done">${cpCount} ${__('done')}</span>` : ''}
           <span class="meta-chip meta-cost">¥${cost}</span>
-          ${totalTokens > 0 ? `<span class="meta-chip meta-tok">${totalTokens.toLocaleString()} tok</span>` : ''}
+          ${totalTokens > 0 ? `<span class="meta-chip meta-tok">${totalTokens.toLocaleString()} ${__('tok')}</span>` : ''}
         </div>
       </div>
     `;
@@ -2813,12 +4345,12 @@ const App = {
     })[r.status] || 'sb-running';
 
     const statusLabel = ({
-      'awaiting_approval': 'Awaiting',
-      'running': 'Running',
-      'completed': 'Done',
-      'failed': 'Failed',
-      'interrupted': 'Interrupted',
-      'cancelled': 'Cancelled',
+      'awaiting_approval': __('Awaiting'),
+      'running': __('Running'),
+      'completed': __('Done'),
+      'failed': __('Failed'),
+      'interrupted': __('Interrupted'),
+      'cancelled': __('Cancelled'),
     })[r.status] || r.status;
 
     const elapsed = this.formatElapsed(r.updated_at, r.created_at);
@@ -2847,7 +4379,7 @@ const App = {
 
     // Token info if available
     const tokenInfo = (r.tokens_in || r.tokens_out)
-      ? `<span class="sep">·</span><span title="Token usage">${((r.tokens_in||0)/1000).toFixed(1)}k in</span>`
+      ? `<span class="sep">·</span><span title="${__('Token usage')}">${((r.tokens_in||0)/1000).toFixed(1)}k ${__('in')}</span>`
       : '';
 
     return `
@@ -2856,9 +4388,9 @@ const App = {
           <span class="run-id mono">${r.run_id}</span>
           <span class="status-badge ${statusClass}"><span class="dot"></span>${statusLabel}</span>
         </div>
-        <div class="run-title">${this.escape(r.requirement || '(no requirement)')}</div>
+        <div class="run-title">${this.escape(r.requirement || __('No requirement'))}</div>
         <div class="run-meta">
-          <span class="phase-pill">Phase ${Math.min(phaseIdx + 1, totalPhases)}/${totalPhases}</span>
+          <span class="phase-pill">${__('Phase')} ${Math.min(phaseIdx + 1, totalPhases)}/${totalPhases}</span>
           <span class="sep">·</span>
           <span>${elapsed}</span>
           <span class="sep">·</span>
@@ -2873,12 +4405,12 @@ const App = {
   async selectRun(runId) {
     this.state.selectedRunId = runId;
     this.state.events = [];
-    this.renderKanban();  // update active highlight
+    document.getElementById('dashboard-root').style.display = 'none';
     document.getElementById('empty-detail').style.display = 'none';
     document.getElementById('detail-root').style.display = 'block';
-    document.getElementById('detail-root').innerHTML = '<div style="padding: 40px; text-align: center; color: var(--text-faint);">Loading...</div>';
-    document.getElementById('live-stream').innerHTML = '<div style="padding: 20px; color: var(--text-faint); font-size: 12px; text-align: center;">Connecting...</div>';
-    document.getElementById('sse-sub').textContent = `Run ${runId}`;
+    document.getElementById('detail-root').innerHTML = `<div style="padding: 40px; text-align: center; color: var(--text-faint);">${__('Loading...')}</div>`;
+    document.getElementById('live-stream').innerHTML = `<div style="padding: 20px; color: var(--text-faint); font-size: 12px; text-align: center;">${__('Connecting...')}</div>`;
+    document.getElementById('sse-sub').textContent = `${__('Run')} ${runId}`;
     this.connectSSE(runId);
     await this.refreshDetail();
   },
@@ -2892,11 +4424,14 @@ const App = {
       this.state.sse = null;
     }
     this.setSSEStatus(false, 'idle');
-    document.getElementById('empty-detail').style.display = 'flex';
+    document.getElementById('dashboard-root').style.display = '';
+    document.getElementById('empty-detail').style.display = 'none';
     document.getElementById('detail-root').style.display = 'none';
     document.getElementById('detail-root').innerHTML = '';
-    document.getElementById('live-stream').innerHTML = '<div style="padding: 32px; text-align: center; color: var(--text-faint); font-size: 12px;">Live events will stream here when a run is selected.</div>';
-    document.getElementById('sse-sub').textContent = 'No run selected';
+    document.getElementById('live-stream').innerHTML = `<div style="padding: 32px; text-align: center; color: var(--text-faint); font-size: 12px;">${__('Live events will stream here when a run is selected.')}</div>`;
+    document.getElementById('sse-sub').textContent = __('No run selected');
+    // Re-render dashboard when coming back
+    this.renderDashboard();
   },
 
   async refreshDetail() {
@@ -2951,7 +4486,7 @@ const App = {
             <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             <span class="fname">${this.escape(f.path)}</span>
             <span class="fsize">${this.formatSize(f.size)}</span>
-            <span class="ftag" style="background: ${isDone ? 'var(--green-soft)' : 'var(--yellow-soft)'}; color: ${isDone ? 'var(--green)' : 'var(--yellow)'};">${isDone ? 'approved' : 'awaiting'}</span>
+            <span class="ftag" style="background: ${isDone ? 'var(--green-soft)' : 'var(--yellow-soft)'}; color: ${isDone ? 'var(--green)' : 'var(--yellow)'};">${isDone ? __('approved') : __('awaiting')}</span>
           </div>
         `).join('') + '</div>';
 
@@ -2968,7 +4503,7 @@ const App = {
               <span class="phase-name">${phaseName}</span>
               <span class="phase-tag ${phase === 'implement' ? 'deepseek' : 'minimax'}">${model}</span>
             </div>
-            <div class="phase-desc">${phase === 'design' ? 'Design system architecture' : phase === 'implement' ? 'Implement code based on spec' : 'Review architecture compliance'}</div>
+            <div class="phase-desc">${phase === 'design' ? __('Design system architecture') : phase === 'implement' ? __('Implement code based on spec') : __('Review architecture compliance')}</div>
             ${filesHTML}
           </div>
         </div>`;
@@ -2983,21 +4518,21 @@ const App = {
       const phaseLabel = d.phase ? d.phase.charAt(0).toUpperCase() + d.phase.slice(1) : '?';
       const wpChips = (d.working_paths && d.working_paths.length)
         ? `<span class="wp-chip-inline">${d.working_paths.map(p => this.escape(p)).join('</span> <span class="wp-chip-inline">')}</span>`
-        : '<em style="color:var(--text-faint); font-style:normal;">none</em>';
+        : `<em style="color:var(--text-faint); font-style:normal;">${__('none')}</em>`;
       const approvedChips = (d.approved_paths && d.approved_paths.length)
         ? `<span class="wp-chip-inline muted">${d.approved_paths.map(p => this.escape(p)).join('</span> <span class="wp-chip-inline muted">')}</span>`
-        : '<em style="color:var(--text-faint); font-style:normal;">none yet</em>';
+        : `<em style="color:var(--text-faint); font-style:normal;">${__('none yet')}</em>`;
       const blockedNote = `
         <div class="approval-context">
-          <div class="ctx-row"><span class="ctx-k">Working paths</span><span class="ctx-v">${wpChips}</span></div>
-          <div class="ctx-row"><span class="ctx-k">Already approved</span><span class="ctx-v">${approvedChips}</span></div>
-          <div class="ctx-hint">Tip: add <code>src/</code> or <code>tests/</code> to working paths to stop seeing prompts for files in those directories.</div>
+          <div class="ctx-row"><span class="ctx-k">${__('Working paths')}</span><span class="ctx-v">${wpChips}</span></div>
+          <div class="ctx-row"><span class="ctx-k">${__('Already approved')}</span><span class="ctx-v">${approvedChips}</span></div>
+          <div class="ctx-hint">${__('Tip: add src/ or tests/ to working paths to stop seeing prompts for files in those directories.')}</div>
         </div>
       `;
       approvalModalHTML = `
           <div class="approval-head-banner">
             <span class="dot"></span>
-            <span class="ttl">Approval required · ${phaseLabel} phase</span>
+            <span class="ttl">${__('Approval required')} &middot; ${phaseLabel} ${__('phase')}</span>
             <span class="sub mono">${this.escape(d.run_id || '')}</span>
           </div>
           <div class="approval-body">
@@ -3007,15 +4542,15 @@ const App = {
                   <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
                 </div>
                 <div style="flex:1;">
-                  <div class="approval-title">Agent wants to write a file</div>
-                  <div class="approval-subtitle">Tool: <code class="mono" style="color:var(--text);">${this.escape(d.pending.tool || '?')}</code></div>
+                  <div class="approval-title">${__('Agent wants to write a file')}</div>
+                  <div class="approval-subtitle">${__('Tool')}: <code class="mono" style="color:var(--text);">${this.escape(d.pending.tool || '?')}</code></div>
                 </div>
               </div>
               <div class="approval-body" style="padding:0;">
                 <div class="approval-grid">
-                  <div class="field"><div class="k">Path</div><div class="v mono">${this.escape(args.path || '?')}</div></div>
-                  <div class="field"><div class="k">Size</div><div class="v num">${this.formatSize((args.content || '').length)}</div></div>
-                  <div class="field"><div class="k">Phase</div><div class="v">${this.escape(phaseLabel)}</div></div>
+                  <div class="field"><div class="k">${__('Path')}</div><div class="v mono">${this.escape(args.path || '?')}</div></div>
+                  <div class="field"><div class="k">${__('Size')}</div><div class="v num">${this.formatSize((args.content || '').length)}</div></div>
+                  <div class="field"><div class="k">${__('Phase')}</div><div class="v">${this.escape(phaseLabel)}</div></div>
                 </div>
                 <div class="code-block">
                   <div class="code-block-head">
@@ -3029,17 +4564,17 @@ const App = {
               <div class="approval-actions">
                 <button class="btn btn-reject" data-approve="reject">
                   <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:var(--red);"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                  Reject
+                  ${__('Reject')}
                   <span class="key-hint">R</span>
                 </button>
                 <button class="btn btn-modify" data-approve="modify">
                   <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                  Modify
+                  ${__('Modify')}
                   <span class="key-hint">M</span>
                 </button>
                 <button class="btn btn-approve" data-approve="approve">
                   <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:white;"><polyline points="20 6 9 17 4 12"/></svg>
-                  Approve
+                  ${__('Approve')}
                   <span class="key-hint">A</span>
                 </button>
               </div>
@@ -3050,7 +4585,7 @@ const App = {
 
     // Files section
     const allFiles = d.files || [];
-    const filesHTML = allFiles.length === 0 ? '<div style="color: var(--text-faint); font-size: 12px; padding: 8px;">No files yet</div>' :
+    const filesHTML = allFiles.length === 0 ? `<div style="color: var(--text-faint); font-size: 12px; padding: 8px;">${__('No files yet')}</div>` :
       '<div class="files-card">' + this.renderFileTree(allFiles) + '</div>';
 
     // Stat tiles — real token usage from API
@@ -3070,63 +4605,60 @@ const App = {
       actionsHTML = `
         <button class="btn" data-action="force-stop" style="color: var(--red); border-color: var(--red-line);">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
-          Force Stop
+          ${__('Force Stop')}
         </button>
         <button class="btn" data-action="cancel" style="color: var(--orange); border-color: hsla(25 90% 60% / 0.35);">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-          Cancel
+          ${__('Cancel')}
         </button>`;
     } else if (isInterrupted) {
       actionsHTML = `
         <button class="btn btn-primary" data-action="resume">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:white;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-          Continue
+          ${__('Continue')}
         </button>
         <button class="btn" data-action="force-stop" style="color: var(--red); border-color: var(--red-line);">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
-          Force Stop
+          ${__('Force Stop')}
         </button>`;
     } else if (isFailed) {
       const completedCount = (d.completed_phases || []).length;
       const continueLabel = completedCount > 0
-        ? `Continue (skip ${completedCount} done)`
-        : `Continue`;
+        ? `${__('Continue')} (${__('skip')} ${completedCount} ${__('done')})`
+        : __('Continue');
       const continueTitle = completedCount > 0
-        ? `Skip the ${completedCount} phase(s) that already completed; resume from the failed one.`
-        : `Restart from design.`;
+        ? __('Skip the {0} phase(s) that already completed; resume from the failed one.').replace('{0}', completedCount)
+        : __('Restart from design.');
       actionsHTML = `
-        <button class="btn btn-primary" data-action="resume" title="${continueTitle}">
+        <button class="btn btn-primary" data-action="resume" title="${this.escape(continueTitle)}">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:white;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
           ${continueLabel}
         </button>
         <button class="btn" data-action="delete" style="color: var(--text-mute);">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-          Delete
+          ${__('Delete')}
         </button>`;
     } else if (d.status === 'cancelled') {
-      // Cancelled is treated like failed for the user: Continue works
-      // (resumes from the current phase, skipping completed_phases).
-      // We just label it explicitly so the user understands why.
       const completedCount = (d.completed_phases || []).length;
       const continueLabel = completedCount > 0
-        ? `Resume (skip ${completedCount} done)`
-        : `Resume`;
+        ? `${__('Resume')} (${__('skip')} ${completedCount} ${__('done')})`
+        : __('Resume');
       const continueTitle = completedCount > 0
-        ? `Skip the ${completedCount} phase(s) that already completed; resume from the failed one.`
-        : `Restart from design.`;
+        ? __('Skip the {0} phase(s) that already completed; resume from the failed one.').replace('{0}', completedCount)
+        : __('Restart from design.');
       actionsHTML = `
-        <button class="btn btn-primary" data-action="resume" title="${continueTitle}">
+        <button class="btn btn-primary" data-action="resume" title="${this.escape(continueTitle)}">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:white;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
           ${continueLabel}
         </button>
         <button class="btn" data-action="delete" style="color: var(--text-mute);">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-          Delete
+          ${__('Delete')}
         </button>`;
     } else if (d.status === 'completed') {
       actionsHTML = `<button class="btn" data-action="delete" style="color: var(--text-faint);">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-        Delete
+        ${__('Delete')}
       </button>`;
     } else if (d.status === 'awaiting_iteration') {
       // Post-review prompt: the user can either add a new requirement
@@ -3138,25 +4670,25 @@ const App = {
       actionsHTML = `
         <button class="btn btn-primary" data-action="add-iteration">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:white;"><path d="M12 5v14M5 12h14"/></svg>
-          ${hasAddenda ? '继续提需求' : '提出新需求'}
+          ${hasAddenda ? __('继续提需求') : __('提出新需求')}
         </button>
         <button class="btn" data-action="finish-iteration" style="color: var(--green); border-color: var(--green-line);">
           <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="20 6 9 17 4 12"/></svg>
-          完成
+          ${__('完成')}
         </button>`;
     }
 
     document.getElementById('detail-root').innerHTML = `
       <div class="detail-header">
         <div class="detail-breadcrumb">
-          <span class="crumb">Active Runs</span>
+          <span class="crumb">${__('Active Runs')}</span>
           <span class="sep">/</span>
           <span class="crumb mono">${d.run_id}</span>
           <span class="sep">/</span>
-          <span>started ${this.formatTime(d.created_at)}</span>
+          <span>${__('started')} ${this.formatTime(d.created_at)}</span>
         </div>
         <div class="detail-title-row">
-          <h1 class="detail-title">${this.escape(d.requirement || '(no requirement)')}
+          <h1 class="detail-title">${this.escape(d.requirement || __('No requirement'))}
             ${d.error ? `<span class="req" style="color: var(--red);">Error: ${this.escape(d.error)}</span>` : ''}
           </h1>
           <div style="display:flex; gap:8px; flex-shrink:0;">${actionsHTML}</div>
@@ -3185,6 +4717,18 @@ const App = {
             <div class="value num">${totalTokens > 0 ? totalTokens.toLocaleString() : '—'}</div>
             <div class="sub">${tokensIn.toLocaleString()} in / ${tokensOut.toLocaleString()} out</div>
           </div>
+          ${this.isTokenPlanRun(d) ? `
+          <div class="stat-tile">
+            <div class="label">Window Tokens</div>
+            <div class="value num">${(d.window_tokens_in || 0) + (d.window_tokens_out || 0) > 0 ? ((d.window_tokens_in || 0) + (d.window_tokens_out || 0)).toLocaleString() : '—'}</div>
+            <div class="sub">${(d.window_tokens_in || 0).toLocaleString()} in / ${(d.window_tokens_out || 0).toLocaleString()} out (current window)</div>
+          </div>
+          <div class="stat-tile">
+            <div class="label">Project Tokens</div>
+            <div class="value num">${(d.project_tokens_in || 0) + (d.project_tokens_out || 0) > 0 ? ((d.project_tokens_in || 0) + (d.project_tokens_out || 0)).toLocaleString() : '—'}</div>
+            <div class="sub">${(d.project_tokens_in || 0).toLocaleString()} in / ${(d.project_tokens_out || 0).toLocaleString()} out (project total)</div>
+          </div>
+          ` : ''}
           <div class="stat-tile">
             <div class="label">Files</div>
             <div class="value num">${allFiles.length}</div>
@@ -3636,6 +5180,40 @@ const App = {
     inp.value = '';
     this.renderDraftWorkingPaths();
   },
+
+  browseWorkingPath() {
+    const fileInput = document.getElementById('modal-wp-file-input');
+    if (fileInput) {
+      // Reset to allow re-selecting the same directory
+      fileInput.value = '';
+      fileInput.click();
+    }
+  },
+
+  handleFileSelection(e) {
+    const fileInput = e.target;
+    if (!fileInput.files || fileInput.files.length === 0) {
+      return;
+    }
+
+    // Get the first file's path (directory path)
+    const firstFile = fileInput.files[0];
+    const filePath = firstFile.webkitRelativePath || firstFile.name;
+    
+    // Extract the directory path
+    const dirPath = filePath.split('/').slice(0, -1).join('/');
+    
+    // Normalize the path
+    const normalizedPath = dirPath.replace(/^[.\/\\]+|[.\/\\]+$/g, '');
+    
+    if (normalizedPath && !this.state.draftWorkingPaths.includes(normalizedPath)) {
+      this.state.draftWorkingPaths.push(normalizedPath);
+      this.renderDraftWorkingPaths();
+    }
+    
+    // Reset the file input
+    fileInput.value = '';
+  },
   removeDraftWorkingPath(path) {
     this.state.draftWorkingPaths = this.state.draftWorkingPaths.filter(p => p !== path);
     this.renderDraftWorkingPaths();
@@ -3786,13 +5364,13 @@ const App = {
   },
   statusLabel(s) {
     return ({
-      'awaiting_approval':  'Awaiting Approval',
-      'awaiting_iteration': 'Awaiting New Requirement',
-      'running':             'Running',
-      'completed':           'Completed',
-      'failed':              'Failed',
-      'interrupted':         'Interrupted',
-      'cancelled':           'Cancelled',
+      'awaiting_approval':  __('Awaiting Approval'),
+      'awaiting_iteration': __('Awaiting New Requirement'),
+      'running':             __('Running'),
+      'completed':           __('Completed'),
+      'failed':              __('Failed'),
+      'interrupted':         __('Interrupted'),
+      'cancelled':           __('Cancelled'),
     })[s] || s;
   },
   statusBadgeClass(s) {
@@ -3812,22 +5390,108 @@ const App = {
     try {
       const data = await this.api('GET', '/board/settings');
       this.state.settings = data;
+      
+      // Apply language setting
+      if (data.language) {
+        this.state.language = data.language;
+      }
+      // Apply i18n to static HTML elements
+      this.applyI18nToDOM();
+      const langSelect = document.getElementById('settings-language-select');
+      if (langSelect) {
+        langSelect.value = this.state.language;
+        langSelect.onchange = () => {
+          this.state.language = langSelect.value;
+          this.applyI18nToDOM();
+          // Re-render settings content (section titles use data-i18n)
+          this.renderSettings(data);
+          // Re-render board/dashboard if visible
+          if (this.state.nav !== 'settings') {
+            this.refreshRuns().then(() => this.renderKanban());
+          }
+          // Auto-save language preference
+          this.saveSettings();
+        };
+      }
+      
       this.renderSettings(data);
       
       // Load version control data
       await this.loadVersionControl();
       await this.loadVcRepositories();
+      
+      // Initialize sidebar with active category
+      this.switchSettingsCategory('providers');
     } catch (e) {
       console.error('loadSettings failed:', e);
-      this.showToast('Failed to load settings', 'error');
+      this.showToast(__('Failed to load settings'), 'error');
     }
+  },
+
+  // ---- Settings Sidebar Navigation ----
+  switchSettingsCategory(category) {
+    this.state.activeSettingsCategory = category;
+    
+    // Update sidebar active state
+    document.querySelectorAll('.settings-category').forEach(cat => {
+      cat.classList.remove('active');
+      if (cat.dataset.category === category) {
+        cat.classList.add('active');
+      }
+    });
+    
+    // Show/hide content sections
+    document.querySelectorAll('.settings-content-section').forEach(section => {
+      section.classList.remove('active');
+    });
+    
+    // Show/hide help content
+    document.querySelectorAll('.help-content').forEach(help => {
+      help.style.display = 'none';
+    });
+    
+    const contentId = `${category}-content`;
+    const content = document.getElementById(contentId);
+    if (content) {
+      content.classList.add('active');
+    }
+    
+    // Show corresponding help content
+    const helpId = `${category}-help`;
+    const helpContent = document.getElementById(helpId);
+    if (helpContent) {
+      helpContent.style.display = 'block';
+    }
+  },
+
+  // Get help content index based on category
+  getHelpIndex(category) {
+    const helpIndices = {
+      'providers': 1,
+      'roles': 2,
+      'pipeline': 3,
+      'approval': 4,
+      'notifications': 5,
+      'version-control': 6
+    };
+    return helpIndices[category] || 1;
+  },
+
+  // ---- Settings Category Event Listeners ----
+  bindSettingsSidebar() {
+    document.querySelectorAll('.settings-category').forEach(cat => {
+      cat.addEventListener('click', () => {
+        const category = cat.dataset.category;
+        this.switchSettingsCategory(category);
+      });
+    });
   },
 
   async saveSettings() {
     try {
       const settings = this.collectSettings();
       await this.api('POST', '/board/settings', settings);
-      this.showToast('Settings saved successfully', 'success');
+      this.showToast(__('Settings saved'), 'success');
     } catch (e) {
       console.error('saveSettings failed:', e);
       this.showToast('Failed to save settings: ' + e.message, 'error');
@@ -3835,14 +5499,14 @@ const App = {
   },
 
   async resetSettings() {
-    if (!confirm('Reset all settings to defaults?')) return;
+    if (!confirm(__('Reset all settings to defaults?'))) return;
     try {
       await this.api('POST', '/board/settings/reset');
       await this.loadSettings();
-      this.showToast('Settings reset to defaults', 'success');
+      this.showToast(__('Settings reset to defaults'), 'success');
     } catch (e) {
       console.error('resetSettings failed:', e);
-      this.showToast('Failed to reset settings: ' + e.message, 'error');
+      this.showToast(__('Failed to reset settings') + ': ' + e.message, 'error');
     }
   },
 
@@ -3919,7 +5583,186 @@ const App = {
     }
   },
 
+  async fetchTokenPlanModels() {
+    try {
+      const response = await fetch('/board/token-plan-models', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await response.json();
+      this.state.tokenPlanModels = data;
+      return data;
+    } catch (e) {
+      console.error('fetchTokenPlanModels failed:', e);
+      this.state.tokenPlanModels = {};
+      return {};
+    }
+  },
+
+  async updateTokenPlanModel(modelName, isTokenPlan) {
+    try {
+      const response = await fetch('/board/token-plan-model', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model_name: modelName, is_token_plan: isTokenPlan }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        this.state.tokenPlanModels[modelName] = isTokenPlan;
+        this.showToast(data.message, 'success');
+      } else {
+        this.showToast(data.message, 'error');
+      }
+      return data;
+    } catch (e) {
+      console.error('updateTokenPlanModel failed:', e);
+      this.showToast('Failed to update token plan model: ' + e.message, 'error');
+      return { success: false, message: e.message };
+    }
+  },
+
+  isTokenPlanRun(run) {
+    // Check if any model used in this run is a token-plan model
+    if (!run || !run.models) return false;
+    
+    // Check the token_plan_models field in the run data
+    if (run.token_plan_models) {
+      return Object.values(run.token_plan_models).some(isTokenPlan => isTokenPlan === true);
+    }
+    
+    // Fallback: check against settings
+    const modelNames = Object.values(run.models);
+    return modelNames.some(modelName => {
+      return this.state.tokenPlanModels && this.state.tokenPlanModels[modelName] === true;
+    });
+  },
+
+  showTokenUsagePanel() {
+    // Create a modal to show token usage statistics
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="modal-content" style="max-width: 800px;">
+        <div class="modal-header">
+          <h2>Token Usage Statistics</h2>
+          <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div id="token-stats-content">Loading...</div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary" onclick="this.closest('.modal-overlay').remove()">Close</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    
+    // Fetch and display token statistics
+    this.fetchTokenUsageStats();
+  },
+
+  async fetchTokenUsageStats() {
+    const content = document.getElementById('token-stats-content');
+    if (!content) return;
+
+    try {
+      // Group runs by model and calculate statistics
+      const runs = this.state.runs || [];
+      const modelStats = {};
+      
+      runs.forEach(run => {
+        if (!run.models) return;
+        
+        Object.entries(run.models).forEach(([phase, modelName]) => {
+          if (!modelStats[modelName]) {
+            modelStats[modelName] = {
+              tokens_in: 0,
+              tokens_out: 0,
+              cost: 0,
+              window_tokens_in: 0,
+              window_tokens_out: 0,
+              project_tokens_in: 0,
+              project_tokens_out: 0,
+              is_token_plan: run.token_plan_models && run.token_plan_models[modelName] === true,
+              run_count: 0
+            };
+          }
+          
+          const stats = modelStats[modelName];
+          stats.tokens_in += run.tokens_in || 0;
+          stats.tokens_out += run.tokens_out || 0;
+          stats.cost += run.cost_estimate || 0;
+          stats.window_tokens_in += run.window_tokens_in || 0;
+          stats.window_tokens_out += run.window_tokens_out || 0;
+          stats.project_tokens_in += run.project_tokens_in || 0;
+          stats.project_tokens_out += run.project_tokens_out || 0;
+          stats.run_count += 1;
+        });
+      });
+
+      // Generate HTML for statistics
+      let html = `
+        <div class="token-stats-section">
+          <h3>Token Usage by Model</h3>
+          <table class="token-stats-table">
+            <thead>
+              <tr>
+                <th>Model</th>
+                <th>Type</th>
+                <th>Runs</th>
+                <th>Tokens (Total)</th>
+                <th>Tokens (Window)</th>
+                <th>Tokens (Project)</th>
+                <th>Cost</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      Object.entries(modelStats).forEach(([modelName, stats]) => {
+        const totalTokens = stats.tokens_in + stats.tokens_out;
+        const windowTokens = stats.window_tokens_in + stats.window_tokens_out;
+        const projectTokens = stats.project_tokens_in + stats.project_tokens_out;
+        const type = stats.is_token_plan ? 'Token Plan' : 'Per-Token';
+        
+        html += `
+          <tr>
+            <td class="model-name">${this.escape(modelName)}</td>
+            <td class="model-type ${stats.is_token_plan ? 'token-plan' : 'per-token'}">${type}</td>
+            <td class="run-count">${stats.run_count}</td>
+            <td class="tokens-total">${totalTokens.toLocaleString()}</td>
+            <td class="tokens-window">${windowTokens.toLocaleString()}</td>
+            <td class="tokens-project">${projectTokens.toLocaleString()}</td>
+            <td class="cost">${stats.is_token_plan ? 'N/A' : '¥' + stats.cost.toFixed(4)}</td>
+          </tr>
+        `;
+      });
+
+      html += `
+            </tbody>
+          </table>
+        </div>
+
+        <div class="token-stats-section">
+          <h3>Window Information</h3>
+          <p class="text-sm text-muted">
+            Current window resets daily at 0:00, 5:00, 10:00, 15:00, and 20:00.
+            Token-plan models track usage without calculating cost.
+          </p>
+        </div>
+      `;
+
+      content.innerHTML = html;
+    } catch (e) {
+      console.error('fetchTokenUsageStats failed:', e);
+      content.innerHTML = '<div style="color: var(--red);">Failed to load token statistics: ' + e.message + '</div>';
+    }
+  },
+
   renderSettings(s) {
+    // Render all sections regardless of active category
     this.renderProviders(s.providers || {});
     this.renderRoles(s.roles || {}, s.providers || {});
     this.renderPipeline(s.pipeline_params || {});
@@ -3929,7 +5772,7 @@ const App = {
   },
 
   renderProviders(providers) {
-    const container = document.getElementById('settings-providers-list');
+    const container = document.getElementById('providers-content').querySelector('#settings-providers-list');
     const keys = Object.keys(providers);
     container.innerHTML = keys.map(key => {
       const p = providers[key];
@@ -3939,30 +5782,30 @@ const App = {
             <span class="settings-card-title">${this.escape(key)}</span>
             <button class="settings-card-remove" data-remove-provider="${this.escape(key)}">
               <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              Remove
+              ${__('Remove')}
             </button>
           </div>
           <div class="settings-grid">
             <div class="settings-field">
-              <label>Provider Name</label>
+              <label>${__('Provider Name')}</label>
               <input type="text" value="${this.escape(key)}" readonly>
             </div>
             <div class="settings-field">
-              <label>API Key</label>
+              <label>${__('API Key')}</label>
               <div class="api-key-wrap">
-                <input type="password" data-provider-field="api_key" data-provider-key="${this.escape(key)}" value="${this.escape(p.api_key || '')}" placeholder="sk-... or leave blank to use env var">
+                <input type="password" data-provider-field="api_key" data-provider-key="${this.escape(key)}" value="${this.escape(p.api_key || '')}" placeholder="${__('sk-... or leave blank to use env var')}">
                 <button type="button" class="api-key-toggle" onclick="App.toggleApiKeyVisibility(this)" title="Show / hide API key">
                   <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                 </button>
               </div>
             </div>
             <div class="settings-field subdued">
-              <label>Env Var Fallback</label>
-              <input type="text" data-provider-field="api_key_env" data-provider-key="${this.escape(key)}" value="${this.escape(p.api_key_env || '')}" placeholder="e.g. OPENAI_API_KEY">
+              <label>${__('Env Var Fallback')}</label>
+              <input type="text" data-provider-field="api_key_env" data-provider-key="${this.escape(key)}" value="${this.escape(p.api_key_env || '')}" placeholder="${__('e.g. OPENAI_API_KEY')}">
             </div>
             <div class="settings-field">
-              <label>Base URL</label>
-              <input type="text" data-provider-field="base_url" data-provider-key="${this.escape(key)}" value="${this.escape(p.base_url || '')}" placeholder="https://api.example.com/v1">
+              <label>${__('Base URL')}</label>
+              <input type="text" data-provider-field="base_url" data-provider-key="${this.escape(key)}" value="${this.escape(p.base_url || '')}" placeholder="${__('https://api.example.com/v1')}">
             </div>
           </div>
         </div>`;
@@ -3982,7 +5825,7 @@ const App = {
   },
 
   renderRoles(roles, providers) {
-    const container = document.getElementById('settings-roles-list');
+    const container = document.getElementById('roles-content').querySelector('#settings-roles-list');
     const providerKeys = Object.keys(providers);
     const keys = Object.keys(roles);
     container.innerHTML = keys.map(key => {
@@ -3997,30 +5840,42 @@ const App = {
           </div>
           <div class="settings-grid">
             <div class="settings-field">
-              <label>Display Name</label>
+              <label>${__('Display Name')}</label>
               <input type="text" data-role-field="display_name" data-role-key="${this.escape(key)}" value="${this.escape(r.display_name || '')}">
             </div>
             <div class="settings-field">
-              <label>Provider</label>
+              <label>${__('Provider')}</label>
               <select data-role-field="provider" data-role-key="${this.escape(key)}">${providerOptions}</select>
             </div>
             <div class="settings-field full">
-              <label>Model</label>
+              <label>${__('Model')}</label>
               <div class="model-select-wrap">
                 <select data-role-field="model" data-role-key="${this.escape(key)}">
-                  <option value="">Select a model...</option>
+                  <option value="">${__('Select a model...')}</option>
                   ${this._buildModelOptions(r.model || '', (r.provider || ''))}
                 </select>
                 <button type="button" class="btn btn-secondary btn-sm get-models-btn" 
                         data-role-key="${this.escape(key)}" data-provider="${this.escape(r.provider || '')}"
-                        title="Get available models from provider">
+                        title="${__('Get available models from provider')}">
                   <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-                  Get Models
+                  ${__('Get Models')}
                 </button>
               </div>
             </div>
             <div class="settings-field full">
-              <label>System Prompt</label>
+              <label class="switch-label">
+                <span>${__('Token Plan')}</span>
+                <label class="switch">
+                  <input type="checkbox" data-role-field="token_plan" data-role-key="${this.escape(key)}" ${r.token_plan ? 'checked' : ''}>
+                  <span class="slider round"></span>
+                </label>
+              </label>
+              <div class="settings-help">
+                <p class="text-sm text-muted">${__('Enable for models with token-plan pricing (no per-token cost, only usage tracking)')}</p>
+              </div>
+            </div>
+            <div class="settings-field full">
+              <label>${__('System Prompt')}</label>
               <textarea class="settings-textarea" rows="10" data-role-field="system_prompt" data-role-key="${this.escape(key)}">${this.escape(r.system_prompt || '')}</textarea>
             </div>
           </div>
@@ -4037,10 +5892,36 @@ const App = {
         }
       });
     });
+
+    // Bind token plan switches
+    container.querySelectorAll('[data-role-field="token_plan"]').forEach(switchEl => {
+      switchEl.addEventListener('change', (e) => {
+        const roleKey = e.target.dataset.roleKey;
+        if (roleKey && this.state.settings && this.state.settings.roles) {
+          // Update the role's token_plan setting
+          if (!this.state.settings.roles[roleKey]) {
+            this.state.settings.roles[roleKey] = {};
+          }
+          this.state.settings.roles[roleKey].token_plan = e.target.checked;
+          
+          // Save settings
+          this.saveSettings();
+          
+          // Show feedback
+          this.showToast(
+            `Token plan for ${roleKey} ${e.target.checked ? 'enabled' : 'disabled'}`,
+            'success'
+          );
+        }
+      });
+    });
+
+    // Fetch token plan models on load
+    this.fetchTokenPlanModels();
   },
 
   renderPipeline(pipelineParams) {
-    const container = document.getElementById('settings-pipeline-list');
+    const container = document.getElementById('pipeline-content').querySelector('#settings-pipeline-list');
     const phases = Object.keys(pipelineParams);
     container.innerHTML = phases.map(phase => {
       const p = pipelineParams[phase];
@@ -4051,15 +5932,15 @@ const App = {
           </div>
           <div class="settings-grid">
             <div class="settings-field">
-              <label>Max Steps</label>
+              <label>${__('Max Steps')}</label>
               <input type="number" data-pipeline-field="max_steps" data-pipeline-key="${this.escape(phase)}" value="${p.max_steps ?? 20}" min="1" step="1">
             </div>
             <div class="settings-field">
-              <label>Temperature</label>
+              <label>${__('Temperature')}</label>
               <input type="number" data-pipeline-field="temperature" data-pipeline-key="${this.escape(phase)}" value="${p.temperature ?? 0.7}" min="0" max="2" step="0.1">
             </div>
             <div class="settings-field">
-              <label>Max Tokens</label>
+              <label>${__('Max Tokens')}</label>
               <input type="number" data-pipeline-field="max_tokens" data-pipeline-key="${this.escape(phase)}" value="${p.max_tokens ?? 4096}" min="1" step="1">
             </div>
           </div>
@@ -4068,33 +5949,33 @@ const App = {
   },
 
   renderApproval(approval) {
-    const container = document.getElementById('settings-approval-content');
+    const container = document.getElementById('approval-content').querySelector('#settings-approval-content');
     const paths = approval.working_paths || [];
     const rememberApproved = approval.remember_approved !== false; // default true
 
     let pathsHtml = paths.map((p, i) => `
       <div class="approval-path-row">
-        <input type="text" data-approval-path-index="${i}" value="${this.escape(p)}" placeholder="e.g. src/">
-        <button type="button" class="approval-path-remove" data-remove-path-index="${i}" title="Remove path">
+        <input type="text" data-approval-path-index="${i}" value="${this.escape(p)}" placeholder="${__('e.g. src/')}">
+        <button type="button" class="approval-path-remove" data-remove-path-index="${i}" title="${__('Remove path')}">
           <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>`).join('');
 
     container.innerHTML = `
       <div class="settings-field full" style="margin-bottom: 8px;">
-        <label>Working Paths</label>
+        <label>${__('Working Paths')}</label>
         <div style="font-size:12px;color:var(--text-mute);margin-bottom:8px;">
-          Path prefixes where writes are auto-approved (relative to workspace root).
+          ${__('Path prefixes where writes are auto-approved (relative to workspace root).')}
         </div>
         <div id="approval-paths-list">${pathsHtml}</div>
         <button type="button" class="approval-add-btn" id="approval-add-path">
           <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14"/></svg>
-          Add Path
+          ${__('Add Path')}
         </button>
       </div>
       <div class="approval-toggle-row">
         <input type="checkbox" id="approval-remember-approved" ${rememberApproved ? 'checked' : ''}>
-        <label for="approval-remember-approved">Remember approved files within a run</label>
+        <label for="approval-remember-approved">${__('Remember approved files within a run')}</label>
       </div>`;
 
     // Bind add-path button
@@ -4144,7 +6025,7 @@ const App = {
   },
 
   renderNotifications(channels) {
-    const container = document.getElementById('settings-channels-list');
+    const container = document.getElementById('notifications-content').querySelector('#settings-channels-list');
     if (!container) return;
     if (!channels.length) {
       container.innerHTML = `
@@ -4434,7 +6315,9 @@ const App = {
   },
 
   collectSettings() {
+    const langSelect = document.getElementById('settings-language-select');
     const settings = {
+      language: langSelect ? langSelect.value : (this.state.language || 'zh-CN'),
       providers: {},
       roles: {},
       pipeline_params: {},
@@ -4512,13 +6395,13 @@ const App = {
   },
 
   addProvider() {
-    const name = prompt('Enter provider name (e.g. "openai"):');
+    const name = prompt(__('Enter provider name (e.g. "openai"):'));
     if (!name || !name.trim()) return;
     const key = name.trim().toLowerCase().replace(/\s+/g, '_');
     if (!this.state.settings) this.state.settings = {};
     if (!this.state.settings.providers) this.state.settings.providers = {};
     if (this.state.settings.providers[key]) {
-      this.showToast('Provider "' + key + '" already exists', 'error');
+      this.showToast(__('Provider "{0}" already exists').replace('{0}', key), 'error');
       return;
     }
     this.state.settings.providers[key] = {

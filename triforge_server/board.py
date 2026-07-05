@@ -47,6 +47,37 @@ class ApproveRequest(BaseModel):
     comment: str = ""
 
 
+# Token usage statistics
+class TokenUsageRequest(BaseModel):
+    project_id: str
+    model: Optional[str] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+
+
+class TokenPlanModelRequest(BaseModel):
+    model_name: str
+    is_token_plan: bool
+
+
+class TokenUsageResponse(BaseModel):
+    tokens_in: int
+    tokens_out: int
+    cost: float
+    window_tokens_in: int = 0
+    window_tokens_out: int = 0
+    project_tokens_in: int = 0
+    project_tokens_out: int = 0
+    is_token_plan: bool = False
+
+
+class TokenPlanModelResponse(BaseModel):
+    model_name: str
+    is_token_plan: bool
+    success: bool
+    message: str = ""
+
+
 # -----------------------------------------------------------------------
 # Helpers — per-run workspace file access
 # -----------------------------------------------------------------------
@@ -214,6 +245,51 @@ async def approve(run_id: str, req: ApproveRequest) -> Dict[str, Any]:
     if not ok:
         raise HTTPException(409, "failed to submit decision (race?)")
     return {"status": "decision_submitted", "decision": req.decision}
+
+
+# -----------------------------------------------------------------------
+# Token usage statistics
+# -----------------------------------------------------------------------
+@router.post("/board/token-usage")
+async def get_token_usage(req: TokenUsageRequest) -> Dict[str, Any]:
+    """Get token usage statistics for a project or model."""
+    # This would typically query a database for historical token usage
+    # For now, return empty structure
+    return {
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "cost": 0.0,
+        "window_tokens_in": 0,
+        "window_tokens_out": 0,
+        "project_tokens_in": 0,
+        "project_tokens_out": 0,
+        "is_token_plan": False
+    }
+
+
+@router.post("/board/token-plan-model")
+async def set_token_plan_model(req: TokenPlanModelRequest) -> TokenPlanModelResponse:
+    """Set whether a model uses token-plan pricing."""
+    settings = get_settings()
+    token_plan_models = settings.pipeline_params.token_plan.models
+    
+    # Update the token plan models setting
+    token_plan_models[req.model_name] = req.is_token_plan
+    settings.save()
+    
+    return TokenPlanModelResponse(
+        model_name=req.model_name,
+        is_token_plan=req.is_token_plan,
+        success=True,
+        message=f"Model {req.model_name} token-plan setting updated"
+    )
+
+
+@router.get("/board/token-plan-models")
+async def get_token_plan_models() -> Dict[str, bool]:
+    """Get all token-plan model settings."""
+    settings = get_settings()
+    return settings.pipeline_params.token_plan.models
 
 
 # -----------------------------------------------------------------------
@@ -577,10 +653,22 @@ async def list_models(request: ModelListRequest) -> Dict[str, Any]:
     try:
         from openai import OpenAI
         
-        # Use provided credentials or fall back to env vars
-        api_key = request.api_key or os.environ.get(
-            request.provider_key.upper() + "_API_KEY", ""
-        )
+        # Use provided credentials or fall back to env vars / settings
+        _API_KEY_MASK = "********"
+        api_key = request.api_key or ""
+        if api_key == _API_KEY_MASK or not api_key:
+            api_key = ""
+            # Check env vars with proper names
+            if request.provider_key.lower() == "minimax":
+                api_key = os.environ.get("MINIMAX_CN_API_KEY", "") or os.environ.get("MINIMAX_API_KEY", "")
+            else:
+                api_key = os.environ.get(f"{request.provider_key.upper()}_API_KEY", "")
+            # Fall back to settings storage
+            if not api_key:
+                from .settings import get_settings
+                provider_cfg = get_settings().get_provider(request.provider_key)
+                api_key = provider_cfg.get("api_key", "")
+        
         base_url = request.base_url or os.environ.get(
             "TRIFORGE_" + request.provider_key.upper() + "_BASE_URL", ""
         )
@@ -596,70 +684,48 @@ async def list_models(request: ModelListRequest) -> Dict[str, Any]:
         
         client = OpenAI(api_key=api_key, base_url=base_url)
         
-        # Special handling for MiniMax - requires Authorization header instead of Bearer token
+        # MiniMax 没有 OpenAI 兼容的 /v1/models 端点，直接返回已知模型列表
         if request.provider_key.lower() == "minimax":
-            import requests
-            headers = {
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json"
+            minimax_models = [
+                {"id": "MiniMax-Text-01", "name": "MiniMax-Text-01", "created": 0},
+                {"id": "MiniMax-M3", "name": "MiniMax-M3", "created": 0},
+                {"id": "MiniMax-M2.7", "name": "MiniMax-M2.7", "created": 0},
+                {"id": "MiniMax-M2.5", "name": "MiniMax-M2.5", "created": 0},
+                {"id": "MiniMax-abab6.5s", "name": "MiniMax-abab6.5s", "created": 0},
+                {"id": "MiniMax-abab6.5s-chat", "name": "MiniMax-abab6.5s-chat", "created": 0},
+            ]
+            return {
+                "status": "success",
+                "provider": request.provider_key,
+                "models": minimax_models,
+                "total": len(minimax_models),
+                "message": "MiniMax known models loaded (no API endpoint for model listing)"
             }
-            try:
-                response = requests.get(f"{base_url}/models", headers=headers)
-                response.raise_for_status()
-                data = response.json()
-                
-                # Parse MiniMax's response format
-                models = []
-                for model in data.get("models", []):
-                    models.append({
-                        "id": model.get("id"),
-                        "name": model.get("id"),
-                        "created": model.get("created"),
-                    })
-            except Exception as e:
-                # If MiniMax API fails, use fallback models
-                raise Exception(f"MiniMax API failed: {str(e)}")
-        else:
-            # Use standard OpenAI client for other providers
-            try:
-                response = client.models.list()
-                models = []
-                for model in response.data:
-                    models.append({
-                        "id": model.id,
-                        "name": model.id,
-                        "created": model.created,
-                    })
-            except Exception as e:
-                # If OpenAI API fails, raise exception to trigger fallback
-                raise Exception(f"OpenAI API failed: {str(e)}")
-        
-        models = []
-        for model in response.data:
-            models.append({
-                "id": model.id,
-                "name": model.id,
-                "created": model.created,
-            })
-        
-        return {
-            "status": "success",
-            "provider": request.provider_key,
-            "models": models,
-            "total": len(models)
-        }
+
+        # Use standard OpenAI client for other providers (DeepSeek, etc.)
+        try:
+            response = client.models.list()
+            models = []
+            for model in response.data:
+                models.append({
+                    "id": model.id,
+                    "name": model.id,
+                    "created": model.created,
+                })
+            
+            return {
+                "status": "success",
+                "provider": request.provider_key,
+                "models": models,
+                "total": len(models)
+            }
+        except Exception as e:
+            # If API fails, raise exception to trigger fallback
+            raise Exception(f"OpenAI API failed: {str(e)}")
         
     except Exception as e:
         # Return fallback models if API call fails
         fallback_models = {
-            "minimax": [
-                "MiniMax-Text-01",
-                "MiniMax-M3", 
-                "MiniMax-M2.7",
-                "MiniMax-M2.5",
-                "MiniMax-abab6.5s",
-                "MiniMax-abab6.5s-chat"
-            ],
             "deepseek": [
                 "deepseek-chat",
                 "deepseek-reasoner",
