@@ -153,6 +153,7 @@ class Agent:
         # Use provided config or fall back to hardcoded LLM_PROVIDERS
         if provider_config is None:
             provider_config = LLM_PROVIDERS.get(provider_key, {})
+        self.provider_config = provider_config
 
         base_url = provider_config.get("base_url", "")
         # API key: prefer direct value from settings, fall back to env var
