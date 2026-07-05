@@ -28,6 +28,7 @@ from .events import BoardEvent, bus
 from .settings import get_settings
 from .store import get_store
 from .workflow import RunState, engine, _snapshot_for_board, run_pipeline_async
+from openai import OpenAI
 
 router = APIRouter(prefix="/board", tags=["board"])
 
@@ -562,6 +563,130 @@ async def reset_settings() -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Model listing API
+# ---------------------------------------------------------------------------
+class ModelListRequest(BaseModel):
+    provider_key: str
+    api_key: str = ""
+    base_url: str = ""
+
+
+@router.post("/models")
+async def list_models(request: ModelListRequest) -> Dict[str, Any]:
+    """Fetch available models from a provider's /v1/models endpoint."""
+    try:
+        from openai import OpenAI
+        
+        # Use provided credentials or fall back to env vars
+        api_key = request.api_key or os.environ.get(
+            request.provider_key.upper() + "_API_KEY", ""
+        )
+        base_url = request.base_url or os.environ.get(
+            "TRIFORGE_" + request.provider_key.upper() + "_BASE_URL", ""
+        )
+        
+        if not api_key:
+            return {"error": f"API key required for provider '{request.provider_key}'"}
+        
+        # Use default base URL if not provided
+        if not base_url:
+            from .settings import get_settings
+            provider_cfg = get_settings().get_provider(request.provider_key)
+            base_url = provider_cfg.get("base_url", "")
+        
+        client = OpenAI(api_key=api_key, base_url=base_url)
+        
+        # Special handling for MiniMax - requires Authorization header instead of Bearer token
+        if request.provider_key.lower() == "minimax":
+            import requests
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            }
+            try:
+                response = requests.get(f"{base_url}/models", headers=headers)
+                response.raise_for_status()
+                data = response.json()
+                
+                # Parse MiniMax's response format
+                models = []
+                for model in data.get("models", []):
+                    models.append({
+                        "id": model.get("id"),
+                        "name": model.get("id"),
+                        "created": model.get("created"),
+                    })
+            except Exception as e:
+                # If MiniMax API fails, use fallback models
+                raise Exception(f"MiniMax API failed: {str(e)}")
+        else:
+            # Use standard OpenAI client for other providers
+            try:
+                response = client.models.list()
+                models = []
+                for model in response.data:
+                    models.append({
+                        "id": model.id,
+                        "name": model.id,
+                        "created": model.created,
+                    })
+            except Exception as e:
+                # If OpenAI API fails, raise exception to trigger fallback
+                raise Exception(f"OpenAI API failed: {str(e)}")
+        
+        models = []
+        for model in response.data:
+            models.append({
+                "id": model.id,
+                "name": model.id,
+                "created": model.created,
+            })
+        
+        return {
+            "status": "success",
+            "provider": request.provider_key,
+            "models": models,
+            "total": len(models)
+        }
+        
+    except Exception as e:
+        # Return fallback models if API call fails
+        fallback_models = {
+            "minimax": [
+                "MiniMax-Text-01",
+                "MiniMax-M3", 
+                "MiniMax-M2.7",
+                "MiniMax-M2.5",
+                "MiniMax-abab6.5s",
+                "MiniMax-abab6.5s-chat"
+            ],
+            "deepseek": [
+                "deepseek-chat",
+                "deepseek-reasoner",
+                "deepseek-coder",
+                "deepseek-v2.5"
+            ]
+        }
+        
+        fallback = fallback_models.get(request.provider_key.lower(), [])
+        if fallback:
+            return {
+                "status": "fallback",
+                "provider": request.provider_key,
+                "models": [{"id": m, "name": m, "created": 0} for m in fallback],
+                "total": len(fallback),
+                "message": f"API call failed. Please check your API key. Using {len(fallback)} common models for {request.provider_key} as fallback.",
+                "error": str(e)
+            }
+        else:
+            return {
+                "status": "error", 
+                "error": str(e),
+                "message": f"Failed to fetch models from {request.provider_key}: {str(e)}"
+            }
+
+
+# ---------------------------------------------------------------------------
 # Notification channels
 # ---------------------------------------------------------------------------
 @router.get("/notifications/platforms")
@@ -822,3 +947,310 @@ def _install_instrumented_publish() -> None:
 
 
 _install_instrumented_publish()
+
+
+# -----------------------------------------------------------------------
+# Version Control API
+# -----------------------------------------------------------------------
+from .version_control import (
+    VersionControlManager, PlatformType, GitRepository, PlatformConfig,
+    GitHubIntegration, GiteeIntegration, GitLabIntegration, get_integration
+)
+from .config import WORKSPACE_ROOT
+
+# Global version control manager
+vc_manager = VersionControlManager()
+
+class PlatformConfigRequest(BaseModel):
+    """平台配置请求"""
+    platform: str
+    auth_token: str
+    username: Optional[str] = None
+    email: Optional[str] = None
+    git_url: Optional[str] = None
+
+class RepositoryRequest(BaseModel):
+    """仓库请求"""
+    name: str
+    description: str = ""
+    platform: str
+    private: bool = False
+
+class PushRequest(BaseModel):
+    """推送请求"""
+    repo_name: str
+    commit_message: str = "TriForge auto push"
+
+class PullRequest(BaseModel):
+    """拉取请求"""
+    repo_name: str
+    target_path: str
+    branch: str = "main"
+
+@router.get("/version-control/platforms")
+async def get_version_control_platforms():
+    """获取版本控制平台列表"""
+    try:
+        platforms = []
+        for platform in PlatformType:
+            platforms.append({
+                "id": platform.value,
+                "name": platform.name.title(),
+                "description": {
+                    "github": "GitHub - 全球最大的代码托管平台",
+                    "gitee": "Gitee - 国内领先的代码托管平台",
+                    "gitlab": "GitLab - 开源DevOps平台",
+                    "custom_git": "自建Git - 任意Git服务器"
+                }.get(platform.value, "")
+            })
+        return {"platforms": platforms}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/version-control/platforms/{platform}/config")
+async def get_platform_config(platform: str):
+    """获取平台配置"""
+    try:
+        platform_type = PlatformType(platform)
+        config = vc_manager.get_platform_config(platform_type)
+        if not config:
+            return {"config": None}
+        return {"config": {
+            "platform": platform.value,
+            "api_url": config.api_url,
+            "auth_token": config.auth_token,
+            "username": config.username,
+            "email": config.email,
+            "git_url": config.git_url
+        }}
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Invalid platform: {platform}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/version-control/platforms/{platform}/config")
+async def update_platform_config(platform: str, request: PlatformConfigRequest):
+    """更新平台配置"""
+    try:
+        platform_type = PlatformType(platform)
+        config = PlatformConfig(
+            platform=platform_type,
+            api_url={
+                "github": "https://api.github.com",
+                "gitee": "https://gitee.com/api/v5",
+                "gitlab": "https://gitlab.com/api/v4",
+                "custom_git": request.git_url or ""
+            }.get(platform.value, ""),
+            auth_token=request.auth_token,
+            username=request.username,
+            email=request.email,
+            git_url=request.git_url
+        )
+        
+        # 保存到设置
+        settings = get_settings()
+        settings.update_platform_config(platform.value, {
+            "platform": platform.value,
+            "api_url": config.api_url,
+            "auth_token": config.auth_token,
+            "username": config.username,
+            "email": config.email,
+            "git_url": config.git_url
+        })
+        
+        # 保存到版本控制管理器
+        vc_manager.add_platform_config(config)
+        
+        return {"success": True, "message": f"Platform {platform} configuration updated"}
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Invalid platform: {platform}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/version-control/repositories")
+async def get_repositories(platform: Optional[str] = None):
+    """获取仓库列表"""
+    try:
+        if platform:
+            platform_type = PlatformType(platform)
+            repositories = vc_manager.list_repositories(platform_type)
+        else:
+            repositories = vc_manager.list_repositories()
+        
+        return {"repositories": [
+            {
+                "name": repo.name,
+                "full_name": repo.full_name,
+                "description": repo.description,
+                "html_url": repo.html_url,
+                "clone_url": repo.clone_url,
+                "default_branch": repo.default_branch,
+                "platform": repo.platform.value,
+                "owner": repo.owner,
+                "private": repo.private
+            }
+            for repo in repositories
+        ]}
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Invalid platform: {platform}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/version-control/repositories")
+async def create_repository(request: RepositoryRequest):
+    """创建新仓库"""
+    try:
+        platform_type = PlatformType(request.platform)
+        config = vc_manager.get_platform_config(platform_type)
+        
+        if not config:
+            raise HTTPException(status_code=400, detail=f"Platform {request.platform} not configured")
+        
+        # 获取集成实例
+        integration = get_integration(platform_type, config)
+        if not integration:
+            raise HTTPException(status_code=400, detail=f"Platform {request.platform} integration not supported")
+        
+        # 创建仓库
+        repo_data = integration.create_repo(request.name, request.description, request.private)
+        if not repo_data:
+            raise HTTPException(status_code=400, detail=f"Failed to create repository {request.name}")
+        
+        # 添加到版本控制管理器
+        repo = GitRepository(
+            name=repo_data["name"],
+            full_name=repo_data["full_name"],
+            description=repo_data.get("description", ""),
+            html_url=repo_data["html_url"],
+            clone_url=repo_data["clone_url"],
+            default_branch=repo_data.get("default_branch", "main"),
+            platform=platform_type,
+            owner=repo_data["owner"]["login"],
+            private=request.private
+        )
+        
+        vc_manager.add_repository(repo)
+        
+        return {"success": True, "repository": {
+            "name": repo.name,
+            "full_name": repo.full_name,
+            "description": repo.description,
+            "html_url": repo.html_url,
+            "clone_url": repo.clone_url,
+            "default_branch": repo.default_branch,
+            "platform": repo.platform.value,
+            "owner": repo.owner,
+            "private": repo.private
+        }}
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Invalid platform: {request.platform}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/version-control/repositories/{repo_name}")
+async def delete_repository(repo_name: str):
+    """删除仓库"""
+    try:
+        success = vc_manager.remove_repository(repo_name)
+        if success:
+            return {"success": True, "message": f"Repository {repo_name} deleted"}
+        else:
+            raise HTTPException(status_code=404, detail=f"Repository {repo_name} not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/version-control/push")
+async def push_project(request: PushRequest):
+    """推送项目到远程仓库"""
+    try:
+        project_path = WORKSPACE_ROOT
+        success = vc_manager.push_project_to_repo(project_path, request.repo_name, request.commit_message)
+        
+        if success:
+            return {"success": True, "message": f"Project pushed to repository {request.repo_name}"}
+        else:
+            raise HTTPException(status_code=400, detail=f"Failed to push project to repository {request.repo_name}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/version-control/pull")
+async def pull_project(request: PullRequest):
+    """从远程仓库拉取项目"""
+    try:
+        target_path = Path(request.target_path)
+        success = vc_manager.pull_project_from_repo(request.repo_name, target_path, request.branch)
+        
+        if success:
+            return {"success": True, "message": f"Project pulled from repository {request.repo_name}"}
+        else:
+            raise HTTPException(status_code=400, detail=f"Failed to pull project from repository {request.repo_name}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/version-control/platforms/{platform}/repositories")
+async def get_platform_repositories(platform: str):
+    """获取平台上的仓库列表"""
+    try:
+        platform_type = PlatformType(platform)
+        config = vc_manager.get_platform_config(platform_type)
+        
+        if not config:
+            raise HTTPException(status_code=400, detail=f"Platform {platform} not configured")
+        
+        # 获取集成实例
+        integration = get_integration(platform_type, config)
+        if not integration:
+            raise HTTPException(status_code=400, detail=f"Platform {platform} integration not supported")
+        
+        # 获取用户仓库
+        repositories = integration.get_user_repos()
+        
+        return {"repositories": [
+            {
+                "name": repo["name"],
+                "full_name": repo["full_name"],
+                "description": repo.get("description", ""),
+                "html_url": repo["html_url"],
+                "clone_url": repo["clone_url"],
+                "default_branch": repo.get("default_branch", "main"),
+                "owner": repo["owner"]["login"],
+                "private": repo.get("private", False)
+            }
+            for repo in repositories
+        ]}
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Invalid platform: {platform}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/version-control/platforms/{platform}/user-info")
+async def get_platform_user_info(platform: str):
+    """获取平台用户信息"""
+    try:
+        platform_type = PlatformType(platform)
+        config = vc_manager.get_platform_config(platform_type)
+        
+        if not config:
+            raise HTTPException(status_code=400, detail=f"Platform {platform} not configured")
+        
+        # 获取集成实例
+        integration = get_integration(platform_type, config)
+        if not integration:
+            raise HTTPException(status_code=400, detail=f"Platform {platform} integration not supported")
+        
+        # 获取用户信息
+        user_info = integration.get_user_info()
+        
+        if user_info:
+            return {"user_info": {
+                "username": user_info.get("login"),
+                "name": user_info.get("name"),
+                "email": user_info.get("email"),
+                "avatar_url": user_info.get("avatar_url")
+            }}
+        else:
+            raise HTTPException(status_code=400, detail=f"Failed to get user info from platform {platform}")
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Invalid platform: {platform}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

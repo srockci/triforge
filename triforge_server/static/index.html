@@ -1317,6 +1317,19 @@
     font-size: 12px;
     line-height: 1.6;
     resize: vertical;
+  }
+  .model-select-wrap {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .model-select-wrap select {
+    flex: 1;
+  }
+  .get-models-btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
     min-height: 140px;
     transition: border-color .12s;
   }
@@ -1681,7 +1694,12 @@
 <div class="topbar">
   <div class="brand">
     <div class="brand-mark">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      <!-- TriForge Logo -->
+      <svg viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="11" fill="#6E5BD3"/>
+        <circle cx="12" cy="12" r="9" fill="#FFFFFF"/>
+        <text x="12" y="17" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#6E5BD3">T</text>
+      </svg>
     </div>
     <span class="brand-name">TriForge</span>
     <span class="brand-sub">三元锻造</span>
@@ -1888,6 +1906,17 @@
       <p class="settings-subtitle">Configure providers, roles, and pipeline parameters</p>
     </div>
 
+    <!-- API Key Help -->
+    <div class="api-help">
+      <h3>🔑 Getting API Keys</h3>
+      <p><strong>Need API keys? Get them here:</strong></p>
+      <ul>
+        <li><strong>MiniMax:</strong> <a href="https://api.minimaxi.com" target="_blank">https://api.minimaxi.com</a></li>
+        <li><strong>DeepSeek:</strong> <a href="https://platform.deepseek.com" target="_blank">https://platform.deepseek.com</a></li>
+      </ul>
+      <p><strong>💡 Tip:</strong> If you leave API keys empty, the system will show common models as fallback options.</p>
+    </div>
+
     <!-- Section A: Providers -->
     <div class="settings-section">
       <div class="settings-section-head">
@@ -1953,6 +1982,106 @@
         <summary>最近 50 条推送记录</summary>
         <div id="notif-history" class="notif-history"></div>
       </details>
+    </div>
+
+    <!-- Section D: Version Control -->
+    <div class="settings-section">
+      <div class="settings-section-head">
+        <div class="section-title">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6"/><path d="M23 12h-6"/></svg>
+          Version Control
+        </div>
+      </div>
+      <div id="version-control-content">
+        <div class="version-control-overview">
+          <p>Configure version control platforms to push and pull projects from GitHub, Gitee, GitLab, or custom Git servers.</p>
+        </div>
+        
+        <!-- Platform Configuration -->
+        <div class="settings-card">
+          <div class="settings-card-head">
+            <span class="settings-card-title">Platform Configuration</span>
+          </div>
+          <div class="settings-grid">
+            <div class="settings-field">
+              <label>Platform</label>
+              <select id="vc-platform-select">
+                <option value="github">GitHub</option>
+                <option value="gitee">Gitee</option>
+                <option value="gitlab">GitLab</option>
+                <option value="custom_git">Custom Git</option>
+              </select>
+            </div>
+            <div class="settings-field">
+              <label>Authentication Token</label>
+              <input type="password" id="vc-auth-token" placeholder="Enter your API token">
+            </div>
+            <div class="settings-field">
+              <label>Username (Optional)</label>
+              <input type="text" id="vc-username" placeholder="Your username">
+            </div>
+            <div class="settings-field">
+              <label>Email (Optional)</label>
+              <input type="email" id="vc-email" placeholder="your@email.com">
+            </div>
+            <div class="settings-field" id="vc-git-url-field" style="display: none;">
+              <label>Git URL</label>
+              <input type="text" id="vc-git-url" placeholder="https://your-git-server.com">
+            </div>
+          </div>
+          <div class="settings-actions">
+            <button class="btn" id="vc-test-connection">Test Connection</button>
+            <button class="btn btn-primary" id="vc-save-platform">Save Platform</button>
+          </div>
+        </div>
+
+        <!-- Repository Management -->
+        <div class="settings-card">
+          <div class="settings-card-head">
+            <span class="settings-card-title">Repository Management</span>
+            <button class="btn" id="vc-add-repository">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 5v14M5 12h14"/></svg>
+              Add Repository
+            </button>
+          </div>
+          <div id="vc-repositories-list"></div>
+        </div>
+
+        <!-- Project Operations -->
+        <div class="settings-card">
+          <div class="settings-card-head">
+            <span class="settings-card-title">Project Operations</span>
+          </div>
+          <div class="settings-grid">
+            <div class="settings-field">
+              <label>Repository</label>
+              <select id="vc-repo-select">
+                <option value="">Select a repository</option>
+              </select>
+            </div>
+            <div class="settings-field">
+              <label>Commit Message</label>
+              <input type="text" id="vc-commit-message" placeholder="TriForge auto push" value="TriForge auto push">
+            </div>
+          </div>
+          <div class="settings-actions">
+            <button class="btn" id="vc-push-project">Push Project</button>
+            <button class="btn" id="vc-pull-project">Pull Project</button>
+          </div>
+        </div>
+
+        <!-- Platform Help -->
+        <div class="api-help">
+          <h3>🔑 Getting API Tokens</h3>
+          <p><strong>Need API tokens? Get them here:</strong></p>
+          <ul>
+            <li><strong>GitHub:</strong> <a href="https://github.com/settings/tokens" target="_blank">GitHub Personal Access Tokens</a></li>
+            <li><strong>Gitee:</strong> <a href="https://gitee.com/profile/personal_access_tokens" target="_blank">Gitee Personal Access Tokens</a></li>
+            <li><strong>GitLab:</strong> <a href="https://gitlab.com/-/profile/personal_access_tokens" target="_blank">GitLab Personal Access Tokens</a></li>
+          </ul>
+          <p><strong>💡 Tip:</strong> Use tokens with 'repo' scope for full repository access.</p>
+        </div>
+      </div>
     </div>
 
     <!-- Actions -->
@@ -3684,6 +3813,10 @@ const App = {
       const data = await this.api('GET', '/board/settings');
       this.state.settings = data;
       this.renderSettings(data);
+      
+      // Load version control data
+      await this.loadVersionControl();
+      await this.loadVcRepositories();
     } catch (e) {
       console.error('loadSettings failed:', e);
       this.showToast('Failed to load settings', 'error');
@@ -3710,6 +3843,79 @@ const App = {
     } catch (e) {
       console.error('resetSettings failed:', e);
       this.showToast('Failed to reset settings: ' + e.message, 'error');
+    }
+  },
+
+  _buildModelOptions(selectedModel, providerKey) {
+    if (!providerKey) return '<option value="">Select a provider first</option>';
+    
+    // For now, return some common models as fallback
+    // In real implementation, these would be fetched from the API
+    const commonModels = {
+      'minimax': ['MiniMax-Text-01', 'MiniMax-M2.7', 'MiniMax-M2.5', 'MiniMax-abab6.5s'],
+      'deepseek': ['deepseek-chat', 'deepseek-reasoner']
+    };
+    
+    const models = commonModels[providerKey] || [];
+    return models.map(model => 
+      `<option value="${this.escape(model)}" ${model === selectedModel ? 'selected' : ''}>${this.escape(model)}</option>`
+    ).join('');
+  },
+
+  async fetchModelsForProvider(roleKey, providerKey) {
+    try {
+      // Get provider credentials from the settings form
+      const providerCard = document.querySelector(`[data-provider-key="${this.escape(providerKey)}"]`);
+      if (!providerCard) {
+        this.showToast('Provider configuration not found', 'error');
+        return;
+      }
+
+      const apiKey = providerCard.querySelector('[data-provider-field="api_key"]').value;
+      const baseUrl = providerCard.querySelector('[data-provider-field="base_url"]').value;
+
+      const btn = document.querySelector(`[data-role-key="${this.escape(roleKey)}"] .get-models-btn`);
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<svg class="icon-sm animate-spin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" opacity="0.25"/><path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg> Loading...';
+      }
+
+      const response = await this.api('POST', '/board/models', {
+        provider_key: providerKey,
+        api_key: apiKey,
+        base_url: baseUrl
+      });
+
+      if (response.status === 'success') {
+        const select = document.querySelector(`[data-role-key="${this.escape(roleKey)}"] [data-role-field="model"]`);
+        if (select) {
+          select.innerHTML = '<option value="">Select a model...</option>' + 
+            response.models.map(model => 
+              `<option value="${this.escape(model.id)}" ${model.id === (this.state.settings.roles[roleKey]?.model || '') ? 'selected' : ''}>${this.escape(model.id)}</option>`
+            ).join('');
+        }
+        this.showToast(`✅ Loaded ${response.total} models from ${providerKey}`, 'success');
+      } else if (response.status === 'fallback') {
+        const select = document.querySelector(`[data-role-key="${this.escape(roleKey)}"] [data-role-field="model"]`);
+        if (select) {
+          select.innerHTML = '<option value="">Select a model...</option>' + 
+            response.models.map(model => 
+              `<option value="${this.escape(model.id)}" ${model.id === (this.state.settings.roles[roleKey]?.model || '') ? 'selected' : ''}>${this.escape(model.id)}</option>`
+            ).join('');
+        }
+        this.showToast(`⚠️ Using ${response.total} common models for ${providerKey} (API key may be invalid)`, 'warning');
+      } else {
+        this.showToast(response.message || 'Failed to fetch models', 'error');
+      }
+    } catch (e) {
+      console.error('fetchModelsForProvider failed:', e);
+      this.showToast('Failed to fetch models: ' + e.message, 'error');
+    } finally {
+      const btn = document.querySelector(`[data-role-key="${this.escape(roleKey)}"] .get-models-btn`);
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Get Models';
+      }
     }
   },
 
@@ -3800,7 +4006,18 @@ const App = {
             </div>
             <div class="settings-field full">
               <label>Model</label>
-              <input type="text" data-role-field="model" data-role-key="${this.escape(key)}" value="${this.escape(r.model || '')}" placeholder="e.g. MiniMax-M2.5, DeepSeek-V3">
+              <div class="model-select-wrap">
+                <select data-role-field="model" data-role-key="${this.escape(key)}">
+                  <option value="">Select a model...</option>
+                  ${this._buildModelOptions(r.model || '', (r.provider || ''))}
+                </select>
+                <button type="button" class="btn btn-secondary btn-sm get-models-btn" 
+                        data-role-key="${this.escape(key)}" data-provider="${this.escape(r.provider || '')}"
+                        title="Get available models from provider">
+                  <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                  Get Models
+                </button>
+              </div>
             </div>
             <div class="settings-field full">
               <label>System Prompt</label>
@@ -3809,6 +4026,17 @@ const App = {
           </div>
         </div>`;
     }).join('');
+
+    // Bind "Get Models" buttons
+    container.querySelectorAll('.get-models-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const roleKey = btn.dataset.roleKey;
+        const providerKey = btn.dataset.provider;
+        if (roleKey && providerKey) {
+          await this.fetchModelsForProvider(roleKey, providerKey);
+        }
+      });
+    });
   },
 
   renderPipeline(pipelineParams) {
@@ -4314,6 +4542,202 @@ const App = {
     }, 3000);
   },
 
+  // Version Control Methods
+  async loadVersionControl() {
+    try {
+      const response = await this.api('GET', '/board/version-control/platforms');
+      this.state.vcPlatforms = response.platforms;
+      this.renderVcPlatforms();
+    } catch (e) {
+      console.error('Failed to load version control platforms:', e);
+    }
+  },
+
+  async testVcConnection() {
+    const platform = document.getElementById('vc-platform-select').value;
+    const token = document.getElementById('vc-auth-token').value;
+    
+    if (!token) {
+      this.showToast('Please enter an authentication token', 'error');
+      return;
+    }
+
+    try {
+      const response = await this.api('GET', `/board/version-control/platforms/${platform}/user-info`);
+      this.showToast('Connection successful! User: ' + response.user_info.username, 'success');
+    } catch (e) {
+      this.showToast('Connection failed: ' + e.message, 'error');
+    }
+  },
+
+  async saveVcPlatform() {
+    const platform = document.getElementById('vc-platform-select').value;
+    const token = document.getElementById('vc-auth-token').value;
+    const username = document.getElementById('vc-username').value;
+    const email = document.getElementById('vc-email').value;
+    const gitUrl = document.getElementById('vc-git-url').value;
+
+    if (!token) {
+      this.showToast('Please enter an authentication token', 'error');
+      return;
+    }
+
+    try {
+      const request = {
+        platform: platform,
+        auth_token: token,
+        username: username,
+        email: email,
+        git_url: gitUrl
+      };
+
+      await this.api('POST', `/board/version-control/platforms/${platform}/config`, request);
+      this.showToast('Platform configuration saved successfully', 'success');
+      this.loadVcRepositories();
+    } catch (e) {
+      this.showToast('Failed to save platform: ' + e.message, 'error');
+    }
+  },
+
+  async loadVcRepositories() {
+    try {
+      const response = await this.api('GET', '/board/version-control/repositories');
+      this.state.vcRepositories = response.repositories;
+      this.renderVcRepositories();
+      this.updateVcRepoSelect();
+    } catch (e) {
+      console.error('Failed to load repositories:', e);
+    }
+  },
+
+  renderVcRepositories() {
+    const container = document.getElementById('vc-repositories-list');
+    if (!container || !this.state.vcRepositories) return;
+
+    container.innerHTML = this.state.vcRepositories.map(repo => `
+      <div class="settings-card">
+        <div class="settings-card-head">
+          <span class="settings-card-title">${this.escape(repo.name)}</span>
+          <button class="settings-card-remove" data-remove-repo="${this.escape(repo.name)}">
+            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="settings-grid">
+          <div class="settings-field">
+            <label>Platform</label>
+            <input type="text" value="${this.escape(repo.platform)}" readonly>
+          </div>
+          <div class="settings-field">
+            <label>URL</label>
+            <input type="text" value="${this.escape(repo.html_url)}" readonly>
+          </div>
+          <div class="settings-field">
+            <label>Branch</label>
+            <input type="text" value="${this.escape(repo.default_branch)}" readonly>
+          </div>
+        </div>
+      </div>
+    `).join('');
+
+    // Add event listeners for remove buttons
+    container.querySelectorAll('.settings-card-remove').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const repoName = e.target.closest('.settings-card-remove').dataset.removeRepo;
+        this.removeVcRepository(repoName);
+      });
+    });
+  },
+
+  updateVcRepoSelect() {
+    const select = document.getElementById('vc-repo-select');
+    if (!select || !this.state.vcRepositories) return;
+
+    select.innerHTML = '<option value="">Select a repository</option>' +
+      this.state.vcRepositories.map(repo => 
+        `<option value="${this.escape(repo.name)}">${this.escape(repo.name)}</option>`
+      ).join('');
+  },
+
+  async removeVcRepository(repoName) {
+    if (!confirm(`Are you sure you want to remove repository "${repoName}"?`)) return;
+
+    try {
+      await this.api('DELETE', `/board/version-control/repositories/${repoName}`);
+      this.showToast('Repository removed successfully', 'success');
+      this.loadVcRepositories();
+    } catch (e) {
+      this.showToast('Failed to remove repository: ' + e.message, 'error');
+    }
+  },
+
+  async addVcRepository() {
+    const platform = document.getElementById('vc-platform-select').value;
+    const repoName = prompt('Enter repository name:');
+    if (!repoName || !repoName.trim()) return;
+
+    const description = prompt('Enter repository description (optional):') || '';
+    const isPrivate = confirm('Make repository private? (Cancel for public)');
+
+    try {
+      const request = {
+        name: repoName.trim(),
+        description: description,
+        platform: platform,
+        private: isPrivate
+      };
+
+      await this.api('POST', '/board/version-control/repositories', request);
+      this.showToast('Repository created successfully', 'success');
+      this.loadVcRepositories();
+    } catch (e) {
+      this.showToast('Failed to create repository: ' + e.message, 'error');
+    }
+  },
+
+  async pushProject() {
+    const repoName = document.getElementById('vc-repo-select').value;
+    const commitMessage = document.getElementById('vc-commit-message').value;
+
+    if (!repoName) {
+      this.showToast('Please select a repository', 'error');
+      return;
+    }
+
+    try {
+      const request = {
+        repo_name: repoName,
+        commit_message: commitMessage
+      };
+
+      await this.api('POST', '/board/version-control/push', request);
+      this.showToast('Project pushed successfully', 'success');
+    } catch (e) {
+      this.showToast('Failed to push project: ' + e.message, 'error');
+    }
+  },
+
+  async pullProject() {
+    const repoName = document.getElementById('vc-repo-select').value;
+    const targetPath = prompt('Enter target path for the project:');
+    if (!targetPath || !targetPath.trim()) return;
+
+    try {
+      const request = {
+        repo_name: repoName,
+        target_path: targetPath.trim()
+      };
+
+      await this.api('POST', '/board/version-control/pull', request);
+      this.showToast('Project pulled successfully', 'success');
+    } catch (e) {
+      this.showToast('Failed to pull project: ' + e.message, 'error');
+    }
+  },
+
+  renderVcPlatforms() {
+    // This method can be used to render platform-specific UI if needed
+  },
+
   switchView(view) {
     this.state.nav = view;
     const mainEl = document.querySelector('.main');
@@ -4369,6 +4793,22 @@ document.addEventListener('DOMContentLoaded', () => {
       App.refreshNotifHistory();
     }
   }, 15000);
+
+  // Version Control Event Listeners
+  document.getElementById('vc-platform-select')?.addEventListener('change', (e) => {
+    const customField = document.getElementById('vc-git-url-field');
+    if (e.target.value === 'custom_git') {
+      customField.style.display = 'block';
+    } else {
+      customField.style.display = 'none';
+    }
+  });
+
+  document.getElementById('vc-test-connection')?.addEventListener('click', () => App.testVcConnection());
+  document.getElementById('vc-save-platform')?.addEventListener('click', () => App.saveVcPlatform());
+  document.getElementById('vc-add-repository')?.addEventListener('click', () => App.addVcRepository());
+  document.getElementById('vc-push-project')?.addEventListener('click', () => App.pushProject());
+  document.getElementById('vc-pull-project')?.addEventListener('click', () => App.pullProject());
 
   App.init();
 });

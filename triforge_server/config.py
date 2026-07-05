@@ -122,5 +122,39 @@ write a review report to `workspace/design/review_report.md`.
 - Be specific: cite file paths and line ranges when raising issues
 
 ## Tools
-- read_file(path), write_file(path, content), finish(summary)""",
+- read_file(path), write_file(path, content), finish(summary)"""
+}
+
+# Version Control Configuration
+VERSION_CONTROL = {
+    "enabled": True,
+    "platforms": {
+        "github": {
+            "name": "GitHub",
+            "api_url": "https://api.github.com",
+            "auth_token_env": "GITHUB_TOKEN",
+            "git_url": "https://github.com"
+        },
+        "gitee": {
+            "name": "Gitee", 
+            "api_url": "https://gitee.com/api/v5",
+            "auth_token_env": "GITEE_TOKEN",
+            "git_url": "https://gitee.com"
+        },
+        "gitlab": {
+            "name": "GitLab",
+            "api_url": "https://gitlab.com/api/v4",
+            "auth_token_env": "GITLAB_TOKEN", 
+            "git_url": "https://gitlab.com"
+        },
+        "custom_git": {
+            "name": "Custom Git",
+            "api_url": "",
+            "auth_token_env": "",
+            "git_url": ""
+        }
+    },
+    "default_branch": "main",
+    "commit_message": "TriForge auto push",
+    "auto_push": False
 }

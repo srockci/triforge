@@ -15,7 +15,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _SETTINGS_PATH = _PROJECT_ROOT / "data" / "settings.json"
@@ -150,6 +150,48 @@ write a review report to `workspace/design/review_report.md`.
         # Channels with enabled=false are kept in settings but ignored
         # at dispatch time, so users can toggle without re-entering URLs.
     ],
+    "version_control": {
+        "enabled": True,
+        "platforms": {
+            "github": {
+                "name": "GitHub",
+                "api_url": "https://api.github.com",
+                "auth_token": "",
+                "auth_token_env": "GITHUB_TOKEN",
+                "username": "",
+                "email": ""
+            },
+            "gitee": {
+                "name": "Gitee",
+                "api_url": "https://gitee.com/api/v5", 
+                "auth_token": "",
+                "auth_token_env": "GITEE_TOKEN",
+                "username": "",
+                "email": ""
+            },
+            "gitlab": {
+                "name": "GitLab",
+                "api_url": "https://gitlab.com/api/v4",
+                "auth_token": "",
+                "auth_token_env": "GITLAB_TOKEN",
+                "username": "",
+                "email": ""
+            },
+            "custom_git": {
+                "name": "Custom Git",
+                "api_url": "",
+                "auth_token": "",
+                "auth_token_env": "",
+                "git_url": "",
+                "username": "",
+                "email": ""
+            }
+        },
+        "repositories": [],
+        "default_branch": "main",
+        "commit_message": "TriForge auto push",
+        "auto_push": False
+    },
 }
 
 
@@ -213,6 +255,48 @@ class SettingsManager:
         """Return pipeline params for a phase."""
         defaults = {"max_steps": 12, "temperature": 0.2, "max_tokens": 4096}
         return self._data.get("pipeline_params", {}).get(phase, defaults)
+
+    def get_version_control_config(self) -> Dict[str, Any]:
+        """Return version control configuration."""
+        return self._data.get("version_control", {})
+
+    def get_platform_config(self, platform: str) -> Dict[str, Any]:
+        """Return a platform's configuration."""
+        return self._data.get("version_control", {}).get("platforms", {}).get(platform, {})
+
+    def update_platform_config(self, platform: str, config: Dict[str, Any]) -> Dict[str, Any]:
+        """Update a platform's configuration."""
+        vc_config = self._data.get("version_control", {})
+        platforms = vc_config.get("platforms", {})
+        platforms[platform] = config
+        vc_config["platforms"] = platforms
+        self._data["version_control"] = vc_config
+        self.save()
+        return self._data
+
+    def add_repository(self, repo: Dict[str, Any]) -> Dict[str, Any]:
+        """Add a repository to version control."""
+        vc_config = self._data.get("version_control", {})
+        repositories = vc_config.get("repositories", [])
+        repositories.append(repo)
+        vc_config["repositories"] = repositories
+        self._data["version_control"] = vc_config
+        self.save()
+        return self._data
+
+    def get_repositories(self) -> List[Dict[str, Any]]:
+        """Get all repositories."""
+        return self._data.get("version_control", {}).get("repositories", [])
+
+    def remove_repository(self, repo_name: str) -> Dict[str, Any]:
+        """Remove a repository."""
+        vc_config = self._data.get("version_control", {})
+        repositories = vc_config.get("repositories", [])
+        repositories = [r for r in repositories if r.get("name") != repo_name]
+        vc_config["repositories"] = repositories
+        self._data["version_control"] = vc_config
+        self.save()
+        return self._data
 
     def update(self, patch: Dict[str, Any]) -> Dict[str, Any]:
         """Apply a partial update and save."""
