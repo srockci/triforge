@@ -4383,8 +4383,8 @@ const App = {
 
     document.getElementById('active-list').innerHTML = rowsHTML;
     document.getElementById('board-sections').style.display = 'none';
-    document.getElementById('recent-count').textContent = filtered.length;
-    document.getElementById('active-count').textContent = all.length;
+    this._setText('recent-count', filtered.length);
+    this._setText('active-count', all.length);
 
     // Bind clicks for filter pills
     document.querySelectorAll('.filter-pill').forEach(p => {
