@@ -4424,12 +4424,9 @@ const App = {
   },
 
   bindRunCardClicks(selector = '.run-card') {
-    const els = document.querySelectorAll(selector);
-    console.log('bindRunCardClicks:', selector, 'found', els.length);
-    els.forEach(el => {
+    document.querySelectorAll(selector).forEach(el => {
       el.addEventListener('click', () => {
         const rid = el.dataset.runId;
-        console.log('run-row clicked:', rid);
         this.selectRun(rid);
       });
     });
