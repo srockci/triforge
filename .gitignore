@@ -91,7 +91,6 @@ $RECYCLE.BIN/
 **/*.local.*
 **/private.*
 .triforge.local.json
-__pycache__
 # 12) Leftover artifacts that escaped earlier patterns
 logs/*
 !logs/.gitkeep
