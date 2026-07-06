@@ -189,7 +189,7 @@ class Agent:
         """Resolve a workspace-relative path and confirm it stays under workspace_root."""
         rel_path = self._normalize_rel_path(rel_path)
         p = (self.workspace_root / rel_path).resolve()
-        if not str(p).startswith(str(self.workspace_root)):
+        if os.path.commonpath([str(p), str(self.workspace_root)]) != str(self.workspace_root):
             raise ValueError(f"path escapes workspace: {rel_path}")
         return p
 

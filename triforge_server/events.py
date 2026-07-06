@@ -7,14 +7,10 @@ subscribes and streams them to connected browsers.
 This is intentionally lightweight — no external broker. If we ever need
 cross-process pub-sub, swap the implementation here; the emit/subscribe
 interface stays the same.
-
-Thread-safety: emits are non-blocking. Subscribers receive events via
-asyncio.Queue, so they MUST be in an async context.
 """
 from __future__ import annotations
 
 import asyncio
-import queue
 import time
 from collections import defaultdict
 from dataclasses import dataclass, field, asdict
@@ -37,17 +33,11 @@ class BoardEvent:
 class EventBus:
     """Per-run pub-sub. Subscribers get events from the moment they
     subscribe; for historical events use RunStore.replay().
-    
-    Also supports a global subscription channel (`subscribe_global`)
-    that delivers every event regardless of run_id — used by the
-    notification dispatcher worker.
     """
 
     def __init__(self) -> None:
         # run_id -> list of per-run subscriber queues (asyncio, for SSE)
         self._subs: Dict[str, List[asyncio.Queue]] = defaultdict(list)
-        # global subscribers (sync queues, for background workers)
-        self._global_subs: List["queue.Queue[BoardEvent]"] = []
 
     def subscribe(self, run_id: str) -> asyncio.Queue:
         """Create a new per-run asyncio subscription queue. Caller MUST
@@ -55,15 +45,6 @@ class EventBus:
         q: asyncio.Queue = asyncio.Queue(maxsize=1000)
         self._subs[run_id].append(q)
         return q
-
-    def subscribe_global(self, q: "queue.Queue[BoardEvent]") -> None:
-        """Subscribe to ALL events regardless of run_id. The dispatcher
-        worker uses this. `q` is a sync queue.Queue (background thread)."""
-        self._global_subs.append(q)
-
-    def unsubscribe_global(self, q: "queue.Queue[BoardEvent]") -> None:
-        if q in self._global_subs:
-            self._global_subs.remove(q)
 
     def unsubscribe(self, run_id: str, q: asyncio.Queue) -> None:
         if run_id in self._subs and q in self._subs[run_id]:
@@ -74,25 +55,11 @@ class EventBus:
     def emit(self, event: BoardEvent) -> None:
         """Synchronous emit. Pushes to all subscriber queues; if a queue
         is full we drop the OLDEST event to make room (FIFO overflow).
-        
-        Also fans out to global subscribers (notification dispatcher).
         """
-        # Per-run asyncio subscribers (SSE endpoints, live stream UI)
         for q in list(self._subs.get(event.run_id, [])):
             try:
                 q.put_nowait(event)
             except asyncio.QueueFull:
-                # drop oldest, push new
-                try:
-                    q.get_nowait()
-                    q.put_nowait(event)
-                except Exception:
-                    pass
-        # Global subscribers (sync queues, background workers)
-        for q in list(self._global_subs):
-            try:
-                q.put_nowait(event)
-            except queue.Full:
                 try:
                     q.get_nowait()
                     q.put_nowait(event)

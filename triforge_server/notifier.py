@@ -6,10 +6,9 @@ Supports two delivery modes per channel:
   complex — every event flows through. Useful while debugging or keeping
             a full audit trail.
 
-The worker is a daemon thread subscribed to the global event bus. It
-runs in parallel to the pipeline so webhook latency cannot back-pressure
-agent calls. Failures are caught and logged but never raised back into
-the workflow.
+Synchronous dispatcher — `publish(ev)` fans out to all enabled channels
+in the calling thread. Webhook latency is typically < 100 ms per channel,
+so this does not meaningfully back-pressure the request path.
 
 Channel configuration lives in settings.json under
 `notification_channels`. Each channel has its own type, mode, and
@@ -24,20 +23,38 @@ from __future__ import annotations
 
 import json
 import logging
-import queue
-import threading
 import time
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 
 import requests
 
-from .events import BoardEvent, bus
+from .events import BoardEvent
 from .settings import get_settings
 from .store import get_store
 
 
 log = logging.getLogger("triforge.notifier")
+
+# In-memory notification delivery history (for UI display)
+_NOTIFICATION_STATE = type("S", (), {"history": []})()
+
+
+def record_notification(channel_type: str, kind: str, ok: bool, detail: str) -> None:
+    """Append to in-memory ring buffer of delivery outcomes."""
+    _NOTIFICATION_STATE.history.append({
+        "ts": time.time(),
+        "channel": channel_type,
+        "kind": kind,
+        "ok": ok,
+        "detail": detail[:200],
+    })
+    if len(_NOTIFICATION_STATE.history) > 200:
+        del _NOTIFICATION_STATE.history[:-200]
+
+
+def get_notification_history(limit: int = 50) -> list:
+    return list(_NOTIFICATION_STATE.history)[-limit:]
 
 
 # -------- two-mode policy ------------------------------------------------
@@ -366,15 +383,18 @@ def build_notifier(channel: Dict[str, Any]) -> Notifier:
     return cls(channel)
 
 
-# -------- dispatcher worker ---------------------------------------------
-
-_global_queue: "queue.Queue[BoardEvent]" = queue.Queue(maxsize=2000)
-_worker_started = False
-_worker_lock = threading.Lock()
-
+# -------- synchronous dispatcher ----------------------------------------
 
 def publish(ev: BoardEvent) -> None:
-    """Fan-out to all enabled channels according to per-channel mode."""
+    """Fan-out to all enabled channels according to per-channel mode.
+    Synchronous — intended to be called from request handlers or the
+    global EventBus emit path. Webhook latency is typically <100 ms,
+    so this does not meaningfully block the agent pipeline."""
+    _dispatch(ev)
+
+
+def _dispatch(ev: BoardEvent) -> None:
+    """Internal: fan-out to all enabled channels (called from worker)."""
     settings = get_settings().get()
     channels = settings.get("notification_channels") or []
     if not channels:
@@ -395,40 +415,15 @@ def publish(ev: BoardEvent) -> None:
         try:
             notifier = build_notifier(ch)
             notifier.send(msg)
+            record_notification(ch.get("type", "?"), ev.kind, True, "ok")
             log.debug("notifier[%s] delivered %s", ch.get("type"), ev.kind)
         except Exception as e:
+            record_notification(ch.get("type", "?"), ev.kind, False,
+                                f"{type(e).__name__}: {e}")
             log.warning(
                 "notifier[%s] failed for %s: %s",
                 ch.get("type"), ev.kind, e,
             )
 
 
-def start_worker() -> None:
-    """Spawn the dispatcher thread once per process. Idempotent."""
-    global _worker_started
-    with _worker_lock:
-        if _worker_started:
-            return
-        t = threading.Thread(target=_worker_loop, name="triforge-notifier",
-                             daemon=True)
-        t.start()
-        _worker_started = True
-        log.info("notifier worker started")
-
-
-def _worker_loop() -> None:
-    """Drain the global EventBus queue and dispatch each event."""
-    bus.subscribe_global(_global_queue)
-    log.info("notifier subscribed to global event bus")
-    while True:
-        try:
-            ev = _global_queue.get(timeout=1.0)
-        except queue.Empty:
-            continue
-        except Exception:
-            log.exception("notifier queue get failed")
-            continue
-        try:
-            publish(ev)
-        except Exception:
-            log.exception("dispatch failed for kind=%s", ev.kind)
+_INSTRUMENTED = True  # outcome recording is part of _dispatch

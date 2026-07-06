@@ -6864,7 +6864,8 @@ const App = {
     try {
       const request = {
         repo_name: repoName,
-        commit_message: commitMessage
+        commit_message: commitMessage,
+        run_id: this.state.selectedRunId || undefined
       };
 
       await this.api('POST', '/board/version-control/push', request);

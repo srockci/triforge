@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import shutil
 import time
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, List, Optional
@@ -121,9 +122,10 @@ def _list_workspace_files(run_id: str) -> List[Dict[str, Any]]:
 
 def _read_file_safe(run_id: str, rel_path: str) -> Optional[Dict[str, Any]]:
     """Read a file from the per-run workspace, with path-traversal protection."""
-    ws = _run_workspace(run_id)
+    import os
+    ws = _run_workspace(run_id).resolve()
     target = (ws / rel_path).resolve()
-    if not str(target).startswith(str(ws.resolve())):
+    if os.path.commonpath([str(target), str(ws)]) != str(ws):
         return None
     if not target.is_file():
         return None
@@ -263,7 +265,7 @@ async def approve(run_id: str, req: ApproveRequest) -> Dict[str, Any]:
 # -----------------------------------------------------------------------
 # Token usage statistics
 # -----------------------------------------------------------------------
-@router.post("/board/token-usage")
+@router.post("/token-usage")
 async def get_token_usage(req: TokenUsageRequest) -> Dict[str, Any]:
     """Get token usage statistics for a project or model."""
     # This would typically query a database for historical token usage
@@ -280,7 +282,7 @@ async def get_token_usage(req: TokenUsageRequest) -> Dict[str, Any]:
     }
 
 
-@router.post("/board/token-plan-model")
+@router.post("/token-plan-model")
 async def set_token_plan_model(req: TokenPlanModelRequest) -> TokenPlanModelResponse:
     """Set whether a model uses token-plan pricing."""
     settings = get_settings()
@@ -298,7 +300,7 @@ async def set_token_plan_model(req: TokenPlanModelRequest) -> TokenPlanModelResp
     )
 
 
-@router.get("/board/token-plan-models")
+@router.get("/token-plan-models")
 async def get_token_plan_models() -> Dict[str, bool]:
     """Get all token-plan model settings."""
     settings = get_settings()
@@ -485,6 +487,11 @@ async def post_iteration(run_id: str, body: IterationBody) -> Dict[str, Any]:
     run.outputs = {}                      # wipe prior artifacts
     run.approved_paths = set()
     get_store().clear_agent_state(run.run_id)  # fresh history for new iteration
+    # Wipe disk artifacts from prior iteration
+    if run.workspace_root and run.workspace_root.exists():
+        shutil.rmtree(run.workspace_root)
+        for sub in ("design", "src", "tests"):
+            (run.workspace_root / sub).mkdir(parents=True, exist_ok=True)
     run.updated_at = time.time()
 
     try:
@@ -969,84 +976,24 @@ async def test_notification_channel(body: Dict[str, Any]) -> Dict[str, Any]:
     Useful for the UI's "Send test" button. The attempt is also recorded
     in /board/notifications/history so the user can verify delivery.
     """
-    from .notifier import build_notifier
+    from .notifier import build_notifier, record_notification
     try:
         notifier = build_notifier(body)
         notifier.test()
-        _record_notification(body.get("type", "?"), "test_send", True,
-                             "test message delivered")
+        record_notification(body.get("type", "?"), "test_send", True,
+                            "test message delivered")
         return {"status": "sent"}
     except Exception as e:
-        _record_notification(body.get("type", "?"), "test_send", False,
-                             f"{type(e).__name__}: {e}")
+        record_notification(body.get("type", "?"), "test_send", False,
+                            f"{type(e).__name__}: {e}")
         raise HTTPException(502, f"notifier delivery failed: {type(e).__name__}: {e}")
 
 
 @router.get("/notifications/history")
 async def recent_notifications(limit: int = 50) -> Dict[str, Any]:
-    """Last `limit` notification deliveries (successes + failures).
-
-    Useful for the UI to show whether push is working without watching
-    raw platform responses.
-    """
-    history = list(getattr(_NOTIFICATION_STATE, "history", []))[-limit:]
-    return {"history": history}
-
-
-_NOTIFICATION_STATE = type("S", (), {"history": []})()
-
-
-def _record_notification(channel_type: str, kind: str, ok: bool, detail: str) -> None:
-    """Called by the dispatcher worker; appends to in-memory ring buffer."""
-    _NOTIFICATION_STATE.history.append({
-        "ts": time.time(),
-        "channel": channel_type,
-        "kind": kind,
-        "ok": ok,
-        "detail": detail[:200],
-    })
-    # cap to a sensible bound
-    if len(_NOTIFICATION_STATE.history) > 200:
-        del _NOTIFICATION_STATE.history[:-200]
-
-
-# Patch publish() to record outcomes. Done with a thin wrapper
-# module-level so we keep notifier.py publish() clean.
-_orig_publish = None
-
-
-def _instrumented_publish(ev: Any) -> None:
-    from .notifier import format_event, build_notifier, _should_send
-    settings = get_settings().get()
-    channels = settings.get("notification_channels") or []
-    for ch in channels:
-        if not ch.get("enabled", False):
-            continue
-        mode = ch.get("mode", "simple")
-        if not _should_send(mode, ev.kind):
-            continue
-        msg = format_event(ev)
-        if not msg:
-            continue
-        try:
-            notifier = build_notifier(ch)
-            notifier.send(msg)
-            _record_notification(ch.get("type", "?"), ev.kind, True, "ok")
-        except Exception as e:
-            _record_notification(ch.get("type", "?"), ev.kind, False,
-                                 f"{type(e).__name__}: {e}")
-
-
-# Replace the publish function in notifier module. Imported on first use.
-def _install_instrumented_publish() -> None:
-    import triforge_server.notifier as n
-    if getattr(n, "_INSTRUMENTED", False):
-        return
-    n.publish = _instrumented_publish
-    n._INSTRUMENTED = True
-
-
-_install_instrumented_publish()
+    """Last `limit` notification deliveries (successes + failures)."""
+    from .notifier import get_notification_history
+    return {"history": get_notification_history(limit)}
 
 
 # -----------------------------------------------------------------------
@@ -1080,6 +1027,7 @@ class PushRequest(BaseModel):
     """推送请求"""
     repo_name: str
     commit_message: str = "TriForge auto push"
+    run_id: Optional[str] = None
 
 class PullRequest(BaseModel):
     """拉取请求"""
@@ -1263,7 +1211,13 @@ async def delete_repository(repo_name: str):
 async def push_project(request: PushRequest):
     """推送项目到远程仓库"""
     try:
-        project_path = WORKSPACE_ROOT
+        if request.run_id:
+            run = engine.runs.get(request.run_id)
+            if not run or not run.workspace_root:
+                raise HTTPException(status_code=404, detail=f"Run {request.run_id} not found or has no workspace")
+            project_path = run.workspace_root
+        else:
+            project_path = WORKSPACE_ROOT
         success = vc_manager.push_project_to_repo(project_path, request.repo_name, request.commit_message)
         
         if success:

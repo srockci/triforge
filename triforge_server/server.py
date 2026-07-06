@@ -28,7 +28,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from .config import AGENT_PROMPTS, WORKSPACE_ROOT
+from .config import WORKSPACE_ROOT
 from .workflow import RunState, engine, run_pipeline_async
 from .board import router as board_router
 from .store import get_store
@@ -74,21 +74,10 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"[startup] could not check providers: {e}", flush=True)
 
-    # Spin up the SNS notification dispatcher worker (daemon thread).
-    # It subscribes to the global event bus and forwards events to any
-    # configured channels (Feishu / WeChat / DingTalk / Telegram).
-    try:
-        from .notifier import start_worker, publish
-        start_worker()
-        n_channels = len((get_settings().get() or {}).get("notification_channels") or [])
-        if n_channels:
-            print(f"[startup] notifier worker watching {n_channels} channel(s)",
-                  flush=True)
-        else:
-            print("[startup] notifier worker up (no channels configured; "
-                  "add them in Settings)", flush=True)
-    except Exception as e:
-        print(f"[startup] could not start notifier worker: {e}", flush=True)
+    # Notification dispatcher is synchronous — `publish(ev)` fans out
+    # to all configured channels in the calling thread.
+    n_channels = len((get_settings().get() or {}).get("notification_channels") or [])
+    print(f"[startup] notifier ready ({n_channels} channel(s))", flush=True)
 
     yield
 

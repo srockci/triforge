@@ -585,87 +585,11 @@ def get_integration(platform: PlatformType, config: PlatformConfig) -> Optional[
     elif platform == PlatformType.GITLAB:
         return GitLabIntegration(config.auth_token)
     elif platform == PlatformType.CUSTOM_GIT:
-        return CustomGitIntegration(config.git_url, config.auth_token)
+        logger.warning("CustomGitIntegration is not implemented")
+        return None
     else:
         logger.warning(f"Unsupported platform: {platform}")
         return None
 
-class CustomGitIntegration:
-    """自建Git平台集成"""
-    
-    def __init__(self, git_url: str, auth_token: str):
-        self.git_url = git_url
-        self.auth_token = auth_token
-        self.api_url = git_url.replace('.git', '') if git_url.endswith('.git') else git_url
-    
-    def get_user_repos(self) -> List[Dict]:
-        """获取用户仓库列表"""
-        try:
-            # 对于自建Git，我们可能需要使用不同的API
-            # 这里返回一个模拟的仓库列表
-            return [
-                {
-                    "name": "example-project",
-                    "full_name": "user/example-project",
-                    "description": "Example project",
-                    "html_url": self.git_url + "/example-project",
-                    "clone_url": self.git_url + "/example-project.git",
-                    "default_branch": "main",
-                    "owner": {"login": "user"},
-                    "private": False
-                }
-            ]
-        except Exception as e:
-            logger.error(f"Failed to get custom git repos: {e}")
-            return []
-    
-    def create_repo(self, name: str, description: str = "", private: bool = False) -> Optional[Dict]:
-        """创建仓库"""
-        try:
-            # 对于自建Git，创建仓库的方式可能不同
-            # 这里返回一个模拟的仓库创建结果
-            return {
-                "name": name,
-                "full_name": f"user/{name}",
-                "description": description,
-                "html_url": self.git_url + f"/{name}",
-                "clone_url": self.git_url + f"/{name}.git",
-                "default_branch": "main",
-                "owner": {"login": "user"},
-                "private": private
-            }
-        except Exception as e:
-            logger.error(f"Failed to create custom git repo: {e}")
-            return None
-    
-    def get_repo(self, owner: str, repo: str) -> Optional[Dict]:
-        """获取仓库信息"""
-        try:
-            # 对于自建Git，获取仓库信息的方式可能不同
-            return {
-                "name": repo,
-                "full_name": f"{owner}/{repo}",
-                "description": "Custom git repository",
-                "html_url": self.git_url + f"/{repo}",
-                "clone_url": self.git_url + f"/{repo}.git",
-                "default_branch": "main",
-                "owner": {"login": owner},
-                "private": False
-            }
-        except Exception as e:
-            logger.error(f"Failed to get custom git repo: {e}")
-            return None
-    
-    def get_user_info(self) -> Optional[Dict]:
-        """获取用户信息"""
-        try:
-            # 对于自建Git，获取用户信息的方式可能不同
-            return {
-                "login": "user",
-                "name": "User",
-                "email": "user@example.com",
-                "avatar_url": ""
-            }
-        except Exception as e:
-            logger.error(f"Failed to get custom git user info: {e}")
-            return None
+# CustomGitIntegration was removed — the class was entirely mock data.
+# Re-implement against a real Gitea/Gogs API if needed.
