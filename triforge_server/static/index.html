@@ -1253,13 +1253,22 @@ input:checked + .slider:before {
   /* ============ Dashboard ============ */
   #dashboard-root { padding: 16px 20px; }
 
-  .dash-header {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 16px; padding-bottom: 12px;
-    border-bottom: 1px solid var(--divider);
+  .dash-hero {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: var(--space-4); margin-bottom: var(--space-5);
   }
-  .dash-title { font-size: 18px; font-weight: 700; color: var(--text); margin: 0; }
-  .dash-header-right { display: flex; align-items: center; gap: 8px; }
+  .dash-hero-text { flex: 1; min-width: 0; }
+  .dash-hero-title {
+    font-size: var(--font-h1); font-weight: 700; color: var(--text);
+    margin: 0 0 2px; line-height: 1.2;
+  }
+  .dash-hero-sub {
+    font-size: var(--font-body-s); color: var(--text-mute); margin: 0;
+  }
+  .dash-hero-actions {
+    display: flex; align-items: center; gap: var(--space-2);
+    flex-shrink: 0;
+  }
 
   .dash-period-tabs {
     display: flex; gap: 0;
@@ -1595,6 +1604,110 @@ input:checked + .slider:before {
     font-size: var(--font-caption);
     color: var(--text-mute);
     font-variant-numeric: tabular-nums;
+  }
+
+  /* ============ Dash aggregate row (Batch 2) ============ */
+  .dash-aggregate {
+    display: flex;
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+  }
+  .dash-aggregate-card {
+    flex: 1;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    padding: var(--space-4);
+    font-size: var(--font-body-s);
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+  .dash-aggregate-card strong {
+    font-size: var(--font-h3);
+    color: var(--text);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ============ Project grid (Batch 2) ============ */
+  .project-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-4);
+  }
+  @media (max-width: 1280px) {
+    .project-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 1024px) {
+    .project-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 640px) {
+    .project-grid { grid-template-columns: 1fr; }
+  }
+  .project-grid-footer {
+    text-align: center;
+    margin-top: var(--space-3);
+  }
+
+  .project-card {
+    position: relative;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: var(--space-4);
+    cursor: pointer;
+    transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  .project-card:hover {
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-1);
+    transform: translateY(-2px);
+  }
+  .project-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+  }
+  .project-card-status {
+    font-size: var(--font-caption);
+    font-weight: 600;
+  }
+  .project-card-id {
+    font-size: var(--font-micro);
+    color: var(--text-faint);
+  }
+  .project-card-req {
+    font-size: var(--font-body-s);
+    color: var(--text);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .project-card-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: var(--font-caption);
+    color: var(--text-faint);
+  }
+  .project-card-stats {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    font-size: var(--font-caption);
+    color: var(--text-mute);
+    font-variant-numeric: tabular-nums;
+    padding-top: var(--space-1);
+    border-top: 1px solid var(--divider);
+    margin-top: auto;
   }
 
   /* ============ All Runs tab: filter pills + dense rows ============ */
@@ -2697,43 +2810,52 @@ input:checked + .slider:before {
   <div class="col col-mid" id="detail-col">
     <!-- Dashboard (shown by default) -->
     <div id="dashboard-root">
-      <div class="dash-header">
-        <h1 class="dash-title" data-i18n="Overview">Overview</h1>
-        <div class="dash-header-right">
-          <div class="dash-period-tabs" id="period-tabs">
+      <!-- Hero area -->
+      <div class="dash-hero">
+        <div class="dash-hero-text">
+          <h1 class="dash-hero-title" data-i18n="Dashboard">Dashboard</h1>
+          <p class="dash-hero-sub" data-i18n="Overview of your AI projects">Overview of your AI projects</p>
+        </div>
+        <div class="dash-hero-actions">
+          <div class="period-tabs" id="period-tabs">
             <button class="period-tab active" data-period="today" data-i18n="Today">Today</button>
             <button class="period-tab" data-period="week" data-i18n="This Week">This Week</button>
             <button class="period-tab" data-period="month" data-i18n="This Month">This Month</button>
           </div>
-          <button class="btn btn-sm" id="dash-refresh" data-i18n-title="Refresh" title="Refresh">
-            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          <button class="btn btn-sm" id="dash-refresh" title="Refresh">
+            <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <polyline points="23 4 23 10 17 10"/>
+              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+            </svg>
           </button>
         </div>
       </div>
 
-      <!-- Overview panel: summary + aggregate -->
-      <div class="dash-overview-panel">
-        <div class="dash-summary" id="dash-summary"></div>
-        <div class="dash-section-divider"></div>
-        <div class="dash-agg-row" id="dash-aggregate"></div>
-      </div>
+      <!-- Stat grid (3 big number cards) -->
+      <div class="stat-grid" id="dash-stat-grid"></div>
+
+      <!-- Aggregate row (4 secondary cards) -->
+      <div class="dash-aggregate" id="dash-aggregate"></div>
 
       <!-- Per-model time period stats -->
       <div class="dash-section">
         <div class="dash-section-header">
-          <h2 class="dash-section-title" style="margin:0;" data-i18n="Token Usage by Model">Token Usage by Model</h2>
-          <span class="dash-section-meta" id="dash-model-meta"></span>
+          <h2 class="dash-section-title" data-i18n="Token Usage by Model">Token Usage by Model</h2>
+          <span class="dash-section-subtitle" id="dash-model-meta"></span>
         </div>
         <div id="dash-model-stats"></div>
       </div>
 
-      <!-- Project list -->
+      <!-- Project grid -->
       <div class="dash-section">
         <div class="dash-section-header">
-          <h2 class="dash-section-title" style="margin:0;" data-i18n="Projects">Projects</h2>
+          <h2 class="dash-section-title" data-i18n="Active Projects">Active Projects</h2>
           <span class="dash-section-subtitle" id="dash-project-count"></span>
         </div>
-        <div id="dash-project-list"></div>
+        <div class="project-grid" id="dash-project-grid"></div>
+        <div class="project-grid-footer" id="dash-project-footer" style="display:none;">
+          <button class="btn btn-sm" id="dash-view-all-runs" data-i18n="View all →">View all →</button>
+        </div>
       </div>
     </div>
 
@@ -4352,7 +4474,6 @@ const App = {
   },
 
   renderDashboard() {
-    // Only show full-width dashboard when no run is selected (polling guard)
     const main = document.querySelector('.main');
     if (this.state.selectedRunId) {
       main.classList.remove('dashboard-mode');
@@ -4360,102 +4481,259 @@ const App = {
       main.classList.add('dashboard-mode');
     }
     const runs = this.state.runs || [];
-    const active = runs.filter(r =>
-      r.status === 'awaiting_approval' || r.status === 'awaiting_iteration'
-        || r.status === 'running' || r.status === 'interrupted'
-    );
 
-    // ---- Dashboard: summary ----
-    const totalRuns = runs.length;
-    const awaiting = runs.filter(r => r.status === 'awaiting_approval').length;
-    const awaitingIter = runs.filter(r => r.status === 'awaiting_iteration').length;
-    const running = runs.filter(r => r.status === 'running').length;
-    const failed = runs.filter(r => r.status === 'failed').length;
-    const completed = runs.filter(r => r.status === 'completed').length;
-    const cancelled = runs.filter(r => r.status === 'cancelled').length;
-    const interrupted = runs.filter(r => r.status === 'interrupted').length;
-
-    const totalTokensIn = runs.reduce((s, r) => s + (r.tokens_in || 0), 0);
-    const totalTokensOut = runs.reduce((s, r) => s + (r.tokens_out || 0), 0);
-    const totalTokens = totalTokensIn + totalTokensOut;
-    const totalCost = runs.reduce((s, r) => s + (r.cost_estimate || 0), 0);
-
-    const completedWithTime = runs.filter(r =>
-      r.status === 'completed' && r.created_at && r.updated_at
-    );
-    let avgDuration = null;
-    if (completedWithTime.length > 0) {
-      const totalSecs = completedWithTime.reduce((s, r) =>
-        s + Math.max(0, (r.updated_at || 0) - (r.created_at || 0)), 0);
-      avgDuration = totalSecs / completedWithTime.length;
+    // Empty state
+    if (!runs || runs.length === 0) {
+      this._renderDashboardEmpty();
+      return;
     }
 
-    // ---- Per-model stats by selected period ----
     const selectedPeriod = this.state.dashboardPeriod || 'today';
-    const filteredRuns = this._filterRunsByPeriod(runs, selectedPeriod);
-    const modelStats = this._computeModelStats(filteredRuns);
+    const filtered = this._filterRunsByPeriod(runs, selectedPeriod);
+    const modelStats = this._computeModelStats(filtered);
 
-    const statusIcon = (label, val, color, icon) =>
-      `<div class="dash-summary-card" style="border-left: 3px solid ${color};">
-        <div class="dsc-icon">${icon}</div>
-        <div class="dsc-body">
-          <div class="dsc-label">${label}</div>
-          <div class="dsc-value">${val}</div>
+    // 3 big stat cards
+    this._renderStatCards(filtered);
+
+    // 4 aggregate secondary cards
+    this._renderAggregate(runs);
+
+    // Per-model table
+    this._renderModelStatsTable(modelStats, filtered.length);
+
+    // Project grid
+    this._renderProjectGrid(filtered);
+
+    document.getElementById('dash-project-count').textContent =
+      `${filtered.length} ${__('total')}`;
+  },
+
+  // ========== Batch 2: Stat cards, aggregate, project grid ==========
+
+  _renderDashboardEmpty() {
+    const grid = document.getElementById('dash-stat-grid');
+    const agg  = document.getElementById('dash-aggregate');
+    const model = document.getElementById('dash-model-stats');
+    const proj  = document.getElementById('dash-project-grid');
+    if (grid) grid.innerHTML = '';
+    if (agg)  agg.innerHTML  = '';
+    if (proj) proj.innerHTML = '';
+    if (model) {
+      model.innerHTML = `<div class="dash-empty">
+        <div class="dash-empty-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width:24px;height:24px;">
+            <path d="M3 3h18v18H3z M3 9h18 M9 21V9"/>
+          </svg>
         </div>
+        <div class="dash-empty-title">${__('Welcome to TriForge')}</div>
+        <div class="dash-empty-hint">${__('Start a new task and TriForge will orchestrate Architect / Coder / Reviewer agents to fulfill your requirement.')}</div>
+        <button class="btn btn-primary" style="margin-top:16px;" data-action="new-task">
+          <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          <span>${__('New Task')}</span>
+        </button>
       </div>`;
+    }
+  },
 
-    // ---- Render summary cards ----
-    document.getElementById('dash-summary').innerHTML = `
-      ${statusIcon(__('Total'), totalRuns, 'var(--accent)',
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>')}
-      ${statusIcon(__('Active'), active.length, 'var(--blue)',
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>')}
-      ${statusIcon(__('Running'), running, 'var(--green)',
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>')}
-      ${awaiting > 0 ? statusIcon(__('Awaiting'), awaiting, 'var(--yellow)',
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>') : ''}
-      ${statusIcon(__('Completed'), completed, 'var(--green)',
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="20 6 9 17 4 12"/></svg>')}
-      ${statusIcon(__('Failed'), failed, 'var(--red)',
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>')}
-    `;
+  _renderStatCards(runs) {
+    const totalIn  = runs.reduce((s, r) => s + (r.tokens_in  || 0), 0);
+    const totalOut = runs.reduce((s, r) => s + (r.tokens_out || 0), 0);
+    const totalCost = runs.reduce((s, r) => s + (r.cost_estimate || 0), 0);
+    const completed = runs.filter(r => r.status === 'completed').length;
+    const failed    = runs.filter(r => r.status === 'failed').length;
+    const cancelled = runs.filter(r => r.status === 'cancelled').length;
+    const total     = runs.length;
+    const successRate = total > 0 ? (completed / Math.max(1, completed + failed + cancelled)) * 100 : 0;
 
-    // ---- Render aggregate stats row ----
-    const aggHTML = `
-      <div class="dash-agg-row">
-        <div class="dash-agg-card">
-          <div class="dash-agg-card-label">${__('Total Tokens')}</div>
-          <div class="dash-agg-card-val">${totalTokens.toLocaleString()}</div>
-          <div class="dash-agg-card-bar">
-            <div class="dash-agg-card-bar-fill" style="width:${totalTokens > 0 ? (totalTokensIn / totalTokens * 100).toFixed(1) : 0}%;background:var(--accent);"></div>
-          </div>
-          <div class="dash-agg-card-sub">${totalTokensIn.toLocaleString()} ${__('in')} &middot; ${totalTokensOut.toLocaleString()} ${__('out')}</div>
-        </div>
-        <div class="dash-agg-card">
-          <div class="dash-agg-card-label">${__('Total Cost')}</div>
-          <div class="dash-agg-card-val">&yen;${totalCost.toFixed(4)}</div>
-          <div class="dash-agg-card-sub">${__('Avg')} ${avgDuration ? this._formatDurationShort(avgDuration) : '—'} / ${__('run')}</div>
-        </div>
-        <div class="dash-agg-card">
-          <div class="dash-agg-card-label">${__('Success Rate')}</div>
-          <div class="dash-agg-card-val">${totalRuns > 0 ? ((completed / totalRuns) * 100).toFixed(1) : 0}%</div>
-          <div class="dash-agg-card-bar">
-            <div class="dash-agg-card-bar-fill" style="width:${totalRuns > 0 ? ((completed / totalRuns) * 100).toFixed(1) : 0}%;background:var(--green);"></div>
-          </div>
-          <div class="dash-agg-card-sub">${completed} ${__('of')} ${totalRuns} ${__('runs')}</div>
-        </div>
+    const yesterday = this._getYesterdayStats();
+    const tokensDelta = totalIn + totalOut - (yesterday.tokensIn + yesterday.tokensOut);
+    const costDelta   = totalCost - yesterday.cost;
+    const successDelta = successRate - yesterday.successRate;
+
+    const cards = [
+      {
+        label: __('Total Tokens'),
+        value: (totalIn + totalOut).toLocaleString(),
+        sub: `${totalIn.toLocaleString()} ${__('in')} · ${totalOut.toLocaleString()} ${__('out')}`,
+        delta: tokensDelta,
+        deltaUnit: 'tokens',
+        type: 'default',
+      },
+      {
+        label: __('Total Cost'),
+        value: `¥${totalCost.toFixed(2)}`,
+        sub: this._formatAverageCost(totalCost, completed),
+        delta: costDelta,
+        deltaUnit: 'cost',
+        type: 'cost',
+      },
+      {
+        label: __('Success Rate'),
+        value: `${successRate.toFixed(1)}%`,
+        sub: `${completed} ${__('of')} ${total} ${__('runs')}`,
+        delta: successDelta,
+        deltaUnit: 'pct',
+        type: 'success',
+      },
+    ];
+
+    const html = cards.map(c => this._statCardHTML(c)).join('');
+    const el = document.getElementById('dash-stat-grid');
+    if (el) el.innerHTML = html;
+  },
+
+  _statCardHTML(card) {
+    const delta = card.delta;
+    const sign = delta > 0 ? '+' : delta < 0 ? '' : '±';
+    const isBad = card.type === 'cost' ? delta > 0 : delta < 0;
+    const dirClass = delta === 0 ? '' : isBad ? 'up-bad' : 'down-bad';
+    const arrow = delta > 0 ? '↑' : delta < 0 ? '↓' : '→';
+    const deltaText = `${sign}${this._formatDelta(delta, card.deltaUnit)} ${arrow}`;
+
+    return `<div class="stat-card ${card.type}">
+      <div class="stat-card-head">
+        <div class="stat-card-label">${card.label}</div>
+        ${delta !== 0 ? `<div class="stat-card-delta ${dirClass}">${deltaText}</div>` : ''}
+      </div>
+      <div class="stat-card-value tabular-nums">${card.value}</div>
+      <div class="stat-card-sub">
+        <div class="stat-card-compare">${card.sub}</div>
+      </div>
+    </div>`;
+  },
+
+  _getYesterdayStats() {
+    return { tokensIn: 0, tokensOut: 0, cost: 0, successRate: 0 };
+  },
+
+  _formatDelta(value, unit) {
+    if (unit === 'pct') return `${Math.abs(value).toFixed(1)}%`;
+    if (unit === 'cost') return `¥${Math.abs(value).toFixed(2)}`;
+    return Math.abs(value).toLocaleString();
+  },
+
+  _formatAverageCost(totalCost, completedCount) {
+    if (completedCount === 0) return '—';
+    return `¥${(totalCost / completedCount).toFixed(2)} ${__('avg per run')}`;
+  },
+
+  _renderAggregate(runs) {
+    const total = runs.length;
+    const awaiting = runs.filter(r => r.status === 'awaiting_approval').length;
+    const running  = runs.filter(r => r.status === 'running').length;
+    const failed   = runs.filter(r => r.status === 'failed').length;
+    const totalDuration = runs.reduce((s, r) => {
+      if (!r.created_at || !r.updated_at) return s;
+      return s + Math.max(0, r.updated_at - r.created_at);
+    }, 0);
+    const avgDuration = total > 0 ? totalDuration / total : 0;
+
+    const el = document.getElementById('dash-aggregate');
+    if (!el) return;
+    el.innerHTML = `
+      <div class="dash-aggregate-card">
+        <strong>${running}</strong> ${__('running')}
+      </div>
+      <div class="dash-aggregate-card">
+        <strong>${awaiting}</strong> ${__('awaiting approval')}
+      </div>
+      <div class="dash-aggregate-card">
+        <strong>${failed}</strong> ${__('failed')}
+      </div>
+      <div class="dash-aggregate-card">
+        <strong>${this._formatDurationShort(avgDuration)}</strong> ${__('avg duration')}
       </div>
     `;
-    document.getElementById('dash-aggregate').innerHTML = aggHTML;
+  },
 
-    // ---- Render model stats table ----
-    this._renderModelStatsTable(modelStats, filteredRuns.length);
+  _renderProjectGrid(runs) {
+    const container = document.getElementById('dash-project-grid');
+    if (!container) return;
+    const sorted = [...runs].sort((a, b) => (b.updated_at || 0) - (a.updated_at || 0));
+    const maxTokens = Math.max(...sorted.map(r => (r.tokens_in || 0) + (r.tokens_out || 0)), 1);
 
-    // ---- Render project list ----
-    this._renderProjectList(runs);
+    if (sorted.length === 0) {
+      container.innerHTML = `<div class="dash-empty">${__('No projects yet. Start a new task!')}</div>`;
+      const footer = document.getElementById('dash-project-footer');
+      if (footer) footer.style.display = 'none';
+      return;
+    }
 
-    // ---- Set project count ----
-    document.getElementById('dash-project-count').textContent = `${runs.length} ${__('total')}`;
+    const display = sorted.slice(0, 12);
+    container.innerHTML = display.map(r => this._projectCardHTML(r, maxTokens)).join('');
+
+    container.querySelectorAll('.project-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const runId = card.dataset.runId;
+        if (!runId) return;
+        const runsTab = document.querySelector('[data-nav="runs"]');
+        if (runsTab) runsTab.click();
+        setTimeout(() => this.selectRun(runId), 50);
+      });
+    });
+
+    const footer = document.getElementById('dash-project-footer');
+    if (footer) {
+      if (sorted.length > 12) {
+        footer.style.display = 'block';
+        document.getElementById('dash-view-all-runs').onclick = () => {
+          document.querySelector('[data-nav="runs"]')?.click();
+        };
+      } else {
+        footer.style.display = 'none';
+      }
+    }
+  },
+
+  _projectCardHTML(run, maxTokens) {
+    const statusClass = this._dashStatusClass(run.status);
+    const statusColors = {
+      running:    'var(--status-running)',
+      waiting:    'var(--status-awaiting)',
+      done:       'var(--status-completed)',
+      failed:     'var(--status-failed)',
+      other:      'var(--status-cancelled)',
+    };
+    const color = statusColors[statusClass] || 'var(--text-faint)';
+    const tokenTotal = (run.tokens_in || 0) + (run.tokens_out || 0);
+    const modelNames = run.models
+      ? Object.values(run.models).filter(Boolean).join(', ')
+      : '—';
+    const duration = (run.created_at && run.updated_at)
+      ? this._formatDurationShort(Math.max(0, run.updated_at - run.created_at))
+      : '—';
+    const cost = run.cost_estimate || 0;
+    const statusLabel = this.statusLabel(run.status);
+    const timeAgo = run.updated_at ? this._timeAgo(run.updated_at) : '';
+    const req = (run.requirement || __('(no req)')).slice(0, 80);
+
+    return `<div class="project-card" data-run-id="${this.escape(run.run_id)}"
+      style="border-left: 3px solid ${color};">
+      <div class="project-card-head">
+        <div class="project-card-status" style="color: ${color};">
+          ${statusLabel}
+        </div>
+        <div class="project-card-id mono">${this.escape(run.run_id.slice(-8))}</div>
+      </div>
+      <div class="project-card-req">${this.escape(req)}</div>
+      <div class="project-card-meta">
+        <span class="mono" style="font-size:10px;">${this.escape(modelNames.split(',')[0] || '—')}</span>
+        <span>${timeAgo}</span>
+      </div>
+      <div class="project-card-stats">
+        <span title="${__('Total tokens')}">⬢ ${tokenTotal > 0 ? this._formatCompact(tokenTotal) : '—'}</span>
+        <span title="${__('Cost')}">¥ ${cost.toFixed(2)}</span>
+        <span title="${__('Duration')}">⏱ ${duration}</span>
+      </div>
+    </div>`;
+  },
+
+  _formatCompact(n) {
+    if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
+    if (n >= 1e3) return `${(n / 1e3).toFixed(1)}K`;
+    return n.toLocaleString();
   },
 
   _filterRunsByPeriod(runs, period) {
