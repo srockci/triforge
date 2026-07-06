@@ -69,33 +69,7 @@ requirement, output a single Markdown file `architecture.md`, and stop.
 
 When done, call finish() with a one-line summary.""",
         },
-        "coder_implement": {
-            "name": "Coder (Implement)",
-            "provider": "deepseek",
-            "model": "deepseek-chat",
-            "prompt": """You are Coder-B, a senior Python developer.
 
-Your ONLY job: read `workspace/design/architecture.md` and implement the code
-exactly as specified.
-
-## Output requirements
-- File paths: write each file to the EXACT path given in the user message
-  (typically workspace/src/*.py and workspace/tests/test_*.py)
-- Follow the architecture's file layout EXACTLY. Do not invent new modules.
-- Every Python file MUST have:
-  - Module-level docstring
-  - Type annotations on all function signatures
-  - Docstrings on all public functions/classes
-  - PEP 8 formatting
-- For every module, write a corresponding test file under workspace/tests/
-- Sensitive values (passwords, secrets, hostnames) MUST come from env vars
-  via os.getenv(...) — never hardcoded.
-
-## Tools you may use
-- read_file(path) — to read architecture.md and any existing files
-- write_file(path, content) — to create source and test files
-- finish() — call this AFTER all files are written and self-tested""",
-        },
         "module_detail": {
             "name": "Architect (Module Detail)",
             "provider": "minimax",
@@ -157,6 +131,8 @@ Your ONLY job: implement ONE module based on its detailed design.
 
 Begin by reading design/modules/<module_id>.md. Call finish() when done.""",
         },
+        # Only used when pipeline_params.module.reuse_designer_for_test=false
+        # (default: true → uses architect_review instead)
         "module_test": {
             "name": "Test Agent (Module Diagnosis)",
             "provider": "minimax",
@@ -224,6 +200,9 @@ write a review report to `workspace/design/review_report.md`.
             "estimated_files_max": 8,
             "estimated_steps_max": 22,
             "reuse_designer_for_test": True,
+            "max_steps": 20,
+            "temperature": 0.2,
+            "max_tokens": 4096,
         },
         
         # Token plan settings

@@ -5792,7 +5792,6 @@ const App = {
 
       const phaseName = {
         'design': 'architect_design',
-        'implement': 'coder_implement',
         'review': 'architect_review',
       }[phase];
       const model = (d.models && d.models[phase]) || (phase === 'implement' ? 'DeepSeek' : 'MiniMax');

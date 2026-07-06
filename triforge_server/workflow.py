@@ -415,6 +415,8 @@ async def run_pipeline_async(run: RunState, settings: Optional[Dict[str, Any]] =
     max_retry = mp.get("max_retry_per_module", 3)
 
     reuse_designer_for_test = bool(mp.get("reuse_designer_for_test", True))
+    # module_test only used when reuse_designer_for_test=false
+    # (default: true → uses architect_review instead)
     test_role_name = "architect_review" if reuse_designer_for_test else "module_test"
 
     roles = settings.get("roles", {})
@@ -877,10 +879,9 @@ def _list_existing_files(ws_root: Path) -> str:
 # Map role names to the max_steps settings key
 _PHASE_ROLE_MAP = {
     "design": "architect_design",
-    "implement": "coder_implement",
     "review": "architect_review",
 }
-_PHASE_STEPS_DEFAULTS = {"design": 12, "implement": 25, "review": 12}
+_PHASE_STEPS_DEFAULTS = {"design": 12, "review": 12}
 
 
 def _get_phase_max_steps(phase: str, settings: Dict[str, Any]) -> int:

@@ -507,8 +507,10 @@ def make_agent(role: str, workspace_root: Path,
     # Pipeline params for this role's phase
     phase_map = {
         "architect_design": "design",
-        "coder_implement": "implement",
         "architect_review": "review",
+        "module_detail": "module",
+        "module_code": "module",
+        "module_test": "module",
     }
     phase = phase_map.get(role, "design")
     params = settings.get("pipeline_params", {}).get(phase, {})
