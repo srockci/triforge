@@ -28,6 +28,12 @@
     --accent-soft:  hsla(245 80% 65% / 0.12);
     --accent-line:  hsla(245 80% 65% / 0.35);
     --accent-2:     hsl(265 75% 68%);
+    --accent-2-soft: hsla(265 75% 68% / 0.12);
+
+    --info:         var(--blue);
+    --info-soft:    var(--blue-soft);
+    --success:      var(--green);
+    --success-soft: var(--green-soft);
 
     /* Semantic */
     --green:        hsl(150 65% 55%);
@@ -1278,21 +1284,24 @@ input:checked + .slider:before {
   }
 
   .dash-period-tabs {
-    display: flex; gap: 0;
-    background: var(--bg-elev-2);
-    border-radius: var(--r-md);
-    padding: 2px;
+    display: inline-flex; gap: 2px;
+    background: var(--bg-elev-1);
+    border: 1px solid var(--border);
+    border-radius: var(--r-pill);
+    padding: 3px;
   }
   .period-tab {
     background: none; border: none;
-    padding: 4px 12px; font-size: 11px; font-weight: 500;
-    color: var(--text-faint); cursor: pointer;
-    border-radius: var(--r-sm);
-    transition: all .15s;
+    padding: 5px 12px; font-size: 12px; font-weight: 500;
+    color: var(--text-mute); cursor: pointer;
+    border-radius: var(--r-pill);
+    transition: all .2s ease;
   }
-  .period-tab:hover { color: var(--text-dim); }
+  .period-tab:hover { color: var(--text); }
   .period-tab.active {
-    background: var(--accent); color: #fff;
+    background: var(--bg-elev-3);
+    box-shadow: var(--shadow-1);
+    color: var(--text);
   }
 
   .dash-section { margin-bottom: 16px; }
@@ -1496,8 +1505,35 @@ input:checked + .slider:before {
 
   /* No data empty state for dashboard */
   .dash-empty {
-    text-align: center; padding: 32px; color: var(--text-faint);
-    font-size: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+    color: var(--text-mute);
+  }
+  .dash-empty-icon {
+    width: 56px; height: 56px;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: var(--space-4);
+    color: var(--accent);
+    font-size: 24px;
+  }
+  .dash-empty-title {
+    font-size: var(--font-h3);
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .dash-empty-hint {
+    font-size: var(--font-body-s);
+    color: var(--text-mute);
+    line-height: 1.6;
+    max-width: 360px;
   }
 
   /* ============ Dashboard stat card system (Batch 1) ============ */
@@ -1546,10 +1582,13 @@ input:checked + .slider:before {
     border-radius: var(--r-lg);
     padding: var(--space-5);
     overflow: hidden;
-    transition: border-color .15s ease, transform .15s ease;
+    min-height: 120px;
+    transition: border-color .15s ease, transform .15s ease, box-shadow .15s ease;
   }
   .stat-card:hover {
     border-color: var(--border-strong);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-1);
   }
   .stat-card::before {
     content: "";
@@ -1669,6 +1708,7 @@ input:checked + .slider:before {
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
+    min-height: 120px;
   }
   .project-card:hover {
     border-color: var(--border-strong);
@@ -1682,8 +1722,20 @@ input:checked + .slider:before {
     gap: var(--space-2);
   }
   .project-card-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     font-size: var(--font-caption);
     font-weight: 600;
+    color: var(--text-dim);
+  }
+  .project-card-status::before {
+    content: "";
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
   }
   .project-card-id {
     font-size: var(--font-micro);
@@ -5001,11 +5053,10 @@ const App = {
     const req = (run.requirement || __('(no req)')).slice(0, 80);
 
     return `<div class="project-card" data-run-id="${this.escape(run.run_id)}"
-      style="border-left: 3px solid ${color};" role="button" tabindex="0"
+      role="button" tabindex="0"
       aria-label="${__('View details for run')} ${this.escape(run.run_id.slice(-8))}">
       <div class="project-card-head">
-        <div class="project-card-status" style="color: ${color};">
-          ${statusLabel}
+        <div class="project-card-status" style="color: ${color};">${statusLabel}
         </div>
         <div class="project-card-id mono">${this.escape(run.run_id.slice(-8))}</div>
       </div>
