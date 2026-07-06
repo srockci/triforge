@@ -426,4 +426,4 @@ def _dispatch(ev: BoardEvent) -> None:
             )
 
 
-_INSTRUMENTED = True  # outcome recording is part of _dispatch
+

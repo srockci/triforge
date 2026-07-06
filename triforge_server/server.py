@@ -23,7 +23,8 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -83,7 +84,24 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="TriForge Integration", lifespan=lifespan)
-app.include_router(board_router)
+
+# ---------------------------------------------------------------------------
+# Optional API-key auth. Set TRIFORGE_API_KEY env var to enable.
+# When enabled, every API request (except health, static files, and the
+# dashboard index) must include header Authorization: Bearer <key>.
+# ---------------------------------------------------------------------------
+API_KEY = os.environ.get("TRIFORGE_API_KEY") or None
+security = HTTPBearer(auto_error=False)
+
+
+async def verify_api_key(creds: Optional[HTTPAuthorizationCredentials] = Depends(security)) -> None:
+    if not API_KEY:
+        return  # auth disabled — open access
+    if creds is None or creds.credentials != API_KEY:
+        raise HTTPException(status_code=401, detail="missing or invalid API key")
+
+
+app.include_router(board_router, dependencies=[Depends(verify_api_key)])
 
 # Serve dashboard static files from triforge_server/static/
 _STATIC_DIR = Path(__file__).parent / "static"

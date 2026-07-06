@@ -3,7 +3,7 @@
 Edit LLM_PROVIDERS below to match the keys already in ~/.hermes/.env.
 
 The model names here MUST match what the provider's /v1/models returns.
-For MiniMax CN (api.minimax.chat/v1) valid model ids include:
+For MiniMax CN (api.minimaxi.com/v1) valid model ids include:
     MiniMax-Text-01, MiniMax-M2.7, MiniMax-M2.5, etc.
 For DeepSeek (api.deepseek.com/v1) valid model ids include:
     deepseek-chat, deepseek-reasoner
@@ -47,11 +47,11 @@ def workspace_from_path(path: str) -> Path:
 # Two LLM providers. Each must have an OpenAI-compatible /v1/chat/completions endpoint.
 LLM_PROVIDERS = {
     "minimax": {
-        # Source: ~/.hermes/.env  MINIMAX_CN_BASE_URL=https://api.minimax.chat/v1
+        # Source: ~/.hermes/.env  MINIMAX_CN_BASE_URL=https://api.minimaxi.com/v1
         # Override via TRIFORGE_MINIMAX_BASE_URL for testing (e.g. mock LLM).
         "base_url": os.environ.get(
             "TRIFORGE_MINIMAX_BASE_URL",
-            "https://api.minimax.chat/v1",
+            "https://api.minimaxi.com/v1",
         ),
         "api_key_env": "MINIMAX_CN_API_KEY",
         "model": os.environ.get("TRIFORGE_ARCHITECT_MODEL", "MiniMax-Text-01"),

@@ -29,7 +29,7 @@ DEFAULT_SETTINGS: Dict[str, Any] = {
     "providers": {
         "minimax": {
             "name": "MiniMax",
-            "base_url": "https://api.minimax.chat/v1",
+            "base_url": "https://api.minimaxi.com/v1",
             "api_key": "",
             "api_key_env": "MINIMAX_CN_API_KEY",
         },

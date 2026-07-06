@@ -12,6 +12,7 @@ so concurrent runs never collide.
 from __future__ import annotations
 
 import asyncio
+import secrets
 import threading
 import time
 import uuid
@@ -204,7 +205,7 @@ class WorkflowEngine:
     def create(self, requirement: str,
                working_paths: Optional[List[str]] = None,
                project_path: str = "") -> RunState:
-        run_id = f"run_{uuid.uuid4().hex[:10]}"
+        run_id = f"run_{secrets.token_urlsafe(16).replace('-', '_')}"
         pp = project_path.strip() if project_path else ""
         if pp:
             from .config import workspace_from_path
@@ -408,7 +409,7 @@ async def run_pipeline_async(run: RunState, settings: Optional[Dict[str, Any]] =
                         existing_files=existing, max_steps_remaining=remaining)
                 else:
                     design_user_msg = (
-                        f"User requirement:\n{run.requirement}\n\n"
+                        f"User requirement:\n```\n{run.requirement}\n```\n\n"
                         f"Workspace root: {ws}\n"
                         f"Write your architecture design to: design/architecture.md "
                         f"(relative to workspace root)."
@@ -450,7 +451,7 @@ async def run_pipeline_async(run: RunState, settings: Optional[Dict[str, Any]] =
                         existing_files=existing, max_steps_remaining=remaining)
                 else:
                     user_msg = (
-                        f"User requirement:\n{run.requirement}\n\n"
+                        f"User requirement:\n```\n{run.requirement}\n```\n\n"
                         f"Read the architecture from: design/architecture.md\n"
                         f"\n"
                         f"## IMPORTANT — Path rules\n"
@@ -496,7 +497,7 @@ async def run_pipeline_async(run: RunState, settings: Optional[Dict[str, Any]] =
                         existing_files=existing, max_steps_remaining=remaining)
                 else:
                     user_msg = (
-                        f"Original user requirement:\n{run.requirement}\n\n"
+                        f"Original user requirement:\n```\n{run.requirement}\n```\n\n"
                         f"Review everything in this directory:\n"
                         f"  {ws}\n"
                         f"\n"

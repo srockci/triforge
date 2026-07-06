@@ -334,13 +334,18 @@ class VersionControlManager:
                 logger.error(f"Repository not found: {repo_name}")
                 return False
             
-            # 安全校验: 只允许在工作区根目录内拉取
+            # 安全校验: 只允许在工作区根目录下特定子目录内拉取
             abs_path = Path(local_path).resolve()
             from .config import WORKSPACE_ROOT
             try:
-                abs_path.relative_to(WORKSPACE_ROOT.resolve())
+                rel = abs_path.relative_to(WORKSPACE_ROOT.resolve())
             except ValueError:
                 logger.error(f"Pull target path {abs_path} is outside workspace root {WORKSPACE_ROOT}")
+                return False
+            # Only allow pulls into dedicated subdirectories (not the root itself)
+            allowed_prefixes = ("pulls", "tmp_pulls", "imported")
+            if not rel.parts or rel.parts[0] not in allowed_prefixes:
+                logger.error(f"Pull target {rel} must start with one of {allowed_prefixes}")
                 return False
             
             # 清空目标目录

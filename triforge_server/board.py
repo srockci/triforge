@@ -100,6 +100,27 @@ def _run_workspace(run_id: str) -> Path:
     return (WORKSPACE_ROOT / run_id).resolve()
 
 
+# Files matching these patterns are hidden from the file tree and unreadable
+# via the API. Globs are matched against the relative path under workspace root.
+_HIDDEN_GLOBS = [
+    ".env", ".env.*", "*.pem", "*.key",
+    "data/settings.json",
+    ".git/config", ".git/credentials", ".git-credentials",
+    "__pycache__/*", "*.pyc",
+    ".venv/*", "venv/*", ".tox/*",
+    "node_modules/*",
+]
+
+
+def _is_hidden(rel_path: str) -> bool:
+    """Check if a relative path matches any hidden glob pattern."""
+    from fnmatch import fnmatch
+    for pat in _HIDDEN_GLOBS:
+        if fnmatch(rel_path, pat):
+            return True
+    return False
+
+
 def _list_workspace_files(run_id: str) -> List[Dict[str, Any]]:
     """List files under the per-run workspace for the file tree panel."""
     ws = _run_workspace(run_id)
@@ -108,12 +129,15 @@ def _list_workspace_files(run_id: str) -> List[Dict[str, Any]]:
         return out
     for p in sorted(ws.rglob("*")):
         if p.is_file():
+            rel = str(p.relative_to(ws)).replace("\\", "/")
+            if _is_hidden(rel):
+                continue
             try:
                 size = p.stat().st_size
             except OSError:
                 size = 0
             out.append({
-                "path": str(p.relative_to(ws)).replace("\\", "/"),
+                "path": rel,
                 "size": size,
                 "modified": p.stat().st_mtime,
             })
@@ -124,6 +148,10 @@ def _read_file_safe(run_id: str, rel_path: str) -> Optional[Dict[str, Any]]:
     """Read a file from the per-run workspace, with path-traversal protection."""
     import os
     ws = _run_workspace(run_id).resolve()
+    # Normalize the requested path and check it's not hidden
+    norm = Path(rel_path).as_posix()
+    if _is_hidden(norm):
+        return None
     target = (ws / rel_path).resolve()
     if os.path.commonpath([str(target), str(ws)]) != str(ws):
         return None
@@ -477,7 +505,7 @@ async def post_iteration(run_id: str, body: IterationBody) -> Dict[str, Any]:
     run.awaiting_iteration_input = False
     run.completed_phases = set()         # full re-run
     run.phase = "design"                  # explicit (matches pipeline start)
-    run.status = "running"
+    run.status = "iterating"              # freeze to prevent concurrent access
     run.error = None
     run.pending_tool = None
     run.pending_args = None
@@ -487,11 +515,14 @@ async def post_iteration(run_id: str, body: IterationBody) -> Dict[str, Any]:
     run.outputs = {}                      # wipe prior artifacts
     run.approved_paths = set()
     get_store().clear_agent_state(run.run_id)  # fresh history for new iteration
-    # Wipe disk artifacts from prior iteration
-    if run.workspace_root and run.workspace_root.exists():
-        shutil.rmtree(run.workspace_root)
+    # Wipe disk artifacts from prior iteration (only subdirs, never the root)
+    if run.workspace_root:
         for sub in ("design", "src", "tests"):
-            (run.workspace_root / sub).mkdir(parents=True, exist_ok=True)
+            p = run.workspace_root / sub
+            if p.exists():
+                shutil.rmtree(p)
+            p.mkdir(parents=True, exist_ok=True)
+    run.status = "running"                # release for pipeline
     run.updated_at = time.time()
 
     try:
@@ -1211,13 +1242,12 @@ async def delete_repository(repo_name: str):
 async def push_project(request: PushRequest):
     """推送项目到远程仓库"""
     try:
-        if request.run_id:
-            run = engine.runs.get(request.run_id)
-            if not run or not run.workspace_root:
-                raise HTTPException(status_code=404, detail=f"Run {request.run_id} not found or has no workspace")
-            project_path = run.workspace_root
-        else:
-            project_path = WORKSPACE_ROOT
+        if not request.run_id:
+            raise HTTPException(status_code=400, detail="run_id is required")
+        run = engine.runs.get(request.run_id)
+        if not run or not run.workspace_root:
+            raise HTTPException(status_code=404, detail=f"Run {request.run_id} not found or has no workspace")
+        project_path = run.workspace_root
         success = vc_manager.push_project_to_repo(project_path, request.repo_name, request.commit_message)
         
         if success:

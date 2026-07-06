@@ -122,9 +122,18 @@ def triforge_start(requirement: str) -> str:
     Blocks until the first approval gate or completion. The user should then
     reply with `/triforge_approve <run_id> <decision>`.
 
+    IMPORTANT: This tool accepts input ONLY from a trusted personal agent.
+    Do NOT expose this MCP server to untrusted MCP clients — the requirement
+    string is passed directly to the LLM pipeline with basic sanitization only.
+
     Args:
         requirement: Full user requirement description (include tech stack, features)
     """
+    if len(requirement) > 10000:
+        return "❌ requirement too long (max 10 000 chars)"
+    import re
+    # Strip control characters (except newline/tab) to reduce injection risk
+    requirement = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', requirement)
     try:
         resp = _post("/workflow/start", {"requirement": requirement})
     except Exception as e:
