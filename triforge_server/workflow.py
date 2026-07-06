@@ -419,7 +419,7 @@ async def run_pipeline_async(run: RunState, settings: Optional[Dict[str, Any]] =
         "design": roles.get("architect_design", {}).get("model", ""),
         "module_detail": roles.get("module_detail", {}).get("model", ""),
         "module_code": roles.get("module_code", {}).get("model", ""),
-        "module_test": roles.get("module_test", {}).get("model", ""),
+        "module_test": roles.get("architect_review", {}).get("model", ""),  # reuses architect_review
         "review": roles.get("architect_review", {}).get("model", ""),
     }
 
@@ -630,12 +630,12 @@ async def run_pipeline_async(run: RunState, settings: Optional[Dict[str, Any]] =
                 _emit("phase_end", phase=f"code_{mid}", ok=True,
                       summary=result.get("summary", ""))
 
-                # 2c. Module test (read-only diagnosis)
+                # 2c. Module test (read-only diagnosis) — reuses architect_review role
                 run.current_phase_sub = "test"
-                _emit("phase_start", phase=f"test_{mid}", agent="module_test",
-                      model=roles.get("module_test", {}).get("model", ""))
+                _emit("phase_start", phase=f"test_{mid}", agent="architect_review",
+                      model=roles.get("architect_review", {}).get("model", ""))
                 test_agent, saved_steps = make_agent_with_resume(
-                    "module_test", ws, settings, run.run_id, f"test_{mid}")
+                    "architect_review", ws, settings, run.run_id, f"test_{mid}")
                 remaining = test_max_steps - saved_steps
                 if remaining <= 0:
                     run.status = "failed"
