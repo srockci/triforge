@@ -242,93 +242,100 @@ input:checked + .slider:before {
 
   /* ============== Light theme ============== */
   [data-theme="light"] {
-    --bg:           hsl(220 20% 97%);
-    --bg-elev-1:    hsl(220 20% 99%);
-    --bg-elev-2:    hsl(220 15% 95%);
-    --bg-elev-3:    hsl(220 12% 92%);
-    --bg-hover:     hsl(220 12% 89%);
+    --bg:           hsl(220 20% 98%);
+    --bg-elev-1:    hsl(220 18% 96%);
+    --bg-elev-2:    hsl(220 16% 93%);
+    --bg-elev-3:    hsl(220 14% 89%);
+    --bg-hover:     hsl(220 12% 85%);
 
-    --border:       hsl(220 15% 88%);
-    --border-strong:hsl(220 12% 78%);
+    --border:       hsl(220 15% 86%);
+    --border-strong:hsl(220 15% 75%);
     --divider:      hsl(220 15% 90%);
 
-    --text:         hsl(220 20% 15%);
-    --text-dim:     hsl(220 12% 35%);
-    --text-mute:    hsl(220 8% 50%);
-    --text-faint:   hsl(220 8% 65%);
+    --text:         hsl(220 20% 12%);
+    --text-dim:     hsl(220 15% 30%);
+    --text-mute:    hsl(220 12% 45%);
+    --text-faint:   hsl(220 10% 60%);
 
-    --accent:       hsl(245 75% 58%);
-    --accent-soft:  hsla(245 75% 58% / 0.08);
-    --accent-line:  hsla(245 75% 58% / 0.30);
-    --accent-2:     hsl(265 70% 60%);
+    --accent:       hsl(245 70% 50%);
+    --accent-soft:  hsla(245 70% 50% / 0.10);
+    --accent-line:  hsla(245 70% 50% / 0.30);
+    --accent-2:     hsl(265 65% 50%);
 
-    --green:        hsl(150 60% 40%);
-    --green-soft:   hsla(150 60% 40% / 0.08);
-    --green-line:   hsla(150 60% 40% / 0.30);
+    --green:        hsl(150 60% 35%);
+    --green-soft:   hsla(150 60% 35% / 0.10);
+    --green-line:   hsla(150 60% 35% / 0.30);
 
-    --yellow:       hsl(40 90% 48%);
-    --yellow-soft:  hsla(40 90% 48% / 0.08);
-    --yellow-line:  hsla(40 90% 48% / 0.30);
+    --yellow:       hsl(40 90% 40%);
+    --yellow-soft:  hsla(40 90% 50% / 0.10);
+    --yellow-line:  hsla(40 90% 50% / 0.30);
 
-    --red:          hsl(0 70% 55%);
-    --red-soft:     hsla(0 70% 55% / 0.08);
-    --red-line:     hsla(0 70% 55% / 0.30);
+    --red:          hsl(0 70% 45%);
+    --red-soft:     hsla(0 70% 45% / 0.10);
+    --red-line:     hsla(0 70% 45% / 0.30);
 
-    --blue:         hsl(210 85% 55%);
-    --blue-soft:    hsla(210 85% 55% / 0.08);
+    --blue:         hsl(210 80% 45%);
+    --blue-soft:    hsla(210 80% 45% / 0.10);
 
-    --orange:       hsl(25 85% 50%);
-    --orange-soft:  hsla(25 85% 50% / 0.08);
+    --orange:       hsl(25 85% 45%);
+    --orange-soft:  hsla(25 85% 45% / 0.10);
 
-    --purple:       hsl(280 65% 55%);
-    --purple-soft:  hsla(280 65% 55% / 0.08);
+    --purple:       hsl(280 60% 50%);
+    --purple-soft:  hsla(280 60% 50% / 0.10);
+
+    --shadow-1: 0 1px 2px hsla(220 20% 20% / 0.06), 0 1px 3px hsla(220 20% 20% / 0.10);
+    --shadow-2: 0 2px 4px hsla(220 20% 20% / 0.08), 0 4px 8px hsla(220 20% 20% / 0.12);
+    --shadow-3: 0 4px 8px hsla(220 20% 20% / 0.10), 0 16px 32px hsla(220 20% 20% / 0.16);
 
     color-scheme: light;
   }
 
-  /* ============== System theme (follows OS) ============== */
   @media (prefers-color-scheme: light) {
     [data-theme="system"] {
-      --bg:           hsl(220 20% 97%);
-      --bg-elev-1:    hsl(220 20% 99%);
-      --bg-elev-2:    hsl(220 15% 95%);
-      --bg-elev-3:    hsl(220 12% 92%);
-      --bg-hover:     hsl(220 12% 89%);
+      --bg:           hsl(220 20% 98%);
+      --bg-elev-1:    hsl(220 18% 96%);
+      --bg-elev-2:    hsl(220 16% 93%);
+      --bg-elev-3:    hsl(220 14% 89%);
+      --bg-hover:     hsl(220 12% 85%);
 
-      --border:       hsl(220 15% 88%);
-      --border-strong:hsl(220 12% 78%);
+      --border:       hsl(220 15% 86%);
+      --border-strong:hsl(220 15% 75%);
       --divider:      hsl(220 15% 90%);
 
-      --text:         hsl(220 20% 15%);
-      --text-dim:     hsl(220 12% 35%);
-      --text-mute:    hsl(220 8% 50%);
-      --text-faint:   hsl(220 8% 65%);
+      --text:         hsl(220 20% 12%);
+      --text-dim:     hsl(220 15% 30%);
+      --text-mute:    hsl(220 12% 45%);
+      --text-faint:   hsl(220 10% 60%);
 
-      --accent:       hsl(245 75% 58%);
-      --accent-soft:  hsla(245 75% 58% / 0.08);
-      --accent-line:  hsla(245 75% 58% / 0.30);
-      --accent-2:     hsl(265 70% 60%);
+      --accent:       hsl(245 70% 50%);
+      --accent-soft:  hsla(245 70% 50% / 0.10);
+      --accent-line:  hsla(245 70% 50% / 0.30);
+      --accent-2:     hsl(265 65% 50%);
 
-      --green:        hsl(150 60% 40%);
-      --green-soft:   hsla(150 60% 40% / 0.08);
-      --green-line:   hsla(150 60% 40% / 0.30);
+      --green:        hsl(150 60% 35%);
+      --green-soft:   hsla(150 60% 35% / 0.10);
+      --green-line:   hsla(150 60% 35% / 0.30);
 
-      --yellow:       hsl(40 90% 48%);
-      --yellow-soft:  hsla(40 90% 48% / 0.08);
-      --yellow-line:  hsla(40 90% 48% / 0.30);
+      --yellow:       hsl(40 90% 40%);
+      --yellow-soft:  hsla(40 90% 50% / 0.10);
+      --yellow-line:  hsla(40 90% 50% / 0.30);
 
-      --red:          hsl(0 70% 55%);
-      --red-soft:     hsla(0 70% 55% / 0.08);
-      --red-line:     hsla(0 70% 55% / 0.30);
+      --red:          hsl(0 70% 45%);
+      --red-soft:     hsla(0 70% 45% / 0.10);
+      --red-line:     hsla(0 70% 45% / 0.30);
 
-      --blue:         hsl(210 85% 55%);
-      --blue-soft:    hsla(210 85% 55% / 0.08);
+      --blue:         hsl(210 80% 45%);
+      --blue-soft:    hsla(210 80% 45% / 0.10);
 
-      --orange:       hsl(25 85% 50%);
-      --orange-soft:  hsla(25 85% 50% / 0.08);
+      --orange:       hsl(25 85% 45%);
+      --orange-soft:  hsla(25 85% 45% / 0.10);
 
-      --purple:       hsl(280 65% 55%);
-      --purple-soft:  hsla(280 65% 55% / 0.08);
+      --purple:       hsl(280 60% 50%);
+      --purple-soft:  hsla(280 60% 50% / 0.10);
+
+      --shadow-1: 0 1px 2px hsla(220 20% 20% / 0.06), 0 1px 3px hsla(220 20% 20% / 0.10);
+      --shadow-2: 0 2px 4px hsla(220 20% 20% / 0.08), 0 4px 8px hsla(220 20% 20% / 0.12);
+      --shadow-3: 0 4px 8px hsla(220 20% 20% / 0.10), 0 16px 32px hsla(220 20% 20% / 0.16);
 
       color-scheme: light;
     }
@@ -2451,6 +2458,164 @@ input:checked + .slider:before {
   .text-dim     { color: var(--text-dim); }
   .text-faint   { color: var(--text-faint); }
   .mono         { font-family: 'Consolas', 'Monaco', monospace; }
+
+  /* ============ Batch 3: Sparkline ============ */
+  .sparkline { display: block; vertical-align: middle; color: var(--accent); }
+  .sparkline.tokens  { color: var(--accent); }
+  .sparkline.cost    { color: var(--green); }
+  .sparkline.success { color: var(--blue); }
+  .sparkline path {
+    fill: none; stroke: currentColor; stroke-width: 1.5;
+    stroke-linecap: round; stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+  }
+  .sparkline-area { fill: currentColor; opacity: 0.12; }
+  .sparkline-dot  { fill: currentColor; }
+
+  /* ============ Batch 3: Alert Strip ============ */
+  .alert-strip {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    background: var(--yellow-soft);
+    border: 1px solid var(--yellow-line);
+    border-radius: var(--r-md);
+    padding: var(--space-2) var(--space-4);
+    margin-bottom: var(--space-4);
+    animation: slide-in .3s ease;
+  }
+  .alert-strip-icon { font-size: 16px; color: var(--yellow); flex: 0 0 auto; }
+  .alert-strip-body {
+    flex: 1; display: flex; align-items: center;
+    gap: var(--space-4); flex-wrap: wrap;
+    font-size: var(--font-body-s); color: var(--text);
+  }
+  .alert-strip-item {
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .alert-strip-item.critical { color: var(--red); font-weight: 600; }
+  .alert-strip-item a {
+    color: inherit; text-decoration: underline;
+    text-decoration-color: var(--text-faint); cursor: pointer;
+  }
+  .alert-strip-item a:hover { text-decoration-color: currentColor; }
+  .alert-strip-close {
+    background: none; border: none; font-size: 18px;
+    color: var(--text-mute); cursor: pointer; padding: 0 4px; line-height: 1;
+  }
+  .alert-strip-close:hover { color: var(--text); }
+
+  /* ============ Batch 3: Breadcrumb ============ */
+  .detail-breadcrumb {
+    display: flex; align-items: center; gap: var(--space-2);
+    padding: var(--space-3) var(--space-5);
+    border-bottom: 1px solid var(--divider);
+    font-size: var(--font-body-s); color: var(--text-mute);
+  }
+  .detail-breadcrumb a {
+    display: inline-flex; align-items: center; gap: 4px;
+    color: var(--text-dim); text-decoration: none;
+    transition: color .15s ease;
+  }
+  .detail-breadcrumb a:hover { color: var(--accent); }
+  .detail-breadcrumb-sep { color: var(--text-faint); }
+  .detail-breadcrumb-current {
+    font-family: 'Consolas', monospace;
+    font-size: var(--font-caption); color: var(--text);
+  }
+
+  /* ============ Batch 3: Custom Range Popover ============ */
+  .custom-range-popover {
+    position: absolute; top: 48px; right: 24px; width: 280px;
+    background: var(--bg-elev-2); border: 1px solid var(--border);
+    border-radius: var(--r-lg); box-shadow: var(--shadow-3); z-index: 50;
+  }
+  .custom-range-popover-head {
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--divider);
+    font-size: var(--font-body-s); font-weight: 600; color: var(--text);
+  }
+  .custom-range-popover-body {
+    padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3);
+  }
+  .custom-range-popover-body label {
+    display: flex; flex-direction: column; gap: 4px;
+    font-size: var(--font-caption); color: var(--text-mute);
+  }
+  .custom-range-popover-body input {
+    padding: 6px 8px; background: var(--bg-elev-1);
+    border: 1px solid var(--border); border-radius: var(--r-sm);
+    color: var(--text); font-size: var(--font-body-s);
+  }
+  .custom-range-popover-foot {
+    padding: var(--space-3) var(--space-4);
+    border-top: 1px solid var(--divider);
+    display: flex; justify-content: flex-end; gap: var(--space-2);
+  }
+
+  /* ============ Batch 3: Responsive Drawer (<1024px) ============ */
+  .col-toggle {
+    display: none; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: var(--r-sm);
+    background: var(--bg-elev-2); border: 1px solid var(--border);
+    color: var(--text-dim); cursor: pointer;
+  }
+  .col-toggle:hover { background: var(--bg-elev-3); color: var(--text); }
+  @media (min-width: 1024px) { .col-toggle { display: none !important; } }
+  @media (max-width: 1023px) {
+    .main { grid-template-columns: 1fr !important; }
+    .main.dashboard-mode .col-left, .main.dashboard-mode .col-right {
+      display: none !important;
+    }
+    .col-left {
+      position: fixed; left: -288px; top: 52px; bottom: 0; z-index: 40;
+      width: 288px; transition: left .25s ease;
+    }
+    .col-left.open { left: 0; }
+    .col-right {
+      position: fixed; right: -384px; top: 52px; bottom: 0; z-index: 40;
+      width: 320px; transition: right .25s ease;
+    }
+    .col-right.open { right: 0; }
+    .col-toggle { display: inline-flex !important; }
+  }
+
+  /* ============ Batch 3: Skeleton ============ */
+  .skeleton {
+    display: inline-block;
+    background: linear-gradient(90deg,
+      var(--bg-elev-2) 0%, var(--bg-elev-3) 50%, var(--bg-elev-2) 100%);
+    background-size: 400px 100%;
+    animation: shimmer 1.5s linear infinite;
+    border-radius: var(--r-sm); color: transparent;
+  }
+  .skeleton-line { height: 12px; margin: 4px 0; }
+  .skeleton-line.lg { height: 32px; width: 60%; }
+  .skeleton-line.md { height: 16px; width: 40%; }
+  .skeleton-line.sm { height: 11px; width: 30%; }
+
+  /* ============ Batch 3: a11y ============ */
+  :focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--r-sm);
+  }
+  button:focus-visible, a:focus-visible, input:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px;
+  }
+  .sr-only {
+    position: absolute; width: 1px; height: 1px;
+    padding: 0; margin: -1px; overflow: hidden;
+    clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+  }
+
+  /* ============ Batch 3: prefers-reduced-motion ============ */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 </style>
 </head>
 <body>
@@ -2770,6 +2935,18 @@ input:checked + .slider:before {
   </div>
   <div class="spacer"></div>
   <div class="topbar-right">
+    <button class="col-toggle" id="col-left-toggle" title="Toggle runs list">
+      <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <line x1="3" y1="12" x2="21" y2="12"/>
+        <line x1="3" y1="6" x2="21" y2="6"/>
+        <line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+    </button>
+    <button class="col-toggle" id="col-right-toggle" title="Toggle live stream">
+      <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+      </svg>
+    </button>
     <div class="conn-pill" id="conn-pill">
       <span class="live-dot"></span>
       <span data-i18n="connected">connected</span>
@@ -2818,9 +2995,30 @@ input:checked + .slider:before {
         </div>
         <div class="dash-hero-actions">
           <div class="period-tabs" id="period-tabs">
-            <button class="period-tab active" data-period="today" data-i18n="Today">Today</button>
-            <button class="period-tab" data-period="week" data-i18n="This Week">This Week</button>
-            <button class="period-tab" data-period="month" data-i18n="This Month">This Month</button>
+            <button class="period-tab active" data-period="today" data-i18n="Today" role="tab" aria-selected="true" tabindex="0">Today</button>
+            <button class="period-tab" data-period="week" data-i18n="This Week" role="tab" aria-selected="false" tabindex="-1">This Week</button>
+            <button class="period-tab" data-period="month" data-i18n="This Month" role="tab" aria-selected="false" tabindex="-1">This Month</button>
+            <button class="period-tab" data-period="custom" id="period-custom-btn" role="tab" aria-selected="false" tabindex="-1">
+              <span data-i18n="Custom">Custom</span>
+            </button>
+          </div>
+          <!-- Custom range popover -->
+          <div class="custom-range-popover" id="custom-range-popover" style="display:none;">
+            <div class="custom-range-popover-head" data-i18n="Custom date range">Custom date range</div>
+            <div class="custom-range-popover-body">
+              <label>
+                <span data-i18n="From">From</span>
+                <input type="date" id="custom-range-from" />
+              </label>
+              <label>
+                <span data-i18n="To">To</span>
+                <input type="date" id="custom-range-to" />
+              </label>
+            </div>
+            <div class="custom-range-popover-foot">
+              <button class="btn btn-sm" id="custom-range-cancel" data-i18n="Cancel">Cancel</button>
+              <button class="btn btn-sm btn-primary" id="custom-range-apply" data-i18n="Apply">Apply</button>
+            </div>
           </div>
           <button class="btn btn-sm" id="dash-refresh" title="Refresh">
             <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -2833,6 +3031,13 @@ input:checked + .slider:before {
 
       <!-- Stat grid (3 big number cards) -->
       <div class="stat-grid" id="dash-stat-grid"></div>
+
+      <!-- Alert strip -->
+      <div class="alert-strip" id="dash-alert-strip" style="display:none;">
+        <div class="alert-strip-icon">⚠</div>
+        <div class="alert-strip-body" id="dash-alert-list"></div>
+        <button class="alert-strip-close" id="dash-alert-close" aria-label="Dismiss">×</button>
+      </div>
 
       <!-- Aggregate row (4 secondary cards) -->
       <div class="dash-aggregate" id="dash-aggregate"></div>
@@ -2876,7 +3081,19 @@ input:checked + .slider:before {
     </div>
 
     <!-- Detail (filled by JS when a run is clicked) -->
-    <div id="detail-root" style="display: none;"></div>
+    <div id="detail-root" style="display: none;">
+      <div class="detail-breadcrumb">
+        <a href="#" id="detail-back-link">
+          <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <line x1="19" y1="12" x2="5" y2="12"/>
+            <polyline points="12 19 5 12 12 5"/>
+          </svg>
+          <span data-i18n="Back to Dashboard">Back to Dashboard</span>
+        </a>
+        <span class="detail-breadcrumb-sep">/</span>
+        <span class="detail-breadcrumb-current" id="detail-bc-runid"></span>
+      </div>
+    </div>
 
     <!-- Keyboard hints strip (always visible) -->
     <div class="kbd-hints">
@@ -4255,8 +4472,8 @@ const App = {
   async init() {
     ThemeManager.init();
     this.bindUI();
-    this.bindSettingsSidebar(); // Bind settings sidebar navigation
-    // Load settings (includes language preference) and apply i18n to static HTML
+    this.bindSettingsSidebar();
+    this._initCustomRangePicker();
     await this.loadSettings();
     await this.refreshRuns();
     this.startPolling();
@@ -4403,9 +4620,56 @@ const App = {
         const period = tab.dataset.period;
         if (period) {
           this.state.dashboardPeriod = period;
-          document.querySelectorAll('.period-tab').forEach(t => t.classList.remove('active'));
+          localStorage.setItem('triforge.dashboardPeriod', period);
+          document.querySelectorAll('.period-tab').forEach(t => {
+            t.classList.remove('active');
+            t.setAttribute('aria-selected', 'false');
+            t.setAttribute('tabindex', '-1');
+          });
           tab.classList.add('active');
+          tab.setAttribute('aria-selected', 'true');
+          tab.setAttribute('tabindex', '0');
+          if (period === 'custom') return;
           this.renderDashboard();
+          this.announce(`${period} ${__('period selected')}`);
+        }
+      });
+      tab.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          tab.click();
+        }
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+          e.preventDefault();
+          const next = tab.nextElementSibling;
+          if (next && next.classList.contains('period-tab')) next.focus();
+        }
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          const prev = tab.previousElementSibling;
+          if (prev && prev.classList.contains('period-tab')) prev.focus();
+        }
+      });
+    });
+
+    // Breadcrumb back button
+    const detailBackBtn = document.getElementById('detail-back');
+    if (detailBackBtn) {
+      detailBackBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.backToDashboard();
+      });
+    }
+
+    // Column toggle buttons (dashboard detail columns)
+    document.querySelectorAll('.col-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const col = btn.dataset.col;
+        if (!col) return;
+        const section = document.querySelector(`.col-${col}`);
+        if (section) {
+          section.classList.toggle('hidden');
+          btn.classList.toggle('active');
         }
       });
     });
@@ -4482,15 +4746,33 @@ const App = {
     }
     const runs = this.state.runs || [];
 
-    // Empty state
     if (!runs || runs.length === 0) {
       this._renderDashboardEmpty();
       return;
     }
 
+    const savedPeriod = localStorage.getItem('triforge.dashboardPeriod');
+    if (savedPeriod && !this.state.dashboardPeriod) {
+      this.state.dashboardPeriod = savedPeriod;
+    }
+    const savedCustom = localStorage.getItem('triforge.dashboardCustomRange');
+    if (savedCustom && !this.state.customRange) {
+      try { this.state.customRange = JSON.parse(savedCustom); } catch (e) {}
+    }
+
     const selectedPeriod = this.state.dashboardPeriod || 'today';
     const filtered = this._filterRunsByPeriod(runs, selectedPeriod);
     const modelStats = this._computeModelStats(filtered);
+
+    // Alerts
+    const periodStats = {
+      totalCost: filtered.reduce((s, r) => s + (r.cost_estimate || 0), 0),
+      completed: filtered.filter(r => r.status === 'completed').length,
+      failed:    filtered.filter(r => r.status === 'failed').length,
+      cancelled: filtered.filter(r => r.status === 'cancelled').length,
+    };
+    const alerts = this._computeAlerts(filtered, periodStats);
+    this._renderAlertStrip(alerts);
 
     // 3 big stat cards
     this._renderStatCards(filtered);
@@ -4599,6 +4881,9 @@ const App = {
       </div>
       <div class="stat-card-value tabular-nums">${card.value}</div>
       <div class="stat-card-sub">
+        ${this._renderSparkline(this._placeholderSparkline(card.type), {
+          width: 100, height: 24, type: card.type
+        })}
         <div class="stat-card-compare">${card.sub}</div>
       </div>
     </div>`;
@@ -4672,6 +4957,12 @@ const App = {
         if (runsTab) runsTab.click();
         setTimeout(() => this.selectRun(runId), 50);
       });
+      card.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          card.click();
+        }
+      });
     });
 
     const footer = document.getElementById('dash-project-footer');
@@ -4710,7 +5001,8 @@ const App = {
     const req = (run.requirement || __('(no req)')).slice(0, 80);
 
     return `<div class="project-card" data-run-id="${this.escape(run.run_id)}"
-      style="border-left: 3px solid ${color};">
+      style="border-left: 3px solid ${color};" role="button" tabindex="0"
+      aria-label="${__('View details for run')} ${this.escape(run.run_id.slice(-8))}">
       <div class="project-card-head">
         <div class="project-card-status" style="color: ${color};">
           ${statusLabel}
@@ -4736,8 +5028,216 @@ const App = {
     return n.toLocaleString();
   },
 
+  // ========== Batch 3: Sparkline ==========
+  _renderSparkline(values, opts = {}) {
+    const width = opts.width || 100;
+    const height = opts.height || 24;
+    const type = opts.type || 'tokens';
+    const showDots = opts.showDots || false;
+
+    if (!values || values.length === 0) {
+      return `<svg class="sparkline ${type}" width="${width}" height="${height}"
+        viewBox="0 0 ${width} ${height}"><text x="50%" y="50%" text-anchor="middle"
+        dominant-baseline="middle" font-size="9" fill="currentColor" opacity="0.4">—</text></svg>`;
+    }
+
+    const max = Math.max(...values, 1);
+    const min = Math.min(...values, 0);
+    const range = max - min || 1;
+    const stepX = width / (values.length - 1 || 1);
+
+    const points = values.map((v, i) => {
+      const x = i * stepX;
+      const y = height - ((v - min) / range) * (height - 2) - 1;
+      return [x, y];
+    });
+
+    const linePath = points.map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`).join(' ');
+    const areaPath = `${linePath} L${width} ${height} L0 ${height} Z`;
+
+    const dots = showDots
+      ? points.map(([x, y]) => `<circle class="sparkline-dot" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="1.5"/>`).join('')
+      : '';
+
+    return `<svg class="sparkline ${type}" width="${width}" height="${height}"
+      viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
+      <path class="sparkline-area" d="${areaPath}"/>
+      <path d="${linePath}"/>
+      ${dots}
+    </svg>`;
+  },
+
+  _placeholderSparkline(type) {
+    const base = type === 'cost' ? 0.5 : type === 'success' ? 80 : 500;
+    const noise = type === 'cost' ? 0.2 : type === 'success' ? 5 : 100;
+    return Array.from({length: 24}, (_, i) =>
+      base + i * (type === 'cost' ? 0.05 : type === 'success' ? 0.5 : 30)
+        + (Math.sin(i * 0.7) * noise)
+    );
+  },
+
+  // ========== Batch 3: Alert Strip ==========
+  _computeAlerts(runs, periodStats) {
+    const now = Date.now() / 1000;
+    const alerts = [];
+
+    runs.filter(r => r.status === 'awaiting_approval').forEach(r => {
+      const waitingSec = now - (r.updated_at || r.created_at || 0);
+      if (waitingSec > 5 * 60) {
+        alerts.push({
+          level: 'warning', kind: 'awaiting_stuck', runId: r.run_id,
+          message: `${__('Run awaiting approval')} ${this._formatDurationShort(waitingSec)}`,
+        });
+      }
+    });
+
+    const totalCompleted = periodStats.completed + periodStats.failed + periodStats.cancelled;
+    if (totalCompleted > 5 && periodStats.failed / totalCompleted > 0.30) {
+      const pct = (periodStats.failed / totalCompleted * 100).toFixed(0);
+      alerts.push({
+        level: 'warning', kind: 'failure_surge',
+        message: `${__('Failure rate')} ${pct}% ${__('in this period')}`,
+      });
+    }
+
+    const last7dAvg = this._getLast7dAvgCost();
+    if (last7dAvg > 0 && periodStats.totalCost > last7dAvg * 1.5) {
+      const spikePct = ((periodStats.totalCost / last7dAvg - 1) * 100).toFixed(0);
+      alerts.push({
+        level: 'warning', kind: 'cost_spike',
+        message: `${__('Cost')} +${spikePct}% ${__('vs 7-day avg')}`,
+      });
+    }
+
+    runs.filter(r => r.status === 'running').forEach(r => {
+      const runningSec = now - (r.created_at || 0);
+      if (runningSec > 30 * 60) {
+        alerts.push({
+          level: 'info', kind: 'long_run', runId: r.run_id,
+          message: `${__('Run long-running')} ${this._formatDurationShort(runningSec)}`,
+        });
+      }
+    });
+
+    return alerts.slice(0, 5);
+  },
+
+  _getLast7dAvgCost() {
+    return 0;
+  },
+
+  _renderAlertStrip(alerts) {
+    const strip = document.getElementById('dash-alert-strip');
+    const list  = document.getElementById('dash-alert-list');
+    if (!strip || !list) return;
+
+    if (!alerts || alerts.length === 0) {
+      strip.style.display = 'none';
+      return;
+    }
+
+    list.innerHTML = alerts.map(a => {
+      const inner = a.runId
+        ? `<a href="#" data-run-id="${this.escape(a.runId)}">${this.escape(a.message)}</a>`
+        : this.escape(a.message);
+      return `<span class="alert-strip-item ${a.level}">${inner}</span>`;
+    }).join('');
+
+    strip.style.display = 'flex';
+
+    list.querySelectorAll('a[data-run-id]').forEach(a => {
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        const runId = a.dataset.runId;
+        document.querySelector('[data-nav="runs"]')?.click();
+        setTimeout(() => this.selectRun(runId), 50);
+      });
+    });
+
+    document.getElementById('dash-alert-close').onclick = () => {
+      strip.style.display = 'none';
+    };
+  },
+
+  // ========== Batch 3: Breadcrumb ==========
+  backToDashboard() {
+    this.deselectRun();
+    const boardTab = document.querySelector('[data-nav="board"]');
+    if (boardTab) boardTab.click();
+  },
+
+  // ========== Batch 3: Custom Range ==========
+  _initCustomRangePicker() {
+    const btn = document.getElementById('period-custom-btn');
+    const popover = document.getElementById('custom-range-popover');
+    const cancel = document.getElementById('custom-range-cancel');
+    const apply = document.getElementById('custom-range-apply');
+    const from = document.getElementById('custom-range-from');
+    const to = document.getElementById('custom-range-to');
+    if (!btn || !popover) return;
+
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = popover.style.display !== 'none';
+      popover.style.display = isOpen ? 'none' : 'block';
+      if (!isOpen) {
+        const today = new Date();
+        const week = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+        from.value = week.toISOString().slice(0, 10);
+        to.value = today.toISOString().slice(0, 10);
+      }
+    });
+
+    cancel.addEventListener('click', () => { popover.style.display = 'none'; });
+
+    apply.addEventListener('click', () => {
+      if (!from.value || !to.value) return;
+      if (new Date(from.value) > new Date(to.value)) {
+        alert(__('From date must be before To date'));
+        return;
+      }
+      const fromTs = new Date(from.value).getTime() / 1000;
+      const toTs = new Date(to.value).getTime() / 1000 + 86400;
+      this.state.dashboardPeriod = 'custom';
+      this.state.customRange = { from: fromTs, to: toTs };
+      localStorage.setItem('triforge.dashboardPeriod', 'custom');
+      localStorage.setItem('triforge.dashboardCustomRange', JSON.stringify({ from: fromTs, to: toTs }));
+      popover.style.display = 'none';
+      this.renderDashboard();
+      btn.querySelector('span').textContent = `${from.value} – ${to.value}`;
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!popover.contains(e.target) && e.target !== btn) {
+        popover.style.display = 'none';
+      }
+    });
+  },
+
+  // ========== Batch 3: Skeleton ==========
+  _renderSkeleton(containerId, lines = 3) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = Array.from({length: lines}, () =>
+      `<div class="skeleton skeleton-line md"></div>`
+    ).join('');
+  },
+
+  // ========== Batch 3: a11y announcement ==========
+  announce(message) {
+    const el = document.getElementById('sr-announcer');
+    if (el) {
+      el.textContent = '';
+      setTimeout(() => { el.textContent = message; }, 50);
+    }
+  },
+
   _filterRunsByPeriod(runs, period) {
     if (!runs || runs.length === 0) return [];
+    if (period === 'custom' && this.state.customRange) {
+      const { from, to } = this.state.customRange;
+      return runs.filter(r => (r.updated_at || 0) >= from && (r.updated_at || 0) < to);
+    }
     const now = Date.now() / 1000;
     let cutoff;
     switch (period) {
@@ -4804,7 +5304,7 @@ const App = {
         <th class="num">${__('Runs')}</th>
         <th class="num">${__('Tokens In')}</th>
         <th class="num">${__('Tokens Out')}</th>
-        <th>${__('Usage')}</th>
+        <th>${__('24h Trend')}</th>
         <th class="num">${__('Cost')}</th>
       </tr></thead><tbody>`;
 
@@ -4823,10 +5323,9 @@ const App = {
         <td class="num">${s.run_count}</td>
         <td class="num">${s.tokens_in.toLocaleString()}</td>
         <td class="num">${s.tokens_out.toLocaleString()}</td>
-        <td class="num" style="width:140px;">
-          <div class="dmt-bar"><div class="dmt-bar-fill" style="width:${barPct.toFixed(0)}%;"></div></div>
-          <span style="font-size:10px;color:var(--text-mute);font-family:'Consolas','Monaco',monospace;">${total.toLocaleString()}</span>
-        </td>
+        <td>${this._renderSparkline(this._placeholderSparkline('tokens'), {
+          width: 120, height: 20, type: 'tokens'
+        })}</td>
         <td class="num">${costDisplay}</td>
       </tr>`;
     });
@@ -5116,6 +5615,8 @@ const App = {
     document.getElementById('detail-root').innerHTML = `<div style="padding: 40px; text-align: center; color: var(--text-faint);">${__('Loading...')}</div>`;
     document.getElementById('live-stream').innerHTML = `<div style="padding: 20px; color: var(--text-faint); font-size: 12px; text-align: center;">${__('Connecting...')}</div>`;
     document.getElementById('sse-sub').textContent = `${__('Run')} ${runId}`;
+    const bcEl = document.getElementById('detail-bc-runid');
+    if (bcEl) bcEl.textContent = runId;
     this.connectSSE(runId);
     await this.refreshDetail();
   },
@@ -7487,5 +7988,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
+  <div aria-live="polite" id="sr-announcer" class="sr-only"></div>
 </body>
 </html>
