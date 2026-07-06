@@ -422,6 +422,40 @@ async def resume(run_id: str) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Module decision: when a module exhausts its retries the run enters
+# awaiting_human status. The user can approve_skip (skip module),
+# regenerate (retry from detail), or cancel (fail the run).
+# ---------------------------------------------------------------------------
+class ModuleDecisionBody(BaseModel):
+    decision: str  # "approve_skip" | "regenerate" | "cancel"
+    module_idx: int
+
+
+@router.post("/runs/{run_id}/module-decision")
+async def module_decision(run_id: str, body: ModuleDecisionBody) -> Dict[str, Any]:
+    """Handle user decision for a module that exhausted retries."""
+    run = engine.get(run_id)
+    if not run:
+        raise HTTPException(404, f"unknown run_id: {run_id}")
+    if run.status not in ("awaiting_human", "running"):
+        raise HTTPException(409,
+            f"can only decide on awaiting_human runs (status={run.status})")
+    if body.decision not in ("approve_skip", "regenerate", "cancel"):
+        raise HTTPException(400,
+            f"invalid decision: {body.decision}; must be one of "
+            "approve_skip, regenerate, cancel")
+    if body.module_idx < 0 or body.module_idx >= len(run.modules or []):
+        raise HTTPException(400, f"invalid module_idx: {body.module_idx}")
+
+    run.module_decision = (body.decision, body.module_idx)
+    run.status = "running"
+    run.resume_event.set()
+    get_store().update_snapshot(run_id, _snapshot_for_board(run))
+    return {"status": "module_decision_accepted", "run_id": run_id,
+            "decision": body.decision, "module_idx": body.module_idx}
+
+
+# ---------------------------------------------------------------------------
 # Iteration loop (P5): after each review, the user can add a new
 # requirement (or mark the run as done). The pipeline re-runs from
 # scratch with the cumulative requirement; all previously-completed

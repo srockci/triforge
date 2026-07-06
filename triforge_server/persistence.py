@@ -100,10 +100,11 @@ class BoardDB:
                 CREATE TABLE IF NOT EXISTS agent_history (
                     run_id TEXT NOT NULL,
                     phase TEXT NOT NULL,
+                    module_id TEXT NOT NULL DEFAULT '',
                     steps_used INTEGER NOT NULL DEFAULT 0,
                     history TEXT NOT NULL,
                     updated_at REAL NOT NULL,
-                    PRIMARY KEY (run_id, phase)
+                    PRIMARY KEY (run_id, phase, module_id)
                 )
             """)
             self._conn.execute("""
@@ -117,6 +118,7 @@ class BoardDB:
             "ALTER TABLE runs ADD COLUMN working_paths TEXT",
             "ALTER TABLE runs ADD COLUMN completed_phases TEXT",
             "ALTER TABLE runs ADD COLUMN project_path TEXT",
+            "ALTER TABLE agent_history ADD COLUMN module_id TEXT NOT NULL DEFAULT ''",
         ):
             try:
                 with self._lock:
@@ -279,26 +281,28 @@ class BoardDB:
 
     # ----- agent history -----
     def save_agent_history(self, run_id: str, phase: str,
-                           history: List[Dict[str, Any]], steps_used: int) -> None:
-        """Persist agent conversation history for resume. UPSERT on (run_id, phase)."""
+                           history: List[Dict[str, Any]], steps_used: int,
+                           module_id: str = "") -> None:
+        """Persist agent conversation history for resume. UPSERT on (run_id, phase, module_id)."""
         with self._lock:
             self._conn.execute("""
-                INSERT INTO agent_history (run_id, phase, steps_used, history, updated_at)
-                VALUES (?, ?, ?, ?, ?)
-                ON CONFLICT(run_id, phase) DO UPDATE SET
+                INSERT INTO agent_history (run_id, phase, module_id, steps_used, history, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT(run_id, phase, module_id) DO UPDATE SET
                     steps_used=excluded.steps_used,
                     history=excluded.history,
                     updated_at=excluded.updated_at
-            """, (run_id, phase, steps_used,
+            """, (run_id, phase, module_id, steps_used,
                   json.dumps(history, default=str), time.time()))
 
-    def load_agent_history(self, run_id: str, phase: str
+    def load_agent_history(self, run_id: str, phase: str,
+                           module_id: str = ""
                            ) -> Optional[Tuple[List[Dict[str, Any]], int]]:
         """Return (history, steps_used) or None."""
         with self._lock:
             cur = self._conn.execute(
-                "SELECT history, steps_used FROM agent_history WHERE run_id = ? AND phase = ?",
-                (run_id, phase))
+                "SELECT history, steps_used FROM agent_history WHERE run_id = ? AND phase = ? AND module_id = ?",
+                (run_id, phase, module_id))
             row = cur.fetchone()
         if not row:
             return None

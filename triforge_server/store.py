@@ -107,16 +107,18 @@ class RunStore:
 
     # ----- Agent state persistence -----
     def save_agent_state(self, run_id: str, phase: str,
-                         history: List[Dict[str, Any]], steps_used: int) -> None:
+                         history: List[Dict[str, Any]], steps_used: int,
+                         module_id: str = "") -> None:
         try:
-            self._db.save_agent_history(run_id, phase, history, steps_used)
+            self._db.save_agent_history(run_id, phase, history, steps_used, module_id)
         except Exception:
             pass
 
-    def load_agent_state(self, run_id: str, phase: str
+    def load_agent_state(self, run_id: str, phase: str,
+                         module_id: str = ""
                          ) -> Optional[Tuple[List[Dict[str, Any]], int]]:
         try:
-            return self._db.load_agent_history(run_id, phase)
+            return self._db.load_agent_history(run_id, phase, module_id)
         except Exception:
             return None
 
@@ -133,7 +135,8 @@ class RunStore:
         convenience fields the frontend expects.
         """
         rows = self._db.load_runs()
-        phase_to_idx = {"design": 0, "implement": 1, "review": 2, "done": 3}
+        phase_to_idx = {"design": 0, "implement": 1, "review": 2, "done": 3,
+                        "detail": 4, "code": 5, "test": 6}
         out = []
         for r in rows:
             r["phase_index"] = phase_to_idx.get(r.get("phase", "design"), 0)

@@ -183,7 +183,8 @@ class Agent:
 
     def save_state_to(self, run_id: str, phase: str, store: Any, steps_used: int) -> None:
         """Persist current history + step count for resume."""
-        store.save_agent_state(run_id, phase, self.history, steps_used)
+        module_id = getattr(store, '_current_module_id', '')
+        store.save_agent_state(run_id, phase, self.history, steps_used, module_id)
 
     def _resolve_safe(self, rel_path: str) -> Path:
         """Resolve a workspace-relative path and confirm it stays under workspace_root."""

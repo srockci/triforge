@@ -17,7 +17,7 @@ import threading
 import time
 import uuid
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from .agent import Agent, FinishEvent, FailedEvent, ToolCallEvent, TokenUsageEvent, make_agent, make_agent_with_resume
 from .config import WORKSPACE_ROOT, workspace_for_run
@@ -142,50 +142,37 @@ class RunState:
     resume_event: asyncio.Event = field(default_factory=asyncio.Event)
     resume_decision: str = "pending"
     resume_comment: str = ""
-    # Token usage tracking (accumulated across all phases)
     tokens_in: int = 0
     tokens_out: int = 0
     cost_estimate: float = 0.0
-    # Model names actually used per phase (set at pipeline start)
     models: Dict[str, str] = field(default_factory=dict)
-    
-    # Token plan specific tracking
-    token_plan_models: Dict[str, bool] = field(default_factory=dict)  # model_name: is_token_plan
+    token_plan_models: Dict[str, bool] = field(default_factory=dict)
     window_tokens_in: int = 0
     window_tokens_out: int = 0
     window_start_time: float = 0.0
     project_tokens_in: int = 0
     project_tokens_out: int = 0
-    # Paths approved for write in this run (remember_approved feature)
     approved_paths: set = field(default_factory=set)
-    # Cancellation: when set, _drive_agent checks between steps
     cancelled: bool = False
-    # Per-run workspace path
-    workspace_root: Optional[Any] = None  # Path, but use Any to avoid import
-    # Per-project working paths: writes here skip approval.
-    # Set at run creation (from /board/runs POST) and persisted to DB.
-    # Falls back to global settings.approval.working_paths when empty.
+    workspace_root: Optional[Any] = None
     working_paths: List[str] = field(default_factory=list)
-    # Phases that have completed successfully. On resume, these are skipped
-    # so the pipeline continues from the next incomplete phase instead of
-    # restarting from design.
     completed_phases: set = field(default_factory=set)
-    # User-specified project path where files are written directly.
-    # When empty, files go to the default WORKSPACE_ROOT/<run_id>/.
     project_path: str = ""
-    # ---- Iteration loop (P5) ----
-    # How many design→code→review cycles have completed. 0 means the
-    # original run; 1+ means at least one user addendum was folded in.
     iteration: int = 0
-    # Cumulative history of requirement addenda, in order. The original
-    # requirement is run.requirement; each new user-submitted requirement
-    # during the awaiting_iteration prompt is appended here so the
-    # audit log preserves every change.
     requirement_addenda: List[str] = field(default_factory=list)
-    # When True, the run has finished the latest review cycle and is
-    # waiting for the user to either add another requirement or mark
-    # the run as done. While True, the pipeline loop is suspended.
     awaiting_iteration_input: bool = False
+    # ---- Module pipeline (modular design) ----
+    # Parsed from design/modules.json, each entry:
+    # {"id": str, "name": str, "estimated_files": int, "depends_on": [str],
+    #  "interface": {...}, "estimated_steps": int,
+    #  "status": "pending"|"in_progress"|"passed"|"failed"|"needs_human"|"manually_approved",
+    #  "retry_count": int, "notes": str}
+    modules: List[Dict[str, Any]] = field(default_factory=list)
+    current_module_idx: int = -1        # index into modules currently being processed
+    current_phase_sub: str = ""         # "detail" | "code" | "test" | ""
+    module_retry_count: int = 0         # retries for the current module
+    needs_human_modules: List[str] = field(default_factory=list)  # module ids needing human decision
+    module_decision: Optional[Tuple[str, int]] = None  # (decision, module_idx) set by user
 
 
 class WorkflowEngine:
@@ -324,286 +311,501 @@ engine = WorkflowEngine()
 # ---------------------------------------------------------------------------
 # Pipeline
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Module helpers
+# ---------------------------------------------------------------------------
+def _topological_sort(modules: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Return modules sorted in dependency order (DAG). Raises ValueError if cycle detected."""
+    module_map = {m["id"]: m for m in modules}
+    visited = set()
+    temp = set()
+    order: List[Dict[str, Any]] = []
+
+    def _visit(mid: str) -> None:
+        if mid in temp:
+            raise ValueError(f"dependency cycle detected involving module {mid!r}")
+        if mid in visited:
+            return
+        temp.add(mid)
+        for dep in module_map[mid].get("depends_on", []):
+            if dep in module_map:
+                _visit(dep)
+        temp.remove(mid)
+        visited.add(mid)
+        order.append(module_map[mid])
+
+    for m in modules:
+        if m["id"] not in visited:
+            _visit(m["id"])
+    return order
+
+
+def _validate_modules_json(data: Any) -> List[Dict[str, Any]]:
+    """Parse and validate modules.json. Returns module list or raises ValueError."""
+    if not isinstance(data, dict) or "modules" not in data:
+        raise ValueError("modules.json must have a 'modules' array")
+    modules = data["modules"]
+    if not isinstance(modules, list) or not modules:
+        raise ValueError("modules array is empty or invalid")
+    ids = set()
+    for m in modules:
+        if not isinstance(m, dict) or "id" not in m:
+            raise ValueError("each module must have an 'id' field")
+        mid = m["id"]
+        if mid in ids:
+            raise ValueError(f"duplicate module id: {mid!r}")
+        ids.add(mid)
+        m.setdefault("estimated_files", 8)
+        m.setdefault("estimated_steps", 20)
+        m.setdefault("depends_on", [])
+        m.setdefault("interface", {})
+        m.setdefault("status", "pending")
+        m.setdefault("retry_count", 0)
+        m.setdefault("notes", "")
+        # Validate depends_on references known modules
+        for dep in m.get("depends_on", []):
+            if dep not in ids and dep != m["id"]:
+                raise ValueError(f"module {mid!r} depends on unknown module {dep!r}")
+    # Topological sort validates the DAG
+    return _topological_sort(modules)
+
+
+def _module_summary(run: RunState) -> str:
+    """Build a human-readable summary of completed modules for agent context."""
+    lines = []
+    for m in run.modules or []:
+        mid = m["id"]
+        if m["status"] in ("passed", "manually_approved"):
+            lines.append(f"  Module {mid} ({m.get('name', mid)}) — completed")
+            # List files under src/<mid>/
+            ws = run.workspace_root
+            if ws:
+                for p in sorted((Path(ws) / "src" / mid).rglob("*.py")):
+                    rel = p.relative_to(ws).as_posix()
+                    lines.append(f"    {rel}")
+            lines.append("")
+    return "\n".join(lines) if lines else "  (no completed modules yet)"
+
+
 async def run_pipeline_async(run: RunState, settings: Optional[Dict[str, Any]] = None) -> None:
-    """Drive a single run through design -> implement -> review."""
-    # Snapshot current settings at pipeline start (in-flight runs keep their config)
+    """Drive a modular pipeline: top-design → per-module (detail→code→test) → top-review."""
     if settings is None:
         settings = get_settings().get()
 
-    # ----- Helpers (local) -----
     def _emit(kind: str, **data: Any) -> None:
-        """Fire-and-forget event for the board. Never raises."""
         try:
             ev = BoardEvent(run_id=run.run_id, kind=kind, data=data)
-            get_store().append(ev)   # persist for board replay
-            bus.emit(ev)       # push to live subscribers
+            get_store().append(ev)
+            bus.emit(ev)
         except Exception:
-            pass  # board events are non-critical
+            pass
 
     _emit("run_start", requirement=run.requirement)
 
-    # Ensure per-run workspace exists
     ws = run.workspace_root or workspace_for_run(run.run_id)
     run.workspace_root = ws
 
-    # Pipeline params from settings
     pp = settings.get("pipeline_params", {})
     design_steps = pp.get("design", {}).get("max_steps", 12)
-    implement_steps = pp.get("implement", {}).get("max_steps", 25)
     review_steps = pp.get("review", {}).get("max_steps", 12)
+    mp = pp.get("module", {})
+    detail_max_steps = mp.get("detail_max_steps", 8)
+    code_max_steps = mp.get("code_max_steps", 20)
+    test_max_steps = mp.get("test_max_steps", 6)
+    max_retry = mp.get("max_retry_per_module", 3)
 
-    # Snapshot model names for the API (what each phase actually uses)
     roles = settings.get("roles", {})
     run.models = {
         "design": roles.get("architect_design", {}).get("model", ""),
-        "implement": roles.get("coder_implement", {}).get("model", ""),
+        "module_detail": roles.get("module_detail", {}).get("model", ""),
+        "module_code": roles.get("module_code", {}).get("model", ""),
+        "module_test": roles.get("module_test", {}).get("model", ""),
         "review": roles.get("architect_review", {}).get("model", ""),
     }
 
-    # Approval settings
     approval_cfg = settings.get("approval", {})
-    # Working paths: per-project overrides global.
-    # If the run specifies any, those REPLACE the global list. If empty,
-    # the global list (from settings) is used.
     global_working_paths = approval_cfg.get("working_paths", [])
     project_working_paths = list(run.working_paths or [])
     working_paths = project_working_paths if project_working_paths else global_working_paths
     remember_approved = approval_cfg.get("remember_approved", True)
 
     try:
-        # ----- Phase loop -----
-        # Each phase records itself in run.completed_phases on success.
-        # On resume (interrupted/failed), phases already in
-        # run.completed_phases are skipped so the pipeline continues
-        # from the next incomplete phase instead of restarting from
-        # design.
-        PHASES = ("design", "implement", "review")
-
-        for phase in PHASES:
-            if run.cancelled:
-                _emit("run_end", status="cancelled")
-                run.status = "cancelled"
-                get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
-                return
-
-            # Skip phases that finished before the interruption.
-            if phase in run.completed_phases:
-                continue
-
-            run.phase = phase
+        # ======== PHASE 1: Top-level design ========
+        if "top_design" in run.completed_phases:
+            pass  # skip
+        else:
+            run.phase = "design"
             run.status = "running"
             get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
 
-            if phase == "design":
-                role_cfg = settings.get("roles", {}).get("architect_design", {})
-                _emit("phase_start", phase="design", agent="architect_design",
-                      model=role_cfg.get("model", "MiniMax"))
-                architect, saved_steps = make_agent_with_resume(
-                    "architect_design", ws, settings, run.run_id, "design")
-                remaining = design_steps - saved_steps
-                if remaining <= 0:
-                    return {"ok": False, "error": "max_steps exhausted before resume"}
-                if saved_steps > 0:
-                    existing = _list_existing_files(ws)
-                    user_msg = RESUME_HINT_TEMPLATE.format(
-                        existing_files=existing, max_steps_remaining=remaining)
-                else:
-                    design_user_msg = (
-                        f"User requirement:\n```\n{run.requirement}\n```\n\n"
-                        f"Workspace root: {ws}\n"
-                        f"Write your architecture design to: design/architecture.md "
-                        f"(relative to workspace root)."
+            role_cfg = roles.get("architect_design", {})
+            _emit("phase_start", phase="design", agent="architect_design",
+                  model=role_cfg.get("model", "MiniMax"))
+            architect, saved_steps = make_agent_with_resume(
+                "architect_design", ws, settings, run.run_id, "design")
+            remaining = design_steps - saved_steps
+            if remaining <= 0:
+                run.status = "failed"
+                run.error = "max_steps exhausted before top-level design resume"
+                _emit("run_end", status="failed", error=run.error)
+                get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
+                return
+            if saved_steps > 0:
+                existing = _list_existing_files(ws)
+                design_user_msg = RESUME_HINT_TEMPLATE.format(
+                    existing_files=existing, max_steps_remaining=remaining)
+            else:
+                design_user_msg = (
+                    f"User requirement:\n```\n{run.requirement}\n```\n\n"
+                    f"Workspace root: {ws}\n"
+                    f"\n"
+                    f"## Task — two outputs\n"
+                    f"1. Write the top-level architecture to design/architecture.md\n"
+                    f"2. Write a module manifest to design/modules.json with this EXACT schema:\n"
+                    f"```json\n"
+                    f"{{\n"
+                    f'  "modules": [\n'
+                    f"    {{\n"
+                    f'      "id": "module_name",\n'
+                    f'      "name": "Human-readable name",\n'
+                    f'      "estimated_files": 6,\n'
+                    f'      "depends_on": ["other_module_id"],\n'
+                    f'      "interface": {{"exports": ["ClassName", "function_name"], "description": "..."}},\n'
+                    f'      "estimated_steps": 18\n'
+                    f"    }}\n"
+                    f"  ]\n"
+                    f"}}\n"
+                    f"```\n"
+                    f"## Module constraints\n"
+                    f"- Each module: estimated_files ≤ 8, estimated_steps ≤ 22\n"
+                    f"- depends_on must reference a module defined in the same list\n"
+                    f"- If a module exceeds the limits, split it into smaller modules\n"
+                    f"- Topological order in the array is preferred but not required\n"
+                    f"- Do NOT write any .py code\n"
+                    f"\n"
+                    f"When done, call finish(summary='modules: <comma-separated ids>')."
+                )
+                if run.iteration > 0 and run.requirement_addenda:
+                    last_add = run.requirement_addenda[-1]
+                    design_user_msg += (
+                        f"\n\n---\n"
+                        f"## Iteration {run.iteration}\n"
+                        f"Previous iteration finished. Update design/modules.json and "
+                        f"design/architecture.md to reflect the new requirement:\n"
+                        f"> {last_add}"
                     )
-                    if run.iteration > 0 and run.requirement_addenda:
-                        last_add = run.requirement_addenda[-1]
-                        design_user_msg += (
-                            f"\n\n---\n"
-                            f"## Iteration {run.iteration}\n"
-                            f"This is iteration #{run.iteration} of the same "
-                            f"run. Previous design is at "
-                            f"design/architecture.md and previous review at "
-                            f"design/review_report.md — read both first to "
-                            f"understand what was already decided.\n"
-                            f"The user just added this new requirement:\n\n"
-                            f"> {last_add}\n\n"
-                            f"Update design/architecture.md to address the new "
-                            f"requirement (don't rewrite history; add a new "
-                            f"section, update the affected modules, and bump "
-                            f"the version header). Then call finish()."
-                        )
-                    user_msg = design_user_msg
-                result = await _drive_agent(run, architect, user_msg,
-                                            max_steps=remaining,
-                                            working_paths=working_paths,
-                                            remember_approved=remember_approved)
-            elif phase == "implement":
-                role_cfg = settings.get("roles", {}).get("coder_implement", {})
-                _emit("phase_start", phase="implement", agent="coder_implement",
-                      model=role_cfg.get("model", "DeepSeek"))
-                coder, saved_steps = make_agent_with_resume(
-                    "coder_implement", ws, settings, run.run_id, "implement")
-                remaining = implement_steps - saved_steps
-                if remaining <= 0:
-                    return {"ok": False, "error": "max_steps exhausted before resume"}
-                if saved_steps > 0:
-                    existing = _list_existing_files(ws)
-                    user_msg = RESUME_HINT_TEMPLATE.format(
-                        existing_files=existing, max_steps_remaining=remaining)
-                else:
-                    user_msg = (
-                        f"User requirement:\n```\n{run.requirement}\n```\n\n"
-                        f"Read the architecture from: design/architecture.md\n"
-                        f"\n"
-                        f"## IMPORTANT — Path rules\n"
-                        f"Your work goes inside this directory:\n"
-                        f"  {ws}\n"
-                        f"\n"
-                        f"All tool calls (read_file / write_file) take paths RELATIVE to that directory.\n"
-                        f"Do NOT prefix paths with `workspace/`, the project name, or any other segment.\n"
-                        f"\n"
-                        f"Correct examples:\n"
-                        f"  - write_file path='src/__init__.py'        (file lives at <ws>/src/__init__.py)\n"
-                        f"  - write_file path='src/app/foo.py'         (file lives at <ws>/src/app/foo.py)\n"
-                        f"  - write_file path='tests/test_foo.py'      (file lives at <ws>/tests/test_foo.py)\n"
-                        f"\n"
-                        f"Wrong examples (will create nested junk dirs):\n"
-                        f"  - write_file path='workspace/src/foo.py'\n"
-                        f"  - write_file path='./src/foo.py'\n"
-                        f"  - write_file path='/abs/path/foo.py'\n"
-                        f"\n"
-                        f"## What to produce\n"
-                        f"- All implementation modules under src/\n"
-                        f"- All test files under tests/ (mirror the src/ tree)\n"
-                        f"- Both directories must exist after you finish.\n"
-                        f"\n"
-                        f"Begin by reading design/architecture.md, then call write_file for each module."
-                    )
-                result = await _drive_agent(run, coder, user_msg,
-                                            max_steps=remaining,
-                                            working_paths=working_paths,
-                                            remember_approved=remember_approved)
-            else:  # review
-                role_cfg = settings.get("roles", {}).get("architect_review", {})
-                _emit("phase_start", phase="review", agent="architect_review",
-                      model=role_cfg.get("model", "MiniMax"))
-                reviewer, saved_steps = make_agent_with_resume(
-                    "architect_review", ws, settings, run.run_id, "review")
-                remaining = review_steps - saved_steps
-                if remaining <= 0:
-                    return {"ok": False, "error": "max_steps exhausted before resume"}
-                if saved_steps > 0:
-                    existing = _list_existing_files(ws)
-                    user_msg = RESUME_HINT_TEMPLATE.format(
-                        existing_files=existing, max_steps_remaining=remaining)
-                else:
-                    user_msg = (
-                        f"Original user requirement:\n```\n{run.requirement}\n```\n\n"
-                        f"Review everything in this directory:\n"
-                        f"  {ws}\n"
-                        f"\n"
-                        f"## IMPORTANT — Path rules\n"
-                        f"All tool calls (read_file / write_file) take paths RELATIVE to that directory.\n"
-                        f"Do NOT prefix paths with `workspace/`, the project name, or any other segment.\n"
-                        f"\n"
-                        f"Correct examples:\n"
-                        f"  - read_file path='design/architecture.md'    (file at <ws>/design/architecture.md)\n"
-                        f"  - read_file path='src/app/main.py'         (file at <ws>/src/app/main.py)\n"
-                        f"  - write_file path='design/review_report.md' (writes to <ws>/design/review_report.md)\n"
-                        f"\n"
-                        f"Wrong examples (will create nested junk or fail):\n"
-                        f"  - write_file path='workspace/design/review_report.md'\n"
-                        f"  - write_file path='' or path='.'\n"
-                        f"  - write_file path='/abs/path/foo.md'\n"
-                        f"\n"
-                        f"## Budget — STRICT\n"
-                        f"You have at most 8-10 tool calls total. Do NOT try to read every file.\n"
-                        f"Recommended reads (5 max):\n"
-                        f"  1. design/architecture.md     (the design doc)\n"
-                        f"  2. src/app/__init__.py or src/app/bootstrap.py   (entry point)\n"
-                        f"  3. ONE core module — pick the most central one (e.g. src/app/scheduler.py or src/app/aggregator.py)\n"
-                        f"  4. tests/conftest.py OR any one test file   (sample, not all)\n"
-                        f"\n"
-                        f"Then you MUST call write_file to produce design/review_report.md.\n"
-                        f"If you do not call write_file within 10 tool calls, the run will fail.\n"
-                        f"\n"
-                        f"## Output structure (write this to design/review_report.md)\n"
-                        f"  1. Architecture consistency (does code match the design doc?)\n"
-                        f"  2. Module completeness (any missing pieces?)\n"
-                        f"  3. Code quality (types, docstrings, error handling, PEP 8)\n"
-                        f"  4. Test coverage (do tests exist and cover the main paths?)\n"
-                        f"  5. Security (any hardcoded secrets, SQL injection, unsafe shell calls?)\n"
-                        f"  6. Verdict (PASS / CONDITIONAL PASS / FAIL) + 1-3 concrete follow-ups.\n"
-                        f"\n"
-                        f"Cite file paths when raising issues. End by calling finish(summary='...')."
-                    )
-                result = await _drive_agent(run, reviewer, user_msg,
-                                            max_steps=remaining,
-                                            working_paths=working_paths,
-                                            remember_approved=remember_approved)
+            result = await _drive_agent(run, architect, design_user_msg,
+                                        max_steps=remaining,
+                                        working_paths=working_paths,
+                                        remember_approved=remember_approved)
+            if run.cancelled or not result.get("ok"):
+                _finish_phase(run, "design", result, _emit, _snapshot_for_board)
+                return
 
-            # ----- post-phase handling -----
+            # Parse modules.json
+            modules_path = Path(ws) / "design" / "modules.json"
+            try:
+                raw = json.loads(modules_path.read_text(encoding="utf-8"))
+                run.modules = _validate_modules_json(raw)
+            except (FileNotFoundError, json.JSONDecodeError, ValueError) as e:
+                run.status = "failed"
+                run.error = f"modules.json validation failed: {e}"
+                _emit("run_end", status="failed", error=run.error)
+                get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
+                return
+
+            run.outputs["modules"] = [m["id"] for m in run.modules]
+            run.outputs["design_doc"] = str(ws / "design/architecture.md")
+            run.completed_phases.add("top_design")
+            run.history.append({"phase": "top_design", "summary": result.get("summary", "")})
+            try:
+                get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
+            except Exception:
+                pass
+            _emit("phase_end", phase="design", ok=True,
+                  modules=[m["id"] for m in run.modules],
+                  summary=result.get("summary", ""))
+
+        # ======== PHASE 2: Per-module loop ========
+        for mod_idx, mod in enumerate(run.modules):
             if run.cancelled:
                 run.status = "cancelled"
                 _emit("run_end", status="cancelled")
                 get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
                 return
-            if not result.get("ok"):
-                # Preserve 'failed' status if it was already set by
-                # engine.force_stop while we were awaiting — don't overwrite
-                # the error message in that case.
-                err = result.get("error", "")
-                if run.status != "failed":
-                    run.status = "failed"
-                    run.error = err or f"{phase} phase did not finish"
-                elif not run.error:
-                    run.error = err or f"{phase} phase did not finish"
-                _emit("phase_end", phase=phase, ok=False, error=run.error)
-                get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
-                return
 
-            # Record outputs and mark this phase complete
-            if phase == "design":
-                run.outputs["design_doc"] = str(ws / "design/architecture.md")
-            elif phase == "implement":
-                src_files = sorted(str(p.relative_to(ws)).replace("\\", "/")
-                                  for p in (ws / "src").rglob("*.py"))
-                test_files = sorted(str(p.relative_to(ws)).replace("\\", "/")
-                                   for p in (ws / "tests").rglob("test_*.py"))
-                run.outputs["code_files"] = src_files + test_files
-            else:  # review
-                run.outputs["review_report"] = str(ws / "design/review_report.md")
+            mid = mod["id"]
+            # Skip modules already completed (from a previous partial run)
+            if mod["status"] in ("passed", "manually_approved"):
+                continue
 
-            run.completed_phases.add(phase)
-            run.history.append({"phase": phase, "summary": result.get("summary", "")})
-
-            # Persist intermediate progress so a crash mid-next-phase can resume.
+            run.current_module_idx = mod_idx
+            mod["status"] = "in_progress"
+            mod["retry_count"] = 0
+            run.module_retry_count = 0
+            run.current_phase_sub = "detail"
             try:
                 get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
             except Exception:
                 pass
 
-            # Phase-end event with extra info for implement (file lists)
-            if phase == "implement":
-                _emit("phase_end", phase="implement", ok=True,
-                      src_files=run.outputs["code_files"],
-                      summary=result.get("summary", ""))
-            else:
-                _emit("phase_end", phase=phase, ok=True,
+            # Retry loop for this module
+            while run.module_retry_count <= max_retry:
+                if run.cancelled:
+                    run.status = "cancelled"
+                    _emit("run_end", status="cancelled")
+                    get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
+                    return
+
+                # 2a. Module detail design
+                run.current_phase_sub = "detail"
+                _emit("phase_start", phase=f"detail_{mid}", agent="module_detail",
+                      model=roles.get("module_detail", {}).get("model", ""))
+                detail_agent, saved_steps = make_agent_with_resume(
+                    "module_detail", ws, settings, run.run_id, f"detail_{mid}")
+                remaining = detail_max_steps - saved_steps
+                if remaining <= 0:
+                    run.status = "failed"
+                    run.error = f"max_steps exhausted for module {mid} detail"
+                    _emit("run_end", status="failed", error=run.error)
+                    get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
+                    return
+                detail_msg = (
+                    f"User requirement:\n```\n{run.requirement}\n```\n\n"
+                    f"Top-level architecture: design/architecture.md\n"
+                    f"Current module: {mid} ({mod.get('name', mid)})\n"
+                    f"Interface contract: {json.dumps(mod.get('interface', {}), indent=2)}\n"
+                    f"Depends on: {mod.get('depends_on', [])}\n\n"
+                    f"{_module_summary(run)}\n\n"
+                    f"Write detailed design to design/modules/{mid}.md"
+                )
+                result = await _drive_agent(run, detail_agent, detail_msg,
+                                            max_steps=remaining,
+                                            working_paths=working_paths,
+                                            remember_approved=remember_approved,
+                                            module_id=mid)
+                if run.cancelled or not result.get("ok"):
+                    mod["status"] = "failed"
+                    _emit("phase_end", phase=f"detail_{mid}", ok=False,
+                          error=result.get("error", ""))
+                    _finish_phase(run, f"detail_{mid}", result, _emit, _snapshot_for_board)
+                    return
+
+                _emit("phase_end", phase=f"detail_{mid}", ok=True,
                       summary=result.get("summary", ""))
 
-        # After a successful review cycle, the pipeline pauses for the
-        # user to add a new requirement (or mark done). The user can
-        # trigger the next iteration by POSTing to
-        # /board/runs/{id}/iteration with a new requirement, which
-        # clears completed_phases and re-launches the pipeline. Or
-        # they can POST {"done": true} to mark the run as completed.
+                # 2b. Module code
+                run.current_phase_sub = "code"
+                _emit("phase_start", phase=f"code_{mid}", agent="module_code",
+                      model=roles.get("module_code", {}).get("model", ""))
+                code_agent, saved_steps = make_agent_with_resume(
+                    "module_code", ws, settings, run.run_id, f"code_{mid}")
+                remaining = code_max_steps - saved_steps
+                if remaining <= 0:
+                    run.status = "failed"
+                    run.error = f"max_steps exhausted for module {mid} code"
+                    _emit("run_end", status="failed", error=run.error)
+                    get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
+                    return
+                code_msg = (
+                    f"User requirement:\n```\n{run.requirement}\n```\n\n"
+                    f"Detailed design: design/modules/{mid}.md\n"
+                    f"Module: {mid}\n"
+                    f"Interface: {json.dumps(mod.get('interface', {}), indent=2)}\n\n"
+                    f"Completed modules so far:\n{_module_summary(run)}\n\n"
+                    f"Write implementation to src/{mid}/*.py and tests/test_{mid}.py"
+                )
+                result = await _drive_agent(run, code_agent, code_msg,
+                                            max_steps=remaining,
+                                            working_paths=working_paths,
+                                            remember_approved=remember_approved,
+                                            module_id=mid)
+                if run.cancelled or not result.get("ok"):
+                    mod["status"] = "failed"
+                    _emit("phase_end", phase=f"code_{mid}", ok=False,
+                          error=result.get("error", ""))
+                    _finish_phase(run, f"code_{mid}", result, _emit, _snapshot_for_board)
+                    return
+
+                _emit("phase_end", phase=f"code_{mid}", ok=True,
+                      summary=result.get("summary", ""))
+
+                # 2c. Module test (read-only diagnosis)
+                run.current_phase_sub = "test"
+                _emit("phase_start", phase=f"test_{mid}", agent="module_test",
+                      model=roles.get("module_test", {}).get("model", ""))
+                test_agent, saved_steps = make_agent_with_resume(
+                    "module_test", ws, settings, run.run_id, f"test_{mid}")
+                remaining = test_max_steps - saved_steps
+                if remaining <= 0:
+                    run.status = "failed"
+                    run.error = f"max_steps exhausted for module {mid} test"
+                    _emit("run_end", status="failed", error=run.error)
+                    get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
+                    return
+                test_msg = (
+                    f"Read-only diagnosis for module {mid}.\n"
+                    f"Implementation: src/{mid}/*.py\n"
+                    f"Tests: tests/test_{mid}.py\n\n"
+                    f"Read the files and call finish(PASS) or finish(FAIL: <reason>)."
+                )
+                result = await _drive_agent(run, test_agent, test_msg,
+                                            max_steps=remaining,
+                                            working_paths=working_paths,
+                                            remember_approved=remember_approved,
+                                            module_id=mid)
+                if run.cancelled:
+                    run.status = "cancelled"
+                    _emit("run_end", status="cancelled")
+                    get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
+                    return
+
+                test_passed = result.get("ok") and "PASS" in (result.get("summary", "").upper())
+                if test_passed:
+                    mod["status"] = "passed"
+                    _emit("phase_end", phase=f"test_{mid}", ok=True,
+                          verdict="PASS", summary=result.get("summary", ""))
+                    break  # exit retry loop, move to next module
+
+                # Test FAILED
+                run.module_retry_count += 1
+                mod["retry_count"] = run.module_retry_count
+                if run.module_retry_count <= max_retry:
+                    _emit("phase_end", phase=f"test_{mid}", ok=False,
+                          verdict="FAIL", retry=run.module_retry_count,
+                          errors=result.get("summary", ""))
+                    # Feedback goes into next code iteration
+                else:
+                    # Exhausted retries — needs human
+                    mod["status"] = "needs_human"
+                    run.needs_human_modules.append(mid)
+                    run.current_phase_sub = ""
+                    run.status = "awaiting_human"
+                    _emit("phase_end", phase=f"test_{mid}", ok=False,
+                          verdict="FAIL", error="max retries exceeded")
+                    try:
+                        get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
+                    except Exception:
+                        pass
+
+                    # Check if too many modules need human
+                    if len(run.needs_human_modules) >= 3:
+                        run.status = "failed"
+                        run.error = f"3+ modules need human intervention: {run.needs_human_modules}"
+                        _emit("run_end", status="failed", error=run.error)
+                        get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
+                        return
+
+                    # Wait for human decision via module_decision endpoint
+                    run.resume_event.clear()
+                    run.module_decision = None
+                    await run.resume_event.wait()
+                    if run.cancelled:
+                        run.status = "cancelled"
+                        _emit("run_end", status="cancelled")
+                        get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
+                        return
+
+                    if not run.module_decision:
+                        run.status = "failed"
+                        run.error = f"no decision received for module {mid}"
+                        _emit("run_end", status="failed", error=run.error)
+                        get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
+                        return
+
+                    decision = run.module_decision[0]
+                    if decision == "approve_skip":
+                        mod["status"] = "manually_approved"
+                        break  # skip to next module
+                    elif decision == "regenerate":
+                        # Reset retry and redo detail→code→test
+                        run.module_retry_count = 0
+                        mod["retry_count"] = 0
+                        mod["status"] = "in_progress"
+                        # Clean up old files
+                        for p in sorted((Path(ws) / "src" / mid).rglob("*")):
+                            if p.is_file():
+                                p.unlink()
+                        for p in sorted((Path(ws) / "tests").rglob(f"test_{mid}*")):
+                            if p.is_file():
+                                p.unlink()
+                        continue  # restart retry
+                    else:  # cancel
+                        run.status = "failed"
+                        run.error = f"user cancelled at module {mid}"
+                        _emit("run_end", status="failed", error=run.error)
+                        get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
+                        return
+
+            # End of retry loop for this module
+            try:
+                get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
+            except Exception:
+                pass
+
+        # ======== PHASE 3: Top-level review ========
+        if "top_review" in run.completed_phases:
+            pass  # skip
+        else:
+            run.current_module_idx = -1
+            run.current_phase_sub = ""
+            run.phase = "review"
+            run.status = "running"
+            get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
+
+            role_cfg = roles.get("architect_review", {})
+            _emit("phase_start", phase="review", agent="architect_review",
+                  model=role_cfg.get("model", "MiniMax"))
+            reviewer, saved_steps = make_agent_with_resume(
+                "architect_review", ws, settings, run.run_id, "review")
+            remaining = review_steps - saved_steps
+            if remaining <= 0:
+                run.status = "failed"
+                run.error = "max_steps exhausted before review resume"
+                _emit("run_end", status="failed", error=run.error)
+                get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
+                return
+            if saved_steps > 0:
+                existing = _list_existing_files(ws)
+                review_msg = RESUME_HINT_TEMPLATE.format(
+                    existing_files=existing, max_steps_remaining=remaining)
+            else:
+                review_msg = (
+                    f"Original user requirement:\n```\n{run.requirement}\n```\n\n"
+                    f"Modules: {json.dumps([m['id'] for m in run.modules], indent=2)}\n\n"
+                    f"Review everything in {ws}\n\n"
+                    f"## Checklist\n"
+                    f"1. Architecture consistency — does the code match architecture.md?\n"
+                    f"2. Module completeness — all modules implemented?\n"
+                    f"3. Cross-module interface contracts — do they match?\n"
+                    f"4. Code quality — types, docstrings, error handling, PEP 8\n"
+                    f"5. Test coverage — do tests exist and cover main paths?\n"
+                    f"6. Security — any hardcoded secrets, SQL injection, unsafe shell calls?\n"
+                    f"7. Verdict — PASS / CONDITIONAL PASS / FAIL + 1-3 follow-ups\n\n"
+                    f"Write verdict to design/review_report.md"
+                )
+            result = await _drive_agent(run, reviewer, review_msg,
+                                        max_steps=remaining,
+                                        working_paths=working_paths,
+                                        remember_approved=remember_approved)
+            if run.cancelled or not result.get("ok"):
+                _finish_phase(run, "review", result, _emit, _snapshot_for_board)
+                return
+
+            run.outputs["review_report"] = str(ws / "design/review_report.md")
+            run.completed_phases.add("top_review")
+            run.history.append({"phase": "top_review", "summary": result.get("summary", "")})
+            _emit("phase_end", phase="review", ok=True,
+                  summary=result.get("summary", ""),
+                  modules=[m["id"] for m in run.modules],
+                  module_statuses={m["id"]: m["status"] for m in run.modules})
+
+        # ======== Done: await iteration ========
         run.status = "awaiting_iteration"
         run.phase = "done"
         run.awaiting_iteration_input = True
         run.updated_at = time.time()
-        _emit("iteration_pending",
-              iteration=run.iteration,
-              run_id=run.run_id)
+        _emit("iteration_pending", iteration=run.iteration, run_id=run.run_id)
         try:
             get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
         except Exception:
@@ -617,6 +819,26 @@ async def run_pipeline_async(run: RunState, settings: Optional[Dict[str, Any]] =
             get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
         except Exception:
             pass
+
+
+def _finish_phase(run: RunState, phase: str, result: Dict[str, Any],
+                  _emit, _snapshot_for_board) -> None:
+    """Handle phase failure uniformly."""
+    if run.status != "failed":
+        run.status = "failed"
+        run.error = result.get("error", "") or f"{phase} phase did not finish"
+    elif not run.error:
+        run.error = result.get("error", "") or f"{phase} phase did not finish"
+    try:
+        ev_obj = BoardEvent(run_id=run.run_id, kind="phase_end",
+                            data={"phase": phase, "ok": False, "error": run.error})
+        get_store().append(ev_obj); bus.emit(ev_obj)
+    except Exception:
+        pass
+    try:
+        get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
+    except Exception:
+        pass
 
 
 # Resume hint template: shown to the agent when restarting a phase
@@ -664,12 +886,26 @@ def _get_phase_max_steps(phase: str, settings: Dict[str, Any]) -> int:
 
 def _snapshot_for_board(run: RunState) -> Dict[str, Any]:
     """Board-friendly view of a run (what the kanban needs)."""
-    phase_to_idx = {"design": 0, "implement": 1, "review": 2, "done": 3}
+    phase_to_idx = {"design": 0, "implement": 1, "review": 2, "done": 3,
+                    "detail": 4, "code": 5, "test": 6}
+    base_phase = run.current_phase_sub if run.current_phase_sub else run.phase
     return {
         "run_id": run.run_id,
         "status": run.status,
         "phase": run.phase,
-        "phase_index": phase_to_idx.get(run.phase, 0),
+        "phase_index": phase_to_idx.get(base_phase, 0),
+        "current_module_idx": run.current_module_idx,
+        "current_phase_sub": run.current_phase_sub,
+        "module_retry_count": run.module_retry_count,
+        "needs_human_modules": list(run.needs_human_modules),
+        "modules": [
+            {"id": m["id"], "name": m.get("name", m["id"]),
+             "status": m["status"], "retry_count": m.get("retry_count", 0),
+             "depends_on": m.get("depends_on", []),
+             "estimated_files": m.get("estimated_files", 0),
+             "estimated_steps": m.get("estimated_steps", 0)}
+            for m in (run.modules or [])
+        ],
         "requirement": run.requirement,
         "created_at": run.created_at,
         "updated_at": run.updated_at,
@@ -684,27 +920,19 @@ def _snapshot_for_board(run: RunState) -> Dict[str, Any]:
         "working_paths": list(run.working_paths or []),
         "approved_paths": sorted(run.approved_paths or set()),
         "completed_phases": sorted(run.completed_phases or set()),
-        # Iteration loop (P5) — exposed so the UI can show "iteration N"
-        # and pre-fill the "what's new" textarea in the iteration modal.
         "iteration": run.iteration,
         "requirement_addenda": list(run.requirement_addenda or []),
         "awaiting_iteration_input": run.awaiting_iteration_input,
-        # Token plan tracking for dashboard
         "token_plan_models": dict(run.token_plan_models or {}),
         "window_tokens_in": run.window_tokens_in,
         "window_tokens_out": run.window_tokens_out,
         "project_tokens_in": run.project_tokens_in,
         "project_tokens_out": run.project_tokens_out,
         "project_path": run.project_path or "",
-        # Phase step progress (for resume-aware UI)
-        "phase_steps_used": get_store().load_agent_state(run.run_id, run.phase)[1]
-            if get_store().load_agent_state(run.run_id, run.phase) else 0,
-        "phase_steps_max": _PHASE_STEPS_DEFAULTS.get(run.phase, 12),
-        "phase_steps_remaining": 0,  # computed below
+        "phase_steps_used": 0,
+        "phase_steps_max": 0,
+        "phase_steps_remaining": 0,
     }
-    snap["phase_steps_remaining"] = max(0,
-        snap["phase_steps_max"] - snap["phase_steps_used"])
-    return snap
 
 
 async def _drive_agent(
@@ -714,6 +942,7 @@ async def _drive_agent(
     max_steps: int,
     working_paths: Optional[List[str]] = None,
     remember_approved: bool = True,
+    module_id: str = "",
 ) -> Dict[str, Any]:
     """Drive Agent.step() across approval gates.
 
@@ -800,7 +1029,9 @@ async def _drive_agent(
         """Best-effort persist agent history for resume."""
         nonlocal _steps_used
         try:
-            agent.save_state_to(run.run_id, run.phase, get_store(), _steps_used)
+            store = get_store()
+            store._current_module_id = module_id
+            agent.save_state_to(run.run_id, run.phase, store, _steps_used)
         except Exception:
             pass  # best-effort — don't let DB failure break the LLM flow
 
