@@ -18,7 +18,7 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from .agent import Agent, FinishEvent, FailedEvent, ToolCallEvent, TokenUsageEvent, make_agent
+from .agent import Agent, FinishEvent, FailedEvent, ToolCallEvent, TokenUsageEvent, make_agent, make_agent_with_resume
 from .config import WORKSPACE_ROOT, workspace_for_run
 from .events import BoardEvent, bus
 from .settings import get_settings
@@ -26,35 +26,38 @@ from .store import get_store
 
 
 def _backfill_completed_phases(run: RunState) -> bool:
-    """Augment `completed_phases` by inferring from any recorded outputs.
+    """Augment `completed_phases` by inferring from outputs and disk.
 
-    Three sources of truth can tell us a phase has finished:
-      1. The in-memory `run.completed_phases` set (added by the new tracker
-         code at every successful phase completion — most reliable).
-      2. The persisted `outputs` dict on the run, where each phase writes
-         a canonical key on success (legacy runs that pre-date the tracker
-         still have these).
+    Three sources:
+      1. The in-memory `run.completed_phases` set.
+      2. The persisted `outputs` dict on the run.
+      3. Disk filesystem — check for canonical phase artifacts.
 
-    We UNION both sources so neither missed writes nor missing records
-    can cause the pipeline to re-run a phase. Returns True if any change
-    was made, False if the set was already complete.
-
-    Idempotent — calling repeatedly is a no-op once stable.
+    Returns True if any change was made.
     """
     before = set(run.completed_phases)
     outputs = run.outputs or {}
 
-    # Phase-output presence is the canonical "did this phase succeed"
-    # signal — independent of when the run happened. Checking key
-    # presence (rather than truthiness) tolerates edge cases like an
-    # empty `code_files` list when the agent legitimately wrote no .py
-    # files for a non-coding task.
     if "design_doc" in outputs and outputs["design_doc"]:
         run.completed_phases.add("design")
     if "code_files" in outputs and outputs["code_files"]:
         run.completed_phases.add("implement")
     if "review_report" in outputs and outputs["review_report"]:
         run.completed_phases.add("review")
+
+    # Disk fallback: when outputs are incomplete (e.g., max_steps failure
+    # before phase_end wrote the snapshot), check the filesystem directly.
+    ws = run.workspace_root
+    if ws is not None and "design" not in run.completed_phases:
+        if (Path(ws) / "design" / "architecture.md").exists():
+            run.completed_phases.add("design")
+    if ws is not None and "implement" not in run.completed_phases:
+        src = Path(ws) / "src"
+        if src.exists() and list(src.rglob("*.py")):
+            run.completed_phases.add("implement")
+    if ws is not None and "review" not in run.completed_phases:
+        if (Path(ws) / "design" / "review_report.md").exists():
+            run.completed_phases.add("review")
 
     return run.completed_phases != before
 
@@ -187,6 +190,16 @@ class RunState:
 class WorkflowEngine:
     def __init__(self):
         self.runs: Dict[str, RunState] = {}
+        self.active_tasks: Dict[str, asyncio.Task] = {}
+
+    def start_pipeline(self, run: RunState) -> None:
+        """Launch or resume a pipeline, with anti-reentry protection."""
+        existing = self.active_tasks.get(run.run_id)
+        if existing and not existing.done():
+            return
+        task = asyncio.create_task(run_pipeline_async(run))
+        self.active_tasks[run.run_id] = task
+        task.add_done_callback(lambda t: self.active_tasks.pop(run.run_id, None))
 
     def create(self, requirement: str,
                working_paths: Optional[List[str]] = None,
@@ -384,126 +397,146 @@ async def run_pipeline_async(run: RunState, settings: Optional[Dict[str, Any]] =
                 role_cfg = settings.get("roles", {}).get("architect_design", {})
                 _emit("phase_start", phase="design", agent="architect_design",
                       model=role_cfg.get("model", "MiniMax"))
-                architect = make_agent("architect_design", workspace_root=ws, settings=settings)
-                # Base user_msg always includes the cumulative requirement
-                # (run.requirement is the original PLUS all addenda appended
-                # by the iteration endpoint).
-                design_user_msg = (
-                    f"User requirement:\n{run.requirement}\n\n"
-                    f"Workspace root: {ws}\n"
-                    f"Write your architecture design to: design/architecture.md "
-                    f"(relative to workspace root)."
-                )
-                # When this is an iteration (i.e. the user has added new
-                # requirements after the last review), tell the agent
-                # what's new and point at the prior artifacts so it can
-                # update rather than rewrite from scratch.
-                if run.iteration > 0 and run.requirement_addenda:
-                    last_add = run.requirement_addenda[-1]
-                    design_user_msg += (
-                        f"\n\n---\n"
-                        f"## Iteration {run.iteration}\n"
-                        f"This is iteration #{run.iteration} of the same "
-                        f"run. Previous design is at "
-                        f"design/architecture.md and previous review at "
-                        f"design/review_report.md — read both first to "
-                        f"understand what was already decided.\n"
-                        f"The user just added this new requirement:\n\n"
-                        f"> {last_add}\n\n"
-                        f"Update design/architecture.md to address the new "
-                        f"requirement (don't rewrite history; add a new "
-                        f"section, update the affected modules, and bump "
-                        f"the version header). Then call finish()."
+                architect, saved_steps = make_agent_with_resume(
+                    "architect_design", ws, settings, run.run_id, "design")
+                remaining = design_steps - saved_steps
+                if remaining <= 0:
+                    return {"ok": False, "error": "max_steps exhausted before resume"}
+                if saved_steps > 0:
+                    existing = _list_existing_files(ws)
+                    user_msg = RESUME_HINT_TEMPLATE.format(
+                        existing_files=existing, max_steps_remaining=remaining)
+                else:
+                    design_user_msg = (
+                        f"User requirement:\n{run.requirement}\n\n"
+                        f"Workspace root: {ws}\n"
+                        f"Write your architecture design to: design/architecture.md "
+                        f"(relative to workspace root)."
                     )
-                user_msg = design_user_msg
+                    if run.iteration > 0 and run.requirement_addenda:
+                        last_add = run.requirement_addenda[-1]
+                        design_user_msg += (
+                            f"\n\n---\n"
+                            f"## Iteration {run.iteration}\n"
+                            f"This is iteration #{run.iteration} of the same "
+                            f"run. Previous design is at "
+                            f"design/architecture.md and previous review at "
+                            f"design/review_report.md — read both first to "
+                            f"understand what was already decided.\n"
+                            f"The user just added this new requirement:\n\n"
+                            f"> {last_add}\n\n"
+                            f"Update design/architecture.md to address the new "
+                            f"requirement (don't rewrite history; add a new "
+                            f"section, update the affected modules, and bump "
+                            f"the version header). Then call finish()."
+                        )
+                    user_msg = design_user_msg
                 result = await _drive_agent(run, architect, user_msg,
-                                            max_steps=design_steps,
+                                            max_steps=remaining,
                                             working_paths=working_paths,
                                             remember_approved=remember_approved)
             elif phase == "implement":
                 role_cfg = settings.get("roles", {}).get("coder_implement", {})
                 _emit("phase_start", phase="implement", agent="coder_implement",
                       model=role_cfg.get("model", "DeepSeek"))
-                coder = make_agent("coder_implement", workspace_root=ws, settings=settings)
-                user_msg = (
-                    f"User requirement:\n{run.requirement}\n\n"
-                    f"Read the architecture from: design/architecture.md\n"
-                    f"\n"
-                    f"## IMPORTANT — Path rules\n"
-                    f"Your work goes inside this directory:\n"
-                    f"  {ws}\n"
-                    f"\n"
-                    f"All tool calls (read_file / write_file) take paths RELATIVE to that directory.\n"
-                    f"Do NOT prefix paths with `workspace/`, the project name, or any other segment.\n"
-                    f"\n"
-                    f"Correct examples:\n"
-                    f"  - write_file path='src/__init__.py'        (file lives at <ws>/src/__init__.py)\n"
-                    f"  - write_file path='src/app/foo.py'         (file lives at <ws>/src/app/foo.py)\n"
-                    f"  - write_file path='tests/test_foo.py'      (file lives at <ws>/tests/test_foo.py)\n"
-                    f"\n"
-                    f"Wrong examples (will create nested junk dirs):\n"
-                    f"  - write_file path='workspace/src/foo.py'\n"
-                    f"  - write_file path='./src/foo.py'\n"
-                    f"  - write_file path='/abs/path/foo.py'\n"
-                    f"\n"
-                    f"## What to produce\n"
-                    f"- All implementation modules under src/\n"
-                    f"- All test files under tests/ (mirror the src/ tree)\n"
-                    f"- Both directories must exist after you finish.\n"
-                    f"\n"
-                    f"Begin by reading design/architecture.md, then call write_file for each module."
-                )
+                coder, saved_steps = make_agent_with_resume(
+                    "coder_implement", ws, settings, run.run_id, "implement")
+                remaining = implement_steps - saved_steps
+                if remaining <= 0:
+                    return {"ok": False, "error": "max_steps exhausted before resume"}
+                if saved_steps > 0:
+                    existing = _list_existing_files(ws)
+                    user_msg = RESUME_HINT_TEMPLATE.format(
+                        existing_files=existing, max_steps_remaining=remaining)
+                else:
+                    user_msg = (
+                        f"User requirement:\n{run.requirement}\n\n"
+                        f"Read the architecture from: design/architecture.md\n"
+                        f"\n"
+                        f"## IMPORTANT — Path rules\n"
+                        f"Your work goes inside this directory:\n"
+                        f"  {ws}\n"
+                        f"\n"
+                        f"All tool calls (read_file / write_file) take paths RELATIVE to that directory.\n"
+                        f"Do NOT prefix paths with `workspace/`, the project name, or any other segment.\n"
+                        f"\n"
+                        f"Correct examples:\n"
+                        f"  - write_file path='src/__init__.py'        (file lives at <ws>/src/__init__.py)\n"
+                        f"  - write_file path='src/app/foo.py'         (file lives at <ws>/src/app/foo.py)\n"
+                        f"  - write_file path='tests/test_foo.py'      (file lives at <ws>/tests/test_foo.py)\n"
+                        f"\n"
+                        f"Wrong examples (will create nested junk dirs):\n"
+                        f"  - write_file path='workspace/src/foo.py'\n"
+                        f"  - write_file path='./src/foo.py'\n"
+                        f"  - write_file path='/abs/path/foo.py'\n"
+                        f"\n"
+                        f"## What to produce\n"
+                        f"- All implementation modules under src/\n"
+                        f"- All test files under tests/ (mirror the src/ tree)\n"
+                        f"- Both directories must exist after you finish.\n"
+                        f"\n"
+                        f"Begin by reading design/architecture.md, then call write_file for each module."
+                    )
                 result = await _drive_agent(run, coder, user_msg,
-                                            max_steps=implement_steps,
+                                            max_steps=remaining,
                                             working_paths=working_paths,
                                             remember_approved=remember_approved)
             else:  # review
                 role_cfg = settings.get("roles", {}).get("architect_review", {})
                 _emit("phase_start", phase="review", agent="architect_review",
                       model=role_cfg.get("model", "MiniMax"))
-                reviewer = make_agent("architect_review", workspace_root=ws, settings=settings)
-                user_msg = (
-                    f"Original user requirement:\n{run.requirement}\n\n"
-                    f"Review everything in this directory:\n"
-                    f"  {ws}\n"
-                    f"\n"
-                    f"## IMPORTANT — Path rules\n"
-                    f"All tool calls (read_file / write_file) take paths RELATIVE to that directory.\n"
-                    f"Do NOT prefix paths with `workspace/`, the project name, or any other segment.\n"
-                    f"\n"
-                    f"Correct examples:\n"
-                    f"  - read_file path='design/architecture.md'    (file at <ws>/design/architecture.md)\n"
-                    f"  - read_file path='src/app/main.py'         (file at <ws>/src/app/main.py)\n"
-                    f"  - write_file path='design/review_report.md' (writes to <ws>/design/review_report.md)\n"
-                    f"\n"
-                    f"Wrong examples (will create nested junk or fail):\n"
-                    f"  - write_file path='workspace/design/review_report.md'\n"
-                    f"  - write_file path='' or path='.'\n"
-                    f"  - write_file path='/abs/path/foo.md'\n"
-                    f"\n"
-                    f"## Budget — STRICT\n"
-                    f"You have at most 8-10 tool calls total. Do NOT try to read every file.\n"
-                    f"Recommended reads (5 max):\n"
-                    f"  1. design/architecture.md     (the design doc)\n"
-                    f"  2. src/app/__init__.py or src/app/bootstrap.py   (entry point)\n"
-                    f"  3. ONE core module — pick the most central one (e.g. src/app/scheduler.py or src/app/aggregator.py)\n"
-                    f"  4. tests/conftest.py OR any one test file   (sample, not all)\n"
-                    f"\n"
-                    f"Then you MUST call write_file to produce design/review_report.md.\n"
-                    f"If you do not call write_file within 10 tool calls, the run will fail.\n"
-                    f"\n"
-                    f"## Output structure (write this to design/review_report.md)\n"
-                    f"  1. Architecture consistency (does code match the design doc?)\n"
-                    f"  2. Module completeness (any missing pieces?)\n"
-                    f"  3. Code quality (types, docstrings, error handling, PEP 8)\n"
-                    f"  4. Test coverage (do tests exist and cover the main paths?)\n"
-                    f"  5. Security (any hardcoded secrets, SQL injection, unsafe shell calls?)\n"
-                    f"  6. Verdict (PASS / CONDITIONAL PASS / FAIL) + 1-3 concrete follow-ups.\n"
-                    f"\n"
-                    f"Cite file paths when raising issues. End by calling finish(summary='...')."
-                )
+                reviewer, saved_steps = make_agent_with_resume(
+                    "architect_review", ws, settings, run.run_id, "review")
+                remaining = review_steps - saved_steps
+                if remaining <= 0:
+                    return {"ok": False, "error": "max_steps exhausted before resume"}
+                if saved_steps > 0:
+                    existing = _list_existing_files(ws)
+                    user_msg = RESUME_HINT_TEMPLATE.format(
+                        existing_files=existing, max_steps_remaining=remaining)
+                else:
+                    user_msg = (
+                        f"Original user requirement:\n{run.requirement}\n\n"
+                        f"Review everything in this directory:\n"
+                        f"  {ws}\n"
+                        f"\n"
+                        f"## IMPORTANT — Path rules\n"
+                        f"All tool calls (read_file / write_file) take paths RELATIVE to that directory.\n"
+                        f"Do NOT prefix paths with `workspace/`, the project name, or any other segment.\n"
+                        f"\n"
+                        f"Correct examples:\n"
+                        f"  - read_file path='design/architecture.md'    (file at <ws>/design/architecture.md)\n"
+                        f"  - read_file path='src/app/main.py'         (file at <ws>/src/app/main.py)\n"
+                        f"  - write_file path='design/review_report.md' (writes to <ws>/design/review_report.md)\n"
+                        f"\n"
+                        f"Wrong examples (will create nested junk or fail):\n"
+                        f"  - write_file path='workspace/design/review_report.md'\n"
+                        f"  - write_file path='' or path='.'\n"
+                        f"  - write_file path='/abs/path/foo.md'\n"
+                        f"\n"
+                        f"## Budget — STRICT\n"
+                        f"You have at most 8-10 tool calls total. Do NOT try to read every file.\n"
+                        f"Recommended reads (5 max):\n"
+                        f"  1. design/architecture.md     (the design doc)\n"
+                        f"  2. src/app/__init__.py or src/app/bootstrap.py   (entry point)\n"
+                        f"  3. ONE core module — pick the most central one (e.g. src/app/scheduler.py or src/app/aggregator.py)\n"
+                        f"  4. tests/conftest.py OR any one test file   (sample, not all)\n"
+                        f"\n"
+                        f"Then you MUST call write_file to produce design/review_report.md.\n"
+                        f"If you do not call write_file within 10 tool calls, the run will fail.\n"
+                        f"\n"
+                        f"## Output structure (write this to design/review_report.md)\n"
+                        f"  1. Architecture consistency (does code match the design doc?)\n"
+                        f"  2. Module completeness (any missing pieces?)\n"
+                        f"  3. Code quality (types, docstrings, error handling, PEP 8)\n"
+                        f"  4. Test coverage (do tests exist and cover the main paths?)\n"
+                        f"  5. Security (any hardcoded secrets, SQL injection, unsafe shell calls?)\n"
+                        f"  6. Verdict (PASS / CONDITIONAL PASS / FAIL) + 1-3 concrete follow-ups.\n"
+                        f"\n"
+                        f"Cite file paths when raising issues. End by calling finish(summary='...')."
+                    )
                 result = await _drive_agent(run, reviewer, user_msg,
-                                            max_steps=review_steps,
+                                            max_steps=remaining,
                                             working_paths=working_paths,
                                             remember_approved=remember_approved)
 
@@ -585,6 +618,49 @@ async def run_pipeline_async(run: RunState, settings: Optional[Dict[str, Any]] =
             pass
 
 
+# Resume hint template: shown to the agent when restarting a phase
+# with saved history. Shorter than the full user_msg because the
+# agent already has context from its restored history.
+RESUME_HINT_TEMPLATE = (
+    "[Resume from interrupted state]\n\n"
+    "You were writing files in this workspace and ran out of step budget.\n"
+    "Files already on disk:\n"
+    "{existing_files}\n\n"
+    "Continue from where you stopped. Read existing files before overwriting.\n"
+    "You have {max_steps_remaining} steps remaining."
+)
+
+
+def _list_existing_files(ws_root: Path) -> str:
+    """Return a compact listing of files under the workspace root."""
+    ws = Path(ws_root)
+    lines = []
+    if (ws / "design" / "architecture.md").exists():
+        lines.append("  design/architecture.md")
+    if (ws / "design" / "review_report.md").exists():
+        lines.append("  design/review_report.md")
+    for p in sorted((ws / "src").rglob("*.py")):
+        lines.append(f"  src/{p.relative_to(ws / 'src').as_posix()}")
+    for p in sorted((ws / "tests").rglob("*.py")):
+        lines.append(f"  tests/{p.relative_to(ws / 'tests').as_posix()}")
+    return "\n".join(lines) if lines else "  (empty workspace)"
+
+
+# Map role names to the max_steps settings key
+_PHASE_ROLE_MAP = {
+    "design": "architect_design",
+    "implement": "coder_implement",
+    "review": "architect_review",
+}
+_PHASE_STEPS_DEFAULTS = {"design": 12, "implement": 25, "review": 12}
+
+
+def _get_phase_max_steps(phase: str, settings: Dict[str, Any]) -> int:
+    role = _PHASE_ROLE_MAP.get(phase)
+    return settings.get("pipeline_params", {}).get(phase, {}).get("max_steps",
+           _PHASE_STEPS_DEFAULTS.get(phase, 12))
+
+
 def _snapshot_for_board(run: RunState) -> Dict[str, Any]:
     """Board-friendly view of a run (what the kanban needs)."""
     phase_to_idx = {"design": 0, "implement": 1, "review": 2, "done": 3}
@@ -619,7 +695,15 @@ def _snapshot_for_board(run: RunState) -> Dict[str, Any]:
         "project_tokens_in": run.project_tokens_in,
         "project_tokens_out": run.project_tokens_out,
         "project_path": run.project_path or "",
+        # Phase step progress (for resume-aware UI)
+        "phase_steps_used": get_store().load_agent_state(run.run_id, run.phase)[1]
+            if get_store().load_agent_state(run.run_id, run.phase) else 0,
+        "phase_steps_max": _PHASE_STEPS_DEFAULTS.get(run.phase, 12),
+        "phase_steps_remaining": 0,  # computed below
     }
+    snap["phase_steps_remaining"] = max(0,
+        snap["phase_steps_max"] - snap["phase_steps_used"])
+    return snap
 
 
 async def _drive_agent(
@@ -707,6 +791,17 @@ async def _drive_agent(
             bus.emit(bev)
         except Exception:
             pass
+
+    # Steps used this phase (for resume save)
+    _steps_used = 0
+
+    def _save_agent_state():
+        """Best-effort persist agent history for resume."""
+        nonlocal _steps_used
+        try:
+            agent.save_state_to(run.run_id, run.phase, get_store(), _steps_used)
+        except Exception:
+            pass  # best-effort — don't let DB failure break the LLM flow
 
     # Main async loop
     while True:
@@ -861,6 +956,8 @@ async def _drive_agent(
                     if ev is None:
                         return {"ok": True, "summary": ""}
                     gen_state["ev"] = ev
+                    _steps_used += 1
+                    _save_agent_state()
                     run.status = "running"
                     get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
                     continue
@@ -875,6 +972,8 @@ async def _drive_agent(
                 if ev is None:
                     return {"ok": True, "summary": ""}
                 gen_state["ev"] = ev
+                _steps_used += 1
+                _save_agent_state()
                 continue
 
             # No approval needed — auto-execute via send(None)
@@ -882,6 +981,8 @@ async def _drive_agent(
             if ev is None:
                 return {"ok": True, "summary": ""}
             gen_state["ev"] = ev
+            _steps_used += 1
+            _save_agent_state()
             continue
 
         # Unknown event type — advance

@@ -181,6 +181,10 @@ class Agent:
         self.total_tokens_out: int = 0
         self.total_cost: float = 0.0
 
+    def save_state_to(self, run_id: str, phase: str, store: Any, steps_used: int) -> None:
+        """Persist current history + step count for resume."""
+        store.save_agent_state(run_id, phase, self.history, steps_used)
+
     def _resolve_safe(self, rel_path: str) -> Path:
         """Resolve a workspace-relative path and confirm it stays under workspace_root."""
         rel_path = self._normalize_rel_path(rel_path)
@@ -449,6 +453,26 @@ def _safe_json(s: str) -> Dict[str, Any]:
         return json.loads(s or "{}")
     except Exception:
         return {}
+
+
+def make_agent_with_resume(role: str, workspace_root: Path,
+                            settings: Optional[Dict[str, Any]] = None,
+                            run_id: str = "", phase: str = "") -> tuple[Agent, int]:
+    """Factory: build agent, try to load saved history from DB.
+
+    Returns (agent, saved_steps):
+        saved_steps=0: fresh start
+        saved_steps>0: history loaded — caller should use resume hint
+    """
+    agent = make_agent(role, workspace_root, settings)
+    if run_id and phase:
+        from .store import get_store
+        loaded = get_store().load_agent_state(run_id, phase)
+        if loaded:
+            history, saved_steps = loaded
+            agent.history = history
+            return agent, saved_steps
+    return agent, 0
 
 
 def make_agent(role: str, workspace_root: Path,

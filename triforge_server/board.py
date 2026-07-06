@@ -211,7 +211,7 @@ async def create_run(req: StartRequest) -> Dict[str, Any]:
             clean_wp.append(norm)
     run = engine.create(req.requirement, working_paths=clean_wp,
                         project_path=req.project_path)
-    asyncio.create_task(run_pipeline_async(run))
+    engine.start_pipeline(run)
     try:
         get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
     except Exception:
@@ -248,7 +248,7 @@ async def approve(run_id: str, req: ApproveRequest) -> Dict[str, Any]:
             get_store().append(ev); bus.emit(ev)
         except Exception:
             pass
-        asyncio.create_task(run_pipeline_async(run))
+        engine.start_pipeline(run)
         return {"status": "pipeline_restarted", "decision": req.decision,
                 "phase": run.phase}
 
@@ -387,7 +387,7 @@ async def resume(run_id: str) -> Dict[str, Any]:
         pass
 
     # Launch the pipeline
-    asyncio.create_task(run_pipeline_async(run))
+    engine.start_pipeline(run)
     return {"status": "resumed", "run_id": run_id, "phase": run.phase}
 
 
@@ -484,6 +484,7 @@ async def post_iteration(run_id: str, body: IterationBody) -> Dict[str, Any]:
     run.resume_event.clear()
     run.outputs = {}                      # wipe prior artifacts
     run.approved_paths = set()
+    get_store().clear_agent_state(run.run_id)  # fresh history for new iteration
     run.updated_at = time.time()
 
     try:
@@ -500,7 +501,7 @@ async def post_iteration(run_id: str, body: IterationBody) -> Dict[str, Any]:
         pass
 
     # Re-launch the full design → code → review cycle.
-    asyncio.create_task(run_pipeline_async(run))
+    engine.start_pipeline(run)
     return {
         "status":    "iterating",
         "iteration": run.iteration,

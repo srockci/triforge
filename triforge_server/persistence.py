@@ -94,6 +94,23 @@ class BoardDB:
                     ON events(run_id, ts);
             """)
 
+        # Create agent_history table
+        with self._lock:
+            self._conn.execute("""
+                CREATE TABLE IF NOT EXISTS agent_history (
+                    run_id TEXT NOT NULL,
+                    phase TEXT NOT NULL,
+                    steps_used INTEGER NOT NULL DEFAULT 0,
+                    history TEXT NOT NULL,
+                    updated_at REAL NOT NULL,
+                    PRIMARY KEY (run_id, phase)
+                )
+            """)
+            self._conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_agent_history_run
+                    ON agent_history(run_id)
+            """)
+
         # Migrations: add columns idempotently. SQLite has no IF NOT EXISTS
         # for columns, so try/except on each ALTER.
         for stmt in (
@@ -260,15 +277,52 @@ class BoardDB:
             )
             return cur.fetchone()[0]
 
+    # ----- agent history -----
+    def save_agent_history(self, run_id: str, phase: str,
+                           history: List[Dict[str, Any]], steps_used: int) -> None:
+        """Persist agent conversation history for resume. UPSERT on (run_id, phase)."""
+        with self._lock:
+            self._conn.execute("""
+                INSERT INTO agent_history (run_id, phase, steps_used, history, updated_at)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT(run_id, phase) DO UPDATE SET
+                    steps_used=excluded.steps_used,
+                    history=excluded.history,
+                    updated_at=excluded.updated_at
+            """, (run_id, phase, steps_used,
+                  json.dumps(history, default=str), time.time()))
+
+    def load_agent_history(self, run_id: str, phase: str
+                           ) -> Optional[Tuple[List[Dict[str, Any]], int]]:
+        """Return (history, steps_used) or None."""
+        with self._lock:
+            cur = self._conn.execute(
+                "SELECT history, steps_used FROM agent_history WHERE run_id = ? AND phase = ?",
+                (run_id, phase))
+            row = cur.fetchone()
+        if not row:
+            return None
+        try:
+            return json.loads(row[0]), row[1]
+        except (json.JSONDecodeError, TypeError):
+            return None
+
+    def clear_agent_history(self, run_id: str) -> None:
+        """Delete all agent history rows for a run."""
+        with self._lock:
+            self._conn.execute("DELETE FROM agent_history WHERE run_id = ?", (run_id,))
+
     def delete_run(self, run_id: str) -> None:
         with self._lock:
             self._conn.execute("DELETE FROM events WHERE run_id = ?", (run_id,))
+            self._conn.execute("DELETE FROM agent_history WHERE run_id = ?", (run_id,))
             self._conn.execute("DELETE FROM runs WHERE run_id = ?", (run_id,))
 
     def clear_all(self) -> None:
         """For tests only — wipe everything."""
         with self._lock:
             self._conn.execute("DELETE FROM events")
+            self._conn.execute("DELETE FROM agent_history")
             self._conn.execute("DELETE FROM runs")
 
 

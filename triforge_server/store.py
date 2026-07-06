@@ -102,8 +102,29 @@ class RunStore:
         return self._db.get_run(run_id)
 
     def delete_run(self, run_id: str) -> None:
-        """Delete a run and its events from the database."""
+        """Delete a run, its events, and agent history from the database."""
         self._db.delete_run(run_id)
+
+    # ----- Agent state persistence -----
+    def save_agent_state(self, run_id: str, phase: str,
+                         history: List[Dict[str, Any]], steps_used: int) -> None:
+        try:
+            self._db.save_agent_history(run_id, phase, history, steps_used)
+        except Exception:
+            pass
+
+    def load_agent_state(self, run_id: str, phase: str
+                         ) -> Optional[Tuple[List[Dict[str, Any]], int]]:
+        try:
+            return self._db.load_agent_history(run_id, phase)
+        except Exception:
+            return None
+
+    def clear_agent_state(self, run_id: str) -> None:
+        try:
+            self._db.clear_agent_history(run_id)
+        except Exception:
+            pass
 
     def known_runs(self) -> List[Dict[str, Any]]:
         """Return a board-friendly list (same shape as the kanban snapshot).
