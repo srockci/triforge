@@ -4789,7 +4789,7 @@ const App = {
     if (el) el.textContent = text;
   },
 
-  renderDashboard() {
+  async renderDashboard() {
     const main = document.querySelector('.main');
     if (this.state.selectedRunId) {
       main.classList.remove('dashboard-mode');
@@ -4813,30 +4813,47 @@ const App = {
     }
 
     const selectedPeriod = this.state.dashboardPeriod || 'today';
+
+    // Try to fetch server-side aggregated stats; fall back to client-side
+    let serverStats = null;
+    try {
+      const res = await fetch(`/board/stats?period=${encodeURIComponent(selectedPeriod)}`);
+      if (res.ok) {
+        serverStats = await res.json();
+      }
+    } catch (e) {
+      // ignore — fall back to client-side
+    }
+
     const filtered = this._filterRunsByPeriod(runs, selectedPeriod);
     const modelStats = this._computeModelStats(filtered);
 
-    // Alerts
-    const periodStats = {
-      totalCost: filtered.reduce((s, r) => s + (r.cost_estimate || 0), 0),
-      completed: filtered.filter(r => r.status === 'completed').length,
-      failed:    filtered.filter(r => r.status === 'failed').length,
-      cancelled: filtered.filter(r => r.status === 'cancelled').length,
-    };
-    const alerts = this._computeAlerts(filtered, periodStats);
+    // Determine if we use server-side alerts or client-side
+    let alerts;
+    if (serverStats && serverStats.alerts && serverStats.alerts.length > 0) {
+      alerts = serverStats.alerts;
+    } else {
+      const periodStats = {
+        totalCost: filtered.reduce((s, r) => s + (r.cost_estimate || 0), 0),
+        completed: filtered.filter(r => r.status === 'completed').length,
+        failed:    filtered.filter(r => r.status === 'failed').length,
+        cancelled: filtered.filter(r => r.status === 'cancelled').length,
+      };
+      alerts = this._computeAlerts(filtered, periodStats);
+    }
     this._renderAlertStrip(alerts);
 
-    // 3 big stat cards
-    this._renderStatCards(filtered);
+    // 3 big stat cards (use server global stats if available)
+    this._renderStatCards(filtered, serverStats);
 
     // 4 aggregate secondary cards
-    this._renderAggregate(runs);
+    this._renderAggregate(runs, serverStats);
 
-    // Per-model table
-    this._renderModelStatsTable(modelStats, filtered.length);
+    // Per-model table (use server by_model if available)
+    this._renderModelStatsTable(modelStats, filtered.length, serverStats);
 
-    // Project grid
-    this._renderProjectGrid(filtered);
+    // Project grid (use server by_project if available)
+    this._renderProjectGrid(filtered, serverStats);
 
     document.getElementById('dash-project-count').textContent =
       `${filtered.length} ${__('total')}`;
@@ -4871,15 +4888,30 @@ const App = {
     }
   },
 
-  _renderStatCards(runs) {
-    const totalIn  = runs.reduce((s, r) => s + (r.tokens_in  || 0), 0);
-    const totalOut = runs.reduce((s, r) => s + (r.tokens_out || 0), 0);
-    const totalCost = runs.reduce((s, r) => s + (r.cost_estimate || 0), 0);
-    const completed = runs.filter(r => r.status === 'completed').length;
-    const failed    = runs.filter(r => r.status === 'failed').length;
-    const cancelled = runs.filter(r => r.status === 'cancelled').length;
-    const total     = runs.length;
-    const successRate = total > 0 ? (completed / Math.max(1, completed + failed + cancelled)) * 100 : 0;
+  _renderStatCards(runs, serverStats) {
+    let totalIn, totalOut, totalCost, completed, failed, cancelled, total, successRate, avgDuration;
+
+    if (serverStats && serverStats.global) {
+      const g = serverStats.global;
+      totalIn = g.tokens_in || 0;
+      totalOut = g.tokens_out || 0;
+      totalCost = g.cost || 0;
+      completed = g.runs_completed || 0;
+      failed = g.runs_failed || 0;
+      cancelled = 0;
+      total = g.runs_total || runs.length;
+      successRate = g.success_rate || 0;
+      avgDuration = g.avg_duration_sec || 0;
+    } else {
+      totalIn  = runs.reduce((s, r) => s + (r.tokens_in  || 0), 0);
+      totalOut = runs.reduce((s, r) => s + (r.tokens_out || 0), 0);
+      totalCost = runs.reduce((s, r) => s + (r.cost_estimate || 0), 0);
+      completed = runs.filter(r => r.status === 'completed').length;
+      failed    = runs.filter(r => r.status === 'failed').length;
+      cancelled = runs.filter(r => r.status === 'cancelled').length;
+      total     = runs.length;
+      successRate = total > 0 ? (completed / Math.max(1, completed + failed + cancelled)) * 100 : 0;
+    }
 
     const yesterday = this._getYesterdayStats();
     const tokensDelta = totalIn + totalOut - (yesterday.tokensIn + yesterday.tokensOut);
@@ -4956,16 +4988,27 @@ const App = {
     return `¥${(totalCost / completedCount).toFixed(2)} ${__('avg per run')}`;
   },
 
-  _renderAggregate(runs) {
-    const total = runs.length;
-    const awaiting = runs.filter(r => r.status === 'awaiting_approval').length;
-    const running  = runs.filter(r => r.status === 'running').length;
-    const failed   = runs.filter(r => r.status === 'failed').length;
-    const totalDuration = runs.reduce((s, r) => {
-      if (!r.created_at || !r.updated_at) return s;
-      return s + Math.max(0, r.updated_at - r.created_at);
-    }, 0);
-    const avgDuration = total > 0 ? totalDuration / total : 0;
+  _renderAggregate(runs, serverStats) {
+    let total, awaiting, running, failed, avgDuration;
+
+    if (serverStats && serverStats.global) {
+      const g = serverStats.global;
+      running = g.runs_running || 0;
+      awaiting = g.runs_awaiting || 0;
+      failed = g.runs_failed || 0;
+      total = g.runs_total || runs.length;
+      avgDuration = g.avg_duration_sec || 0;
+    } else {
+      total = runs.length;
+      awaiting = runs.filter(r => r.status === 'awaiting_approval').length;
+      running  = runs.filter(r => r.status === 'running').length;
+      failed   = runs.filter(r => r.status === 'failed').length;
+      const totalDuration = runs.reduce((s, r) => {
+        if (!r.created_at || !r.updated_at) return s;
+        return s + Math.max(0, r.updated_at - r.created_at);
+      }, 0);
+      avgDuration = total > 0 ? totalDuration / total : 0;
+    }
 
     const el = document.getElementById('dash-aggregate');
     if (!el) return;
@@ -4985,10 +5028,17 @@ const App = {
     `;
   },
 
-  _renderProjectGrid(runs) {
+  _renderProjectGrid(runs, serverStats) {
     const container = document.getElementById('dash-project-grid');
     if (!container) return;
-    const sorted = [...runs].sort((a, b) => (b.updated_at || 0) - (a.updated_at || 0));
+
+    // Use server by_project if available, else client-side runs
+    let sorted;
+    if (serverStats && serverStats.by_project && serverStats.by_project.length > 0) {
+      sorted = serverStats.by_project;
+    } else {
+      sorted = [...runs].sort((a, b) => (b.updated_at || 0) - (a.updated_at || 0));
+    }
     const maxTokens = Math.max(...sorted.map(r => (r.tokens_in || 0) + (r.tokens_out || 0)), 1);
 
     if (sorted.length === 0) {
@@ -5335,8 +5385,15 @@ const App = {
     return stats;
   },
 
-  _renderModelStatsTable(modelStats, filteredRunCount) {
-    const entries = Object.entries(modelStats);
+  _renderModelStatsTable(modelStats, filteredRunCount, serverStats) {
+    // Use server by_model if available (more accurate — includes events aggregation)
+    let entries;
+    if (serverStats && serverStats.by_model && serverStats.by_model.length > 0) {
+      entries = serverStats.by_model.map(m => [m.model, m]);
+      entries.sort((a, b) => (b[1].cost || 0) - (a[1].cost || 0));
+    } else {
+      entries = Object.entries(modelStats);
+    }
     const container = document.getElementById('dash-model-stats');
     const metaEl = document.getElementById('dash-model-meta');
     if (entries.length === 0) {
@@ -5368,13 +5425,14 @@ const App = {
         ? `<span class="cost-na">${__('N/A')}</span>`
         : `&yen;${s.cost.toFixed(4)}`;
 
+      const slData = (s.sparkline && s.sparkline.length > 0) ? s.sparkline : this._placeholderSparkline('tokens');
       html += `<tr>
         <td class="model-name">${this.escape(name)}</td>
         <td><span class="model-plan-tag ${typeClass}">${typeLabel}</span></td>
         <td class="num">${s.run_count}</td>
         <td class="num">${s.tokens_in.toLocaleString()}</td>
         <td class="num">${s.tokens_out.toLocaleString()}</td>
-        <td>${this._renderSparkline(this._placeholderSparkline('tokens'), {
+        <td>${this._renderSparkline(slData, {
           width: 120, height: 20, type: 'tokens'
         })}</td>
         <td class="num">${costDisplay}</td>
