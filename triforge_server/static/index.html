@@ -6198,8 +6198,47 @@ const App = {
   renderPipeline(pipelineParams) {
     const container = document.getElementById('pipeline-content').querySelector('#settings-pipeline-list');
     const phases = Object.keys(pipelineParams);
+    const mod = pipelineParams.module || {};
     container.innerHTML = phases.map(phase => {
       const p = pipelineParams[phase];
+      if (phase === 'module') {
+        return `
+          <div class="settings-card" data-pipeline-key="module">
+            <div class="settings-card-head">
+              <span class="settings-card-title">${__('Module Pipeline')}</span>
+            </div>
+            <div class="settings-grid">
+              <div class="settings-field">
+                <label>${__('Detail Max Steps')}</label>
+                <input type="number" data-pipeline-field="detail_max_steps" data-pipeline-key="module" value="${mod.detail_max_steps ?? 8}" min="1" step="1">
+              </div>
+              <div class="settings-field">
+                <label>${__('Code Max Steps')}</label>
+                <input type="number" data-pipeline-field="code_max_steps" data-pipeline-key="module" value="${mod.code_max_steps ?? 20}" min="1" step="1">
+              </div>
+              <div class="settings-field">
+                <label>${__('Test Max Steps')}</label>
+                <input type="number" data-pipeline-field="test_max_steps" data-pipeline-key="module" value="${mod.test_max_steps ?? 6}" min="1" step="1">
+              </div>
+              <div class="settings-field">
+                <label>${__('Max Retry Per Module')}</label>
+                <input type="number" data-pipeline-field="max_retry_per_module" data-pipeline-key="module" value="${mod.max_retry_per_module ?? 3}" min="0" step="1">
+              </div>
+              <div class="settings-field">
+                <label>${__('Est. Files Max')}</label>
+                <input type="number" data-pipeline-field="estimated_files_max" data-pipeline-key="module" value="${mod.estimated_files_max ?? 8}" min="1" step="1">
+              </div>
+              <div class="settings-field">
+                <label>${__('Est. Steps Max')}</label>
+                <input type="number" data-pipeline-field="estimated_steps_max" data-pipeline-key="module" value="${mod.estimated_steps_max ?? 22}" min="1" step="1">
+              </div>
+            </div>
+            <div class="settings-toggle-row" style="margin-top:12px;display:flex;align-items:center;gap:8px;">
+              <input type="checkbox" id="reuse-designer-for-test" data-pipeline-field="reuse_designer_for_test" data-pipeline-key="module" ${mod.reuse_designer_for_test !== false ? 'checked' : ''}>
+              <label for="reuse-designer-for-test">${__('Reuse architect_review for test agent (off = use independent module_test role)')}</label>
+            </div>
+          </div>`;
+      }
       return `
         <div class="settings-card" data-pipeline-key="${this.escape(phase)}">
           <div class="settings-card-head">
@@ -6639,10 +6678,14 @@ const App = {
       }
       const field = el.dataset.pipelineField;
       if (field) {
-        const val = el.value;
-        settings.pipeline_params[key][field] = field === 'temperature'
-          ? parseFloat(val)
-          : parseInt(val, 10);
+        if (el.type === 'checkbox') {
+          settings.pipeline_params[key][field] = el.checked;
+        } else {
+          const val = el.value;
+          settings.pipeline_params[key][field] = field === 'temperature'
+            ? parseFloat(val)
+            : parseInt(val, 10);
+        }
       }
     });
 

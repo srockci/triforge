@@ -223,6 +223,7 @@ write a review report to `workspace/design/review_report.md`.
             "max_retry_per_module": 3,
             "estimated_files_max": 8,
             "estimated_steps_max": 22,
+            "reuse_designer_for_test": True,
         },
         
         # Token plan settings
