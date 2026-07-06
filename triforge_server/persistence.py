@@ -92,6 +92,9 @@ class BoardDB:
 
                 CREATE INDEX IF NOT EXISTS idx_events_run
                     ON events(run_id, ts);
+
+                CREATE INDEX IF NOT EXISTS idx_events_kind_ts
+                    ON events(kind, ts);
             """)
 
         # Create agent_history table

@@ -230,7 +230,8 @@ write a review report to `workspace/design/review_report.md`.
         "token_plan": {
             "enabled": False,
             "window_hours": [0, 5, 10, 15, 20],  # 0:00, 5:00, 10:00, 15:00, 20:00
-            "models": {}  # model_name: is_token_plan
+            "models": {},  # model_name: is_token_plan
+            "alert_threshold_pct": 0.8,
         },
     },
     "approval": {

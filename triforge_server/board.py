@@ -193,6 +193,311 @@ async def list_runs() -> Dict[str, Any]:
 
 
 # -----------------------------------------------------------------------
+# Dashboard stats (aggregated from events + runs)
+# -----------------------------------------------------------------------
+@router.get("/stats")
+async def get_board_stats(period: str = "today", model: Optional[str] = None) -> Dict[str, Any]:
+    """Aggregated dashboard stats: global, by_model, by_project, alerts.
+
+    Query params:
+        period: "today" | "week" | "month" | "7d" | "30d" | "90d"  (default: today)
+        model:  optional, filter by model name
+    """
+    store = get_store()
+    now = time.time()
+
+    # ---- Period calculation ----
+    def _period_range(p: str) -> tuple[float, float]:
+        d = time.localtime(now)
+        if p == "today":
+            start = time.mktime((d.tm_year, d.tm_mon, d.tm_mday, 0, 0, 0, 0, 0, -1))
+        elif p == "week":
+            monday = d.tm_mday - d.tm_wday
+            start = time.mktime((d.tm_year, d.tm_mon, monday, 0, 0, 0, 0, 0, -1))
+        elif p == "month":
+            start = time.mktime((d.tm_year, d.tm_mon, 1, 0, 0, 0, 0, 0, -1))
+        elif p == "7d":
+            start = now - 7 * 86400
+        elif p == "30d":
+            start = now - 30 * 86400
+        elif p == "90d":
+            start = now - 90 * 86400
+        else:
+            start = time.mktime((d.tm_year, d.tm_mon, d.tm_mday, 0, 0, 0, 0, 0, -1))
+        return (start, now)
+
+    start_ts, end_ts = _period_range(period)
+
+    # ---- Get all runs for state-based stats ----
+    all_runs = list(engine.runs.values())
+    completed_failed_cancelled = [
+        r for r in all_runs
+        if r.status in ("completed", "failed", "cancelled")
+    ]
+    period_runs = [
+        r for r in all_runs
+        if (r.updated_at or r.created_at or 0) >= start_ts
+    ]
+
+    # ---- SQL aggregation from events ----
+    # Query: token_usage events in the time range, grouped by model
+    conn = store._conn
+    cur = conn.execute("""
+        SELECT
+            json_extract(data, '$.model')                          AS model,
+            json_extract(data, '$.provider')                       AS provider,
+            json_extract(data, '$.is_token_plan')                  AS is_token_plan,
+            SUM(COALESCE(json_extract(data, '$.tokens_in'), 0))    AS tokens_in,
+            SUM(COALESCE(json_extract(data, '$.tokens_out'), 0))   AS tokens_out,
+            SUM(COALESCE(json_extract(data, '$.cost'), 0.0))       AS cost,
+            COUNT(*)                                               AS call_count,
+            COUNT(DISTINCT run_id)                                 AS run_count
+        FROM events
+        WHERE kind = 'token_usage'
+          AND ts >= ? AND ts < ?
+        GROUP BY model, is_token_plan
+        ORDER BY (tokens_in + tokens_out) DESC
+    """, (start_ts, end_ts))
+    rows = cur.fetchall()
+
+    # ---- Daily/hourly bucket sparkline ----
+    sparkline_data: dict = {}
+    if period == "today":
+        day_start = _period_range("today")[0]
+        cur2 = conn.execute("""
+            SELECT
+                json_extract(data, '$.model') AS model,
+                CAST(((ts - ?) / 3600) AS INTEGER) AS bucket,
+                SUM(COALESCE(json_extract(data, '$.tokens_in'), 0) +
+                    COALESCE(json_extract(data, '$.tokens_out'), 0)) AS total
+            FROM events
+            WHERE kind = 'token_usage'
+              AND ts >= ? AND ts < ?
+            GROUP BY model, bucket
+        """, (day_start, day_start, day_start + 86400))
+        for r2 in cur2.fetchall():
+            m = r2[0] or "unknown"
+            b = int(r2[1])
+            if 0 <= b < 24:
+                sparkline_data.setdefault(m, [0]*24)[b] = r2[2]
+    else:
+        day_start = _period_range("today")[0]
+        days = 7 if period in ("week", "7d") else 30
+        cur2 = conn.execute("""
+            SELECT
+                json_extract(data, '$.model') AS model,
+                CAST(((ts - ?) / 86400) AS INTEGER) AS bucket,
+                SUM(COALESCE(json_extract(data, '$.tokens_in'), 0) +
+                    COALESCE(json_extract(data, '$.tokens_out'), 0)) AS total
+            FROM events
+            WHERE kind = 'token_usage'
+              AND ts >= ? AND ts < ?
+            GROUP BY model, bucket
+        """, (day_start, day_start, day_start + days * 86400))
+        for r2 in cur2.fetchall():
+            m = r2[0] or "unknown"
+            b = int(r2[1])
+            if 0 <= b < days:
+                sparkline_data.setdefault(m, [0]*days)[b] = r2[2]
+
+    # ---- Build by_model array ----
+    total_tokens_in = 0
+    total_tokens_out = 0
+    total_cost = 0.0
+    by_model = []
+    for row in rows:
+        m = row[0] or "unknown"
+        prov = row[1] or ""
+        is_tp = bool(row[2])
+        ti = row[3] or 0
+        to = row[4] or 0
+        c = row[5] or 0.0
+        if is_tp:
+            c = 0.0
+        total_tokens_in += ti
+        total_tokens_out += to
+        total_cost += c
+        sl = sparkline_data.get(m, [])
+        by_model.append({
+            "model": m,
+            "provider": prov,
+            "is_token_plan": is_tp,
+            "tokens_in": ti,
+            "tokens_out": to,
+            "tokens_total": ti + to,
+            "cost": c,
+            "run_count": row[7] or 0,
+            "call_count": row[6] or 0,
+            "sparkline": sl,
+        })
+
+    # ---- Global stats ----
+    completed = sum(1 for r in period_runs if r.status == "completed")
+    failed = sum(1 for r in period_runs if r.status == "failed")
+    cancelled = sum(1 for r in period_runs if r.status == "cancelled")
+    running = sum(1 for r in period_runs if r.status == "running")
+    awaiting = sum(1 for r in period_runs if r.status == "awaiting_approval")
+    terminal = completed + failed + cancelled
+    success_rate = (completed / terminal * 100) if terminal > 0 else 0.0
+
+    durations = [
+        (r.updated_at or 0) - (r.created_at or 0)
+        for r in completed_failed_cancelled
+        if (r.updated_at or 0) > (r.created_at or 0)
+    ]
+    avg_duration = sum(durations) / len(durations) if durations else 0.0
+    total_duration = sum(durations)
+
+    global_stats = {
+        "tokens_in": total_tokens_in,
+        "tokens_out": total_tokens_out,
+        "tokens_total": total_tokens_in + total_tokens_out,
+        "cost": total_cost,
+        "runs_total": len(period_runs),
+        "runs_completed": completed,
+        "runs_failed": failed,
+        "runs_running": running,
+        "runs_awaiting": awaiting,
+        "success_rate": round(success_rate, 1),
+        "avg_duration_sec": round(avg_duration, 1),
+        "total_duration_sec": round(total_duration, 1),
+    }
+
+    # ---- By project (top 12) ----
+    sorted_runs = sorted(
+        period_runs,
+        key=lambda r: (r.updated_at or r.created_at or 0),
+        reverse=True,
+    )[:12]
+    by_project = []
+    for r in sorted_runs:
+        tokens_in = getattr(r, 'tokens_in', 0) or 0
+        tokens_out = getattr(r, 'tokens_out', 0) or 0
+        by_project.append({
+            "run_id": r.run_id,
+            "requirement": (r.requirement or "")[:100],
+            "status": r.status,
+            "phase": r.phase,
+            "model": (r.models or [None])[0] if getattr(r, 'models', None) else None,
+            "tokens_in": tokens_in,
+            "tokens_out": tokens_out,
+            "tokens_total": tokens_in + tokens_out,
+            "cost": (r.cost_estimate or 0.0),
+            "duration_sec": round(max(0, (r.updated_at or now) - (r.created_at or now)), 1),
+            "created_at": r.created_at or 0,
+            "updated_at": r.updated_at or 0,
+            "progress_pct": _estimate_progress(r),
+        })
+
+    # ---- Alerts ----
+    settings = get_settings()
+    alerts = []
+    # awaiting_stuck
+    for r in all_runs:
+        if r.status == "awaiting_approval":
+            waiting = now - (r.updated_at or r.created_at or 0)
+            if waiting > 300:
+                alerts.append({
+                    "level": "warning", "kind": "awaiting_stuck",
+                    "message": f"Run {r.run_id[-12:]} awaiting approval for {int(waiting // 60)}m",
+                    "run_id": r.run_id, "ts": now,
+                })
+    # failure_surge
+    if terminal > 5 and (failed / terminal) > 0.30:
+        pct = round(failed / terminal * 100, 0)
+        alerts.append({
+            "level": "warning", "kind": "failure_surge",
+            "message": f"Failure rate {pct}% in this period",
+            "run_id": "", "ts": now,
+        })
+    # long_run
+    for r in all_runs:
+        if r.status == "running":
+            running_sec = now - (r.created_at or 0)
+            if running_sec > 1800:
+                alerts.append({
+                    "level": "info", "kind": "long_run",
+                    "message": f"Run {r.run_id[-12:]} long-running for {int(running_sec // 60)}m",
+                    "run_id": r.run_id, "ts": now,
+                })
+    # token_plan_window (stub — would need per-model window tracking)
+    tp_models = settings.pipeline_params.token_plan.models
+    if tp_models:
+        alerts.append({
+            "level": "info", "kind": "token_plan_window",
+            "message": f"{len(tp_models)} token-plan model(s) configured",
+            "run_id": "", "ts": now,
+        })
+    alerts.sort(key=lambda a: a["ts"], reverse=True)
+
+    # ---- Token plan info ----
+    token_plan = None
+    if tp_models:
+        windows = settings.pipeline_params.token_plan.window_hours
+        current_h = time.localtime(now).tm_hour
+        current_label = "—"
+        remaining = 0
+        for i, wh in enumerate(windows):
+            if current_h >= wh:
+                if i + 1 < len(windows) and current_h < windows[i + 1]:
+                    current_label = f"{wh:02d}:00–{windows[i + 1]:02d}:00"
+                    remaining = (windows[i + 1] - current_h) * 3600
+                    break
+                elif i + 1 >= len(windows):
+                    current_label = f"{wh:02d}:00–24:00"
+                    remaining = (24 - current_h) * 3600
+                    break
+        # Query token_plan model usage in current window
+        window_start = _period_range("today")[0] + wh * 3600
+        cur3 = conn.execute("""
+            SELECT
+                SUM(COALESCE(json_extract(data, '$.tokens_in'), 0)),
+                SUM(COALESCE(json_extract(data, '$.tokens_out'), 0))
+            FROM events
+            WHERE kind = 'token_usage'
+              AND ts >= ? AND ts < ?
+              AND json_extract(data, '$.is_token_plan') = 1
+        """, (window_start, now))
+        row3 = cur3.fetchone()
+        token_plan = {
+            "models": list(tp_models.keys()),
+            "window_hours": windows,
+            "current_window": {
+                "label": current_label,
+                "tokens_in": row3[0] or 0,
+                "tokens_out": row3[1] or 0,
+                "remaining_to_reset_sec": max(0, remaining),
+            },
+        }
+
+    return {
+        "period": period,
+        "range": {"start_ts": start_ts, "end_ts": end_ts},
+        "global": global_stats,
+        "by_model": by_model,
+        "by_project": by_project,
+        "alerts": alerts,
+        "token_plan": token_plan,
+    }
+
+
+def _estimate_progress(run: Any) -> float:
+    """Estimate 0-100 progress from phase index."""
+    phases = ["design", "detail", "code", "test", "review", "done"]
+    if run.status == "completed":
+        return 100.0
+    if run.status == "failed":
+        return 100.0
+    if run.status == "cancelled":
+        return 100.0
+    try:
+        idx = phases.index(run.phase)
+        return round((idx / len(phases)) * 100, 0)
+    except (ValueError, AttributeError):
+        return 50.0
+
+
+# -----------------------------------------------------------------------
 # Run detail
 # -----------------------------------------------------------------------
 @router.get("/runs/{run_id}")
@@ -291,23 +596,12 @@ async def approve(run_id: str, req: ApproveRequest) -> Dict[str, Any]:
 
 
 # -----------------------------------------------------------------------
-# Token usage statistics
+# Token usage statistics (deprecated — use GET /board/stats)
 # -----------------------------------------------------------------------
 @router.post("/token-usage")
 async def get_token_usage(req: TokenUsageRequest) -> Dict[str, Any]:
-    """Get token usage statistics for a project or model."""
-    # This would typically query a database for historical token usage
-    # For now, return empty structure
-    return {
-        "tokens_in": 0,
-        "tokens_out": 0,
-        "cost": 0.0,
-        "window_tokens_in": 0,
-        "window_tokens_out": 0,
-        "project_tokens_in": 0,
-        "project_tokens_out": 0,
-        "is_token_plan": False
-    }
+    """DEPRECATED. Use GET /board/stats instead."""
+    raise HTTPException(410, "This endpoint is deprecated. Use GET /board/stats instead.")
 
 
 @router.post("/token-plan-model")
