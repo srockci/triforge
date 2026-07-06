@@ -56,8 +56,56 @@
     --r-md: 6px;
     --r-lg: 8px;
     --r-xl: 12px;
+    --r-xs: 3px;          /* tag, badge */
+    --r-pill: 9999px;     /* status dot, tab pill */
 
-/* ============== Switch ============== */
+    /* Shadows (dark-mode tuned) */
+    --shadow-1: 0 1px 2px hsla(0 0% 0% / 0.04), 0 1px 3px hsla(0 0% 0% / 0.06);
+    --shadow-2: 0 2px 4px hsla(0 0% 0% / 0.06), 0 4px 8px hsla(0 0% 0% / 0.08);
+    --shadow-3: 0 4px 8px hsla(0 0% 0% / 0.08), 0 16px 32px hsla(0 0% 0% / 0.12);
+
+    /* Spacing scale */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-10: 40px;
+    --space-12: 48px;
+
+    /* Font size scale */
+    --font-display: 32px;
+    --font-h1: 24px;
+    --font-h2: 18px;
+    --font-h3: 15px;
+    --font-body-l: 14px;
+    --font-body-m: 13px;
+    --font-body-s: 12px;
+    --font-caption: 11px;
+    --font-micro: 10px;
+
+    /* Status colors (alias tokens) */
+    --status-running:          var(--blue);
+    --status-running-soft:     var(--blue-soft);
+    --status-awaiting:         var(--yellow);
+    --status-awaiting-soft:    var(--yellow-soft);
+    --status-awaiting-iter:    var(--orange);
+    --status-awaiting-iter-soft: var(--orange-soft);
+    --status-completed:        var(--green);
+    --status-completed-soft:   var(--green-soft);
+    --status-failed:           var(--red);
+    --status-failed-soft:      var(--red-soft);
+    --status-cancelled:        var(--text-faint);
+    --status-cancelled-soft:   var(--bg-elev-2);
+    --status-interrupted:      var(--orange);
+    --status-interrupted-soft: var(--orange-soft);
+    --status-token-plan:       var(--purple);
+    --status-token-plan-soft:  var(--purple-soft);
+  }
+
+  /* ============== Switch ============== */
 .switch {
   position: relative;
   display: inline-block;
@@ -466,7 +514,8 @@ input:checked + .slider:before {
     height: calc(100vh - 52px);
   }
   .main.dashboard-mode {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+    background: var(--bg);
   }
   .main.dashboard-mode .col-left,
   .main.dashboard-mode .col-right {
@@ -475,9 +524,14 @@ input:checked + .slider:before {
   .main.dashboard-mode .col-mid {
     border-left: none;
     border-right: none;
+    background: var(--bg);
+    padding: 0;
+    max-width: 1280px;
+    margin: 0 auto;
+    width: 100%;
   }
   .main.dashboard-mode #dashboard-root {
-    padding: 20px 24px;
+    padding: 28px 24px 48px;
   }
   .col {
     overflow-y: auto;
@@ -499,7 +553,7 @@ input:checked + .slider:before {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 2px;
+    margin-bottom: var(--space-2);
   }
   .col-title .label {
     font-size: 11px;
@@ -523,7 +577,7 @@ input:checked + .slider:before {
     margin-top: 2px;
   }
 
-  .col-body { padding: 10px; }
+  .col-body { padding: var(--space-2); }
 
   /* ============== Run card ============== */
   .run-card {
@@ -1152,7 +1206,7 @@ input:checked + .slider:before {
   ::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
 
   /* Special: ring gradient on left column active card */
-  .col-left .col-body { padding: 8px; }
+  .col-left .col-body { padding: var(--space-2); }
 
   /* ============ Board tab: stat tiles ============ */
   .board-stats {
@@ -1428,6 +1482,119 @@ input:checked + .slider:before {
   .dash-empty {
     text-align: center; padding: 32px; color: var(--text-faint);
     font-size: 12px;
+  }
+
+  /* ============ Dashboard stat card system (Batch 1) ============ */
+  .dash-section {
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: var(--space-4) var(--space-5);
+    margin-bottom: var(--space-4);
+  }
+  .dash-section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-3);
+  }
+  .dash-section-title {
+    font-size: var(--font-h3);
+    font-weight: 600;
+    color: var(--text);
+    margin: 0;
+  }
+  .dash-section-subtitle {
+    font-size: var(--font-body-s);
+    color: var(--text-mute);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+  }
+  @media (max-width: 1024px) {
+    .stat-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 640px) {
+    .stat-grid { grid-template-columns: 1fr; }
+  }
+
+  .stat-card {
+    position: relative;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    padding: var(--space-5);
+    overflow: hidden;
+    transition: border-color .15s ease, transform .15s ease;
+  }
+  .stat-card:hover {
+    border-color: var(--border-strong);
+  }
+  .stat-card::before {
+    content: "";
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--accent);
+  }
+  .stat-card.cost::before    { background: var(--green); }
+  .stat-card.success::before { background: var(--blue); }
+  .stat-card.failed::before  { background: var(--red); }
+
+  .stat-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-3);
+  }
+  .stat-card-label {
+    font-size: var(--font-micro);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-mute);
+    font-weight: 600;
+  }
+  .stat-card-delta {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: var(--font-caption);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-card-delta.up-bad    { color: var(--red); }
+  .stat-card-delta.down-bad  { color: var(--green); }
+  .stat-card-delta.up-good   { color: var(--green); }
+  .stat-card-delta.down-good { color: var(--red); }
+
+  .stat-card-value {
+    font-size: var(--font-display);
+    font-weight: 700;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+  .stat-card-sub {
+    display: flex;
+    align-items: flex-end;
+    gap: var(--space-3);
+    margin-top: var(--space-2);
+  }
+  .stat-card-sparkline {
+    flex: 0 0 100px;
+    height: 24px;
+    display: block;
+  }
+  .stat-card-compare {
+    font-size: var(--font-caption);
+    color: var(--text-mute);
+    font-variant-numeric: tabular-nums;
   }
 
   /* ============ All Runs tab: filter pills + dense rows ============ */
@@ -2150,6 +2317,27 @@ input:checked + .slider:before {
     gap: 10px;
     margin-top: 24px;
   }
+
+  /* ============ Dashboard animation keyframes (Batch 1) ============ */
+  @keyframes slide-in {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes shimmer {
+    0%   { background-position: -200px 0; }
+    100% { background-position: 200px 0; }
+  }
+
+  /* ============ Utility classes (Batch 1) ============ */
+  .tabular-nums { font-variant-numeric: tabular-nums; }
+  .text-mute    { color: var(--text-mute); }
+  .text-dim     { color: var(--text-dim); }
+  .text-faint   { color: var(--text-faint); }
+  .mono         { font-family: 'Consolas', 'Monaco', monospace; }
 </style>
 </head>
 <body>
