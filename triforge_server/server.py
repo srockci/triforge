@@ -123,7 +123,7 @@ async def lifespan(app: FastAPI):
         import threading
         channels = get_settings().get().get("notification_channels", [])
         handler = TelegramWebhookHandler.instance()
-        handler.set_port(int(os.environ.get("PORT", "8000")))
+        handler.set_port(int(os.environ.get("TRIFORGE_PORT", "8800")))
         _POLLING_STARTED: set = set()
         tg_count = 0
         for ch in channels:

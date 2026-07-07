@@ -26,6 +26,7 @@ _SETTINGS_PATH = _PROJECT_ROOT / "data" / "settings.json"
 # ---------------------------------------------------------------------------
 DEFAULT_SETTINGS: Dict[str, Any] = {
     "language": "zh-CN",  # "en" | "zh-CN"
+    "public_url": "http://localhost:8800",  # used for Telegram View diff button
     "providers": {
         "minimax": {
             "name": "MiniMax",
@@ -319,6 +320,9 @@ class SettingsManager:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with open(self.path, "w", encoding="utf-8") as f:
             json.dump(self._data, f, indent=2, ensure_ascii=False)
+
+    def get_public_url(self) -> str:
+        return self._data.get("public_url", "http://localhost:8800")
 
     def get(self) -> Dict[str, Any]:
         """Return current settings (cached)."""

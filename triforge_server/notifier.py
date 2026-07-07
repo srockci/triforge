@@ -224,6 +224,8 @@ def build_approval_keyboard(run_id: str, phase: str, file_path: str
                             ) -> List[List[Dict[str, str]]]:
     short_id = run_id[-12:]
     file_hash = hashlib.sha256(file_path.encode()).hexdigest()[:8]
+    public_url = get_settings().get_public_url().rstrip("/")
+    diff_url = f"{public_url}/dashboard/runs/{run_id}?file={file_path}"
 
     return [
         [
@@ -231,7 +233,8 @@ def build_approval_keyboard(run_id: str, phase: str, file_path: str
             {"text": "❌ Reject",  "callback_data": f"reject:{short_id}:{phase}:{file_hash}"},
         ],
         [
-            {"text": "💬 Reply",   "callback_data": f"reply:{short_id}:{phase}:{file_hash}"},
+            {"text": "💬 Reply",     "callback_data": f"reply:{short_id}:{phase}:{file_hash}"},
+            {"text": "📂 View diff", "url": diff_url},
         ],
     ]
 
@@ -484,23 +487,12 @@ def _dispatch(ev: BoardEvent) -> None:
                 file_path = args.get("path", "?")
                 keyboard = build_approval_keyboard(ev.run_id, phase, file_path)
 
-                # Register pending approval
                 short_id = ev.run_id[-12:]
                 file_hash = hashlib.sha256(file_path.encode()).hexdigest()[:8]
                 store = _get_pending_store()
-                store.add(PendingApproval(
-                    short_run_id=short_id,
-                    full_run_id=ev.run_id,
-                    phase=phase,
-                    file_path=file_path,
-                    file_hash=file_hash,
-                    chat_id=int(ch.get("chat_id", 0)),
-                    message_id=0,  # filled in after send
-                    created_at=time.time(),
-                ))
 
                 sent = notifier.send_with_buttons(msg, keyboard)
-                # Update message_id from response
+                # Register pending only after successful send (with message_id).
                 result_msg = sent if isinstance(sent, dict) else {}
                 mid = (result_msg.get("message_id")
                        or result_msg.get("result", {}).get("message_id"))
@@ -515,6 +507,12 @@ def _dispatch(ev: BoardEvent) -> None:
                         message_id=mid,
                         created_at=time.time(),
                     ))
+                else:
+                    log.warning(
+                        "telegram send returned no message_id (run=%s, phase=%s); "
+                        "callback will not be able to edit original message",
+                        ev.run_id, phase,
+                    )
             else:
                 notifier.send(msg)
 

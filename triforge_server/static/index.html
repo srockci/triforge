@@ -3350,6 +3350,15 @@ input:checked + .slider:before {
                       <p class="text-sm text-muted">Display language for the interface / 界面显示语言</p>
                     </div>
                   </div>
+                  <div class="settings-field full">
+                    <label>Public URL</label>
+                    <input type="text" id="settings-public-url"
+                           placeholder="https://triforge.example.com"
+                           style="max-width: 400px;">
+                    <div class="settings-help">
+                      <p class="text-sm text-muted">Telegram 通知里 "View diff" 按钮的跳转链接。生产环境必填</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -6851,6 +6860,11 @@ const App = {
           this.saveSettings();
         };
       }
+      const publicUrlInput = document.getElementById('settings-public-url');
+      if (publicUrlInput) {
+        publicUrlInput.value = data.public_url || 'http://localhost:8800';
+        publicUrlInput.onchange = () => this.saveSettings();
+      }
       
       this.renderSettings(data);
       
@@ -7873,8 +7887,10 @@ const App = {
 
   collectSettings() {
     const langSelect = document.getElementById('settings-language-select');
+    const publicUrlInput = document.getElementById('settings-public-url');
     const settings = {
       language: langSelect ? langSelect.value : (this.state.language || 'zh-CN'),
+      public_url: publicUrlInput ? publicUrlInput.value.trim() || 'http://localhost:8800' : 'http://localhost:8800',
       providers: {},
       roles: {},
       pipeline_params: {},

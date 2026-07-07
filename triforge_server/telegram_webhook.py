@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import requests
 import threading
 import time
 from dataclasses import dataclass, field
@@ -183,9 +184,8 @@ class TelegramWebhookHandler:
                 bot.send_message(chat_id, msg)
             return {"ok": False, "error": "expired or already processed"}
 
-        import requests as http_requests
         try:
-            r = http_requests.post(
+            r = requests.post(
                 f"http://127.0.0.1:{self._port}/board/runs/{pending.full_run_id}/approve",
                 json={"decision": decision, "comment": comment},
                 headers={"X-Approved-By-Telegram": user_id_str},
