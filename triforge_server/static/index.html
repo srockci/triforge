@@ -3020,6 +3020,11 @@ input:checked + .slider:before {
 <!-- ====================== MAIN ====================== -->
 <div class="main">
 
+  <!-- iLink Gateway status banner (hidden when all ACTIVE or no gateways) -->
+  <div id="ilink-banner" class="ilink-banner" style="display:none;">
+    <span id="ilink-banner-text"></span>
+  </div>
+
   <!-- ============ LEFT: RUNS ============ -->
   <div class="col col-left">
     <div id="board-stats"></div>
@@ -3904,6 +3909,33 @@ input:checked + .slider:before {
 
   /* Event item variants */
   .evt .body .preview { color: var(--text-faint); font-family: ui-monospace, monospace; font-size: 11px; }
+
+  /* ---- iLink Gateway status banner ---- */
+  .ilink-banner {
+    padding: 8px 16px;
+    margin: 0 0 12px;
+    border-radius: var(--r-md);
+    font-size: 13px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .ilink-banner.warning {
+    background: var(--yellow-soft);
+    color: var(--yellow);
+    border: 1px solid var(--yellow-soft);
+  }
+  .ilink-banner.danger {
+    background: var(--red-soft);
+    color: var(--red);
+    border: 1px solid var(--red-soft);
+  }
+  .ilink-banner.success {
+    background: var(--green-soft);
+    color: var(--green);
+    border: 1px solid var(--green-soft);
+  }
 </style>
 
 <script>
@@ -7618,6 +7650,39 @@ const App = {
     this.refreshNotifHistory();
   },
 
+  // ---- iLink Gateway status banner ----
+  async _pollIlinkStatus() {
+    try {
+      const r = await this.api('GET', '/board/ilink/status');
+      const banner = document.getElementById('ilink-banner');
+      const text = document.getElementById('ilink-banner-text');
+      const gws = r.gateways || [];
+      const degraded = gws.filter(g => g.state === 'DEGRADED');
+      const reconnecting = gws.filter(g => g.state === 'RECONNECTING');
+      const connecting = gws.filter(g => g.state === 'CONNECTING');
+      const active = gws.filter(g => g.state === 'ACTIVE');
+      const total = gws.length;
+
+      if (total === 0) {
+        banner.style.display = 'none';
+        return;
+      }
+      if (degraded.length > 0) {
+        banner.className = 'ilink-banner danger';
+        text.textContent = '\u26A0\uFE0F Personal WeChat: ' + degraded.length + ' bot(s) offline \u2014 reconnect in Settings';
+        banner.style.display = 'flex';
+      } else if (reconnecting.length > 0 || connecting.length > 0) {
+        banner.className = 'ilink-banner warning';
+        text.textContent = '\u26A0\uFE0F Personal WeChat: ' + (reconnecting.length + connecting.length) + '/' + total + ' bot(s) connecting...';
+        banner.style.display = 'flex';
+      } else if (active.length === total) {
+        banner.style.display = 'none';
+      }
+    } catch (e) {
+      // silently ignore
+    }
+  },
+
   // ---- Personal WeChat pairing wizard ----
   _pwState: { code: null, timer: null, channelIdx: null },
 
@@ -8093,6 +8158,12 @@ document.addEventListener('DOMContentLoaded', () => {
       App.refreshNotifHistory();
     }
   }, 15000);
+
+  // Poll iLink gateway status every 10s
+  setInterval(() => {
+    App._pollIlinkStatus();
+  }, 10000);
+  App._pollIlinkStatus();
 
   // Version Control Event Listeners
   document.getElementById('vc-platform-select')?.addEventListener('change', (e) => {

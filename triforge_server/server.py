@@ -80,7 +80,27 @@ async def lifespan(app: FastAPI):
     n_channels = len((get_settings().get() or {}).get("notification_channels") or [])
     print(f"[startup] notifier ready ({n_channels} channel(s))", flush=True)
 
+    # Boot iLink gateway manager for personal-wechat long-poll keep-alive.
+    # Each paired WeChat account gets a background ILinkGateway instance
+    # that runs getupdates long-poll to keep the bot ACTIVE on iLink's side.
+    try:
+        from .ilink_gateway import GatewayManager
+        n_gw = GatewayManager.boot_from_settings()
+        if n_gw:
+            print(f"[startup] ilink gateway manager booted ({n_gw} gateway(s))",
+                  flush=True)
+    except Exception as e:
+        print(f"[startup] ilink gateway boot failed: {e}", flush=True)
+
     yield
+
+    # Graceful shutdown for iLink gateways
+    try:
+        from .ilink_gateway import GatewayManager
+        GatewayManager.shutdown_all(timeout=5)
+        print("[shutdown] ilink gateways stopped", flush=True)
+    except Exception as e:
+        print(f"[shutdown] ilink gateway shutdown error: {e}", flush=True)
 
 
 app = FastAPI(title="TriForge Integration", lifespan=lifespan)

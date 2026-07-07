@@ -1354,6 +1354,20 @@ class NotificationChannel(BaseModel):
     at_all_on_error: bool = False
 
 
+@router.get("/ilink/status")
+async def ilink_gateway_status() -> Dict[str, Any]:
+    """Return the status snapshot of all ILinkGateway instances.
+
+    Used by the dashboard banner to show per-channel connection state.
+    """
+    try:
+        from .ilink_gateway import GatewayManager
+        snap = GatewayManager.instance().snapshot()
+        return {"gateways": snap}
+    except Exception as e:
+        return {"gateways": [], "error": str(e)}
+
+
 @router.post("/notifications/test")
 async def test_notification_channel(body: Dict[str, Any]) -> Dict[str, Any]:
     """Send a test message to one channel via its configured creds.

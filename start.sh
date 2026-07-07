@@ -42,6 +42,9 @@ echo "Starting TriForge server on $TRIFORGE_HOST:$PORT..."
 echo "Dashboard:  http://$TRIFORGE_HOST:$PORT"
 echo "venv:        $TRIFORGE_VENV"
 
+# ⚠️  Personal WeChat 通知强制 workers=1（ILinkGateway 长连线程）
+# 多 worker 下多进程抢占同一 bot_token 的 getupdates，iLink 只保留一个。
+# 改 workers 之前请阅读 docs/ilink_protocol.md。
 nohup "$PYTHON_BIN" -X utf8 -m uvicorn triforge_server.server:app \
     --host "$TRIFORGE_HOST" --port "$PORT" \
     > logs/server.log 2>&1 &

@@ -12,17 +12,15 @@ The iLink protocol basics:
   - X-WECHAT-UIN: random base64(uint32) per request, anti-replay
   - Body: {msg: {...}, base_info: {channel_version: "1.0.3"}}
 
-For our use case (one-way push notifications) we only need three
-endpoints:
+For our use case (one-way push notifications) we need four endpoints:
   - GET  /ilink/bot/get_bot_qrcode?bot_type=3   → scan-time QR
   - GET  /ilink/bot/get_qrcode_status?qrcode=... → wait for confirmed
   - POST /ilink/bot/sendmessage                  → push a text
+  - GET  /ilink/bot/getupdates                   → long-poll keep-alive
 
-We deliberately do NOT call getupdates (long-polling for inbound
-messages) — TriForge is notification-only and won't act as an inbound
-chat. If we ever want to, we'd add a per-user background task that
-holds the getupdates connection and routes inbound messages to an
-agent. For now: outbound only.
+getupdates is now handled by ILinkGateway (ilink_gateway.py), which keeps
+the bot marked ACTIVE on iLink's side. Without it, the bot shows "Unable
+to connect to OpenClaw" and messages are silently dropped.
 """
 from __future__ import annotations
 
@@ -69,6 +67,48 @@ def _new_client_id() -> str:
     return str(uuid.uuid4())
 
 
+# ── Module-level HTTP helpers (shared by WeChatBot and ILinkGateway) ──
+
+def ilink_headers(bot_token: str) -> Dict[str, str]:
+    return {
+        "Content-Type":       "application/json",
+        "AuthorizationType":  "ilink_bot_token",
+        "Authorization":      f"Bearer {bot_token}",
+        "X-WECHAT-UIN":       _new_wechat_uin(),
+    }
+
+
+def ilink_post(
+    bot_token: str,
+    baseurl: str,
+    path: str,
+    payload: Dict[str, Any],
+    timeout: float = 10.0,
+) -> requests.Response:
+    url = f"{baseurl.rstrip('/')}{path}"
+    body = json_dumps(payload)
+    headers = ilink_headers(bot_token)
+    headers["Content-Length"] = str(len(body.encode("utf-8")))
+    return requests.post(
+        url, data=body.encode("utf-8"),
+        headers=headers,
+        timeout=timeout,
+    )
+
+
+def ilink_get(
+    bot_token: str,
+    baseurl: str,
+    path: str,
+    timeout: float = 10.0,
+) -> requests.Response:
+    url = f"{baseurl.rstrip('/')}{path}"
+    return requests.get(
+        url, headers=ilink_headers(bot_token),
+        timeout=timeout,
+    )
+
+
 class WeChatBot:
     """Thin wrapper over iLink API for one paired account.
 
@@ -85,78 +125,38 @@ class WeChatBot:
                  baseurl: str = DEFAULT_BASE_URL,
                  to_user_id: Optional[str] = None,
                  channel_version: str = DEFAULT_CHANNEL_VERSION,
-                 timeout: float = 10.0):
+                 timeout: float = 10.0,
+                 gateway=None):
         self.bot_token = bot_token
         self.ilink_bot_id = ilink_bot_id
-        # Default: send "to self" — appears in WeChat as a Saved-messages
-        # entry. Most iLink-style bots do this for proactive notifications.
         self.to_user_id = to_user_id or ilink_bot_id
         self.baseurl = baseurl.rstrip("/")
         self.channel_version = channel_version
         self._timeout = timeout
-
-    # ---------- HTTP helpers ----------
-
-    def _headers(self) -> Dict[str, str]:
-        return {
-            "Content-Type":       "application/json",
-            "AuthorizationType":  "ilink_bot_token",
-            "Authorization":      f"Bearer {self.bot_token}",
-            "X-WECHAT-UIN":       _new_wechat_uin(),
-        }
-
-    def _post(self, path: str, payload: Dict[str, Any],
-              timeout: Optional[float] = None) -> Dict[str, Any]:
-        url = f"{self.baseurl}{path}"
-        body = json_dumps(payload)  # utf-8, length-known
-        # Some iLink endpoints are picky about Content-Length / chunked
-        # transfer; we set it explicitly to avoid "偶发超时" pitfalls.
-        headers = self._headers()
-        headers["Content-Length"] = str(len(body.encode("utf-8")))
-        r = requests.post(
-            url, data=body.encode("utf-8"),
-            headers=headers,
-            timeout=timeout if timeout is not None else self._timeout,
-        )
-        if r.status_code // 100 != 2:
-            raise RuntimeError(
-                f"iLink POST {path} → HTTP {r.status_code}: {r.text[:200]}"
-            )
-        # sendmessage returns `{}` on success — treat empty body as
-        # success too.
-        if not r.content:
-            return {}
-        try:
-            return r.json()
-        except ValueError:
-            return {}
-
-    def _get(self, path: str, timeout: Optional[float] = None) -> requests.Response:
-        url = f"{self.baseurl}{path}"
-        return requests.get(
-            url, headers=self._headers(),
-            timeout=timeout if timeout is not None else self._timeout,
-        )
-
-    # ---------- Public API ----------
+        self.gateway = gateway
 
     def send_text(self, text: str) -> None:
-        """Push a plain-text message to the bound WeChat account.
+        """Push a plain-text message.
 
-        Maps to `POST /ilink/bot/sendmessage` with a single text item.
-        `context_token` is left empty — the docs say it's required for
-        replies, but in practice iLink accepts an empty string for
-        proactive sends to a known bot (i.e. self-message). If your
-        iLink version rejects this, we can fall back to "send a
-        no-op message to get a context_token, then use that" — but
-        for the common 1.0.3 / 2.0.0 channels it works.
+        If a gateway is attached and ACTIVE, enqueue for async sending.
+        Otherwise, POST directly (backward-compatible fallback).
         """
+        if self.gateway is not None:
+            from .ilink_gateway import State as GwState
+            if self.gateway.state is GwState.ACTIVE:
+                self.gateway.enqueue(text)
+                return
+        # Direct fallback (backward compat / no gateway)
+        self._send_text_direct(text)
+
+    def _send_text_direct(self, text: str) -> None:
+        """Original direct-POST behavior (preserved for backward compat)."""
         msg = {
             "from_user_id":  "",
             "to_user_id":    self.to_user_id,
             "client_id":     _new_client_id(),
-            "message_type":  2,   # 2 = BOT
-            "message_state": 2,   # 2 = FINISH
+            "message_type":  2,
+            "message_state": 2,
             "context_token": "",
             "item_list":     [
                 {"type": 1, "text_item": {"text": text}},
@@ -166,15 +166,22 @@ class WeChatBot:
             "msg":       msg,
             "base_info": {"channel_version": self.channel_version},
         }
-        # sendmessage returns `{}` on success — that's the documented
-        # "200 OK with empty body" behavior, not an error.
-        result = self._post("/ilink/bot/sendmessage", payload)
-        # Some versions also include `ret: 0`. We don't depend on the
-        # payload — an empty dict is success.
-        if isinstance(result, dict) and result.get("ret") not in (None, 0):
+        r = ilink_post(self.bot_token, self.baseurl,
+                       "/ilink/bot/sendmessage", payload,
+                       timeout=self._timeout)
+        if r.status_code // 100 != 2:
             raise RuntimeError(
-                f"iLink sendmessage ret={result.get('ret')}: {result}"
+                f"iLink sendmessage → HTTP {r.status_code}: {r.text[:200]}"
             )
+        if r.content:
+            try:
+                result = r.json()
+                if isinstance(result, dict) and result.get("ret") not in (None, 0):
+                    raise RuntimeError(
+                        f"iLink sendmessage ret={result.get('ret')}: {result}"
+                    )
+            except ValueError:
+                pass
 
     # ---------- Pairing helpers (static) ----------
 

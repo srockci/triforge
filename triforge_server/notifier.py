@@ -314,13 +314,12 @@ class TelegramNotifier(Notifier):
 
 
 class WeChatBotNotifier(Notifier):
-    """Personal WeChat via direct iLink Bot API calls from TriForge.
+    """Personal WeChat via ILinkGateway (long-poll keep-alive) + direct API.
 
     The user pairs their WeChat once by scanning a QR that TriForge
     fetched from iLink's `get_bot_qrcode` endpoint. After that, TriForge
-    holds the bot_token locally and pushes notifications with a single
-    `POST /ilink/bot/sendmessage` — no bridge daemon, no extra process,
-    no user-managed process to keep running.
+    holds the bot_token locally and runs a background ILinkGateway that
+    keeps the bot ACTIVE on iLink's side via getupdates long-poll.
 
     Channel fields:
         bot_token     — iLink bot token (stored after QR scan)
@@ -331,7 +330,6 @@ class WeChatBotNotifier(Notifier):
     platform = "personal_wechat"
 
     def send(self, message: str) -> None:
-        from .wechat_bot import WeChatBot
         bot_token    = self.channel.get("bot_token")
         ilink_bot_id = self.channel.get("ilink_bot_id")
         if not bot_token or not ilink_bot_id:
@@ -339,19 +337,29 @@ class WeChatBotNotifier(Notifier):
                 "personal_wechat: channel is not paired. "
                 "Open Settings → Notifications and click 'Connect Personal WeChat'."
             )
-        try:
-            bot = WeChatBot(
-                bot_token=bot_token,
-                ilink_bot_id=ilink_bot_id,
-                baseurl=self.channel.get("baseurl") or "https://ilinkai.weixin.qq.com",
-            )
-            bot.send_text(message)
-        except requests.RequestException as e:
+
+        from .ilink_gateway import GatewayManager, State
+        channel_key = self.channel.get("__channel_key__") or bot_token[:8]
+        gateway = GatewayManager.instance().lookup(channel_key)
+
+        if gateway is None:
             raise PlatformError(
-                f"iLink connection failed: {type(e).__name__}: {e}"
+                "personal_wechat: notifier ready but gateway not spawned yet. "
+                "If this persists 30s after start, check server logs."
             )
-        except Exception as e:
-            raise PlatformError(f"iLink send_text failed: {e}")
+
+        if gateway.state is State.ACTIVE:
+            gateway.enqueue(message)
+            return
+        if gateway.state is State.DEGRADED:
+            raise PlatformError(
+                "personal_wechat: bot is DEGRADED (offline / revoked). "
+                "Open Settings → Notifications and click 'Re-connect Personal WeChat'."
+            )
+        raise PlatformError(
+            f"personal_wechat: gateway state={gateway.state.value}, "
+            f"message not sent. Will recover automatically."
+        )
 
 
 _PLATFORM_REGISTRY: Dict[str, type] = {
