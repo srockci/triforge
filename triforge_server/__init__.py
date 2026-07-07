@@ -3,4 +3,7 @@
 Exposes a FastAPI server with /workflow/start, /status, /approve endpoints
 that Hermes (Telegram coordinator) calls to run the modular pipeline:
 Architect-A designs → module_detail/code/test loop → Architect-A reviews.
+
+Also provides Telegram bidirectional approval via inline_keyboard buttons
+and webhook/polling update handling.
 """

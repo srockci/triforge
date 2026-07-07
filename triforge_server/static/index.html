@@ -7479,7 +7479,8 @@ const App = {
       const enaChk   = container.querySelector(`[data-channel-field="${idx}-enabled"]`);
       const modeRad  = container.querySelectorAll(`input[name="ch-mode-${idx}"]`);
       const fields   = ['webhook_url','secret','bot_token','chat_id','at_all_on_error',
-                        'bridge_url','bridge_token','bridge_account'];
+                        'bridge_url','bridge_token','bridge_account',
+                        'webhook_secret','polling_mode','allowed_user_ids'];
       fields.forEach(k => {
         const input = container.querySelector(`[data-channel-field="${idx}-${k}"]`);
         if (!input) return;
@@ -7501,6 +7502,12 @@ const App = {
       }));
       if (sendBtn) sendBtn.addEventListener('click', () => this._testChannel(idx));
       if (delBtn)  delBtn.addEventListener('click',  () => this._deleteChannel(idx));
+      const setWebhookBtn = container.querySelector(`[data-channel-set-webhook="${idx}"]`);
+      const testWebhookBtn = container.querySelector(`[data-channel-test-webhook="${idx}"]`);
+      const delWebhookBtn = container.querySelector(`[data-channel-delete-webhook="${idx}"]`);
+      if (setWebhookBtn) setWebhookBtn.addEventListener('click', () => this._setTelegramWebhook(idx));
+      if (testWebhookBtn) testWebhookBtn.addEventListener('click', () => this._testTelegramWebhook(idx));
+      if (delWebhookBtn) delWebhookBtn.addEventListener('click', () => this._deleteTelegramWebhook(idx));
     });
   },
 
@@ -7572,6 +7579,40 @@ const App = {
             <input type="text" data-channel-field="${idx}-chat_id"
                     value="${this.escape(ch.chat_id || '')}"
                     placeholder="@channel 或数字 ID" style="grid-column: span 2;"/>
+
+            <label>Webhook URL</label>
+            <input type="text" data-channel-field="${idx}-webhook_url"
+                   value="${this.escape(ch.webhook_url || '')}"
+                   placeholder="https://example.com/board/notifications/telegram/webhook"
+                   style="grid-column: span 2;"/>
+            <small style="grid-column: span 3;">留空 = polling 模式（开发友好）。生产建议配 webhook</small>
+
+            <label>Webhook Secret</label>
+            <input type="password" data-channel-field="${idx}-webhook_secret"
+                   value="${this.escape(ch.webhook_secret || '')}"
+                   placeholder="留空 = 自动生成"
+                   style="grid-column: span 2;"/>
+            <small style="grid-column: span 3;">Telegram 推送时验证 X-Telegram-Bot-Api-Secret-Token</small>
+
+            <label>Polling 模式</label>
+            <label style="grid-column: span 2; display:flex; align-items:center; gap:6px;">
+              <input type="checkbox" data-channel-field="${idx}-polling_mode"
+                     ${ch.polling_mode !== false ? 'checked' : ''}/>
+              使用 long-polling 接收更新（未勾选 = webhook 模式）
+            </label>
+
+            <label>允许审批的 User ID</label>
+            <input type="text" data-channel-field="${idx}-allowed_user_ids"
+                   value="${this.escape(String(ch.allowed_user_ids || ''))}"
+                   placeholder="12345,67890"
+                   style="grid-column: span 2;"/>
+            <small style="grid-column: span 3;">只有这些 Telegram user_id 能审批。留空 = 允许所有人（不安全）</small>
+
+            <div style="grid-column: span 3; display:flex; gap:8px; margin-top:4px;">
+              <button class="btn" data-channel-set-webhook="${idx}" title="向 Telegram 注册 webhook">注册 webhook</button>
+              <button class="btn" data-channel-test-webhook="${idx}" title="发送一条测试 callback">测试 webhook</button>
+              <button class="btn" data-channel-delete-webhook="${idx}" title="切回 polling" style="color:var(--red); border-color:var(--red-line);">删 webhook</button>
+            </div>
           ` : ''}
 
           ${ch.type === 'personal_wechat' ? `
@@ -7605,7 +7646,7 @@ const App = {
       feishu:          { webhook_url: '' },
       dingtalk:        { webhook_url: '', secret: '' },
       wechatwork:      { webhook_url: '' },
-      telegram:        { bot_token: '', chat_id: '' },
+      telegram:        { bot_token: '', chat_id: '', webhook_url: '', webhook_secret: '', polling_mode: true, allowed_user_ids: '' },
       // personal_wechat has no form fields — the channel is created
       // automatically by the bridge-pairing flow.
     }[type] || {};
@@ -7643,6 +7684,55 @@ const App = {
       resultEl.className = 'ch-test-result fail';
     }
     this.refreshNotifHistory();
+  },
+
+  async _setTelegramWebhook(idx) {
+    const resultEl = document.querySelector(`[data-channel-result="${idx}"]`);
+    resultEl.textContent = '注册中…';
+    resultEl.className = 'ch-test-result';
+    try {
+      const r = await this.api('POST', '/board/notifications/telegram/set-webhook', { channel_idx: idx });
+      const secret = r.secret_token || '';
+      // Save secret back to local state
+      if (this.state.settings.notification_channels[idx]) {
+        this.state.settings.notification_channels[idx].webhook_secret = secret;
+      }
+      resultEl.textContent = '✓ Webhook 注册成功 (secret: ' + secret.slice(0,8) + '...)';
+      resultEl.className = 'ch-test-result ok';
+    } catch (e) {
+      resultEl.textContent = '✗ Webhook 注册失败: ' + (e.message || e);
+      resultEl.className = 'ch-test-result fail';
+    }
+  },
+
+  async _testTelegramWebhook(idx) {
+    const resultEl = document.querySelector(`[data-channel-result="${idx}"]`);
+    resultEl.textContent = '测试中…';
+    resultEl.className = 'ch-test-result';
+    try {
+      const callback_data = 'approve:test:phase:hash';
+      const r = await this.api('POST', '/board/notifications/telegram/test-webhook',
+                               { channel_idx: idx, callback_data });
+      resultEl.textContent = '✓ Dry-run 结果: ' + JSON.stringify(r.dry_run_result);
+      resultEl.className = 'ch-test-result ok';
+    } catch (e) {
+      resultEl.textContent = '✗ 测试失败: ' + (e.message || e);
+      resultEl.className = 'ch-test-result fail';
+    }
+  },
+
+  async _deleteTelegramWebhook(idx) {
+    const resultEl = document.querySelector(`[data-channel-result="${idx}"]`);
+    resultEl.textContent = '删除中…';
+    resultEl.className = 'ch-test-result';
+    try {
+      const r = await this.api('POST', '/board/notifications/telegram/delete-webhook', { channel_idx: idx });
+      resultEl.textContent = '✓ Webhook 已删除，切换为 polling 模式';
+      resultEl.className = 'ch-test-result ok';
+    } catch (e) {
+      resultEl.textContent = '✗ 删除失败: ' + (e.message || e);
+      resultEl.className = 'ch-test-result fail';
+    }
   },
 
   // ---- iLink Gateway status banner ----

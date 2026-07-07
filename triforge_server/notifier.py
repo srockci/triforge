@@ -21,6 +21,7 @@ DingTalk / WeChat get a card-style or plain-text variant.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import time
@@ -30,6 +31,7 @@ from typing import Any, Callable, Dict, List, Optional
 import requests
 
 from .events import BoardEvent
+from .pending_approvals import PendingApproval, PendingApprovalStore
 from .settings import get_settings
 from .store import get_store
 
@@ -206,6 +208,34 @@ def format_event(ev: BoardEvent) -> Optional[str]:
         return None
 
 
+# -------- telegram inline keyboard helpers --------------------------------
+
+_PENDING_STORE: Optional[PendingApprovalStore] = None
+
+
+def _get_pending_store() -> PendingApprovalStore:
+    global _PENDING_STORE
+    if _PENDING_STORE is None:
+        _PENDING_STORE = PendingApprovalStore()
+    return _PENDING_STORE
+
+
+def build_approval_keyboard(run_id: str, phase: str, file_path: str
+                            ) -> List[List[Dict[str, str]]]:
+    short_id = run_id[-12:]
+    file_hash = hashlib.sha256(file_path.encode()).hexdigest()[:8]
+
+    return [
+        [
+            {"text": "✅ Approve", "callback_data": f"approve:{short_id}:{phase}:{file_hash}"},
+            {"text": "❌ Reject",  "callback_data": f"reject:{short_id}:{phase}:{file_hash}"},
+        ],
+        [
+            {"text": "💬 Reply",   "callback_data": f"reply:{short_id}:{phase}:{file_hash}"},
+        ],
+    ]
+
+
 # -------- per-platform senders -------------------------------------------
 
 class PlatformError(Exception):
@@ -311,6 +341,27 @@ class TelegramNotifier(Notifier):
         )
         if r.status_code // 100 != 2:
             raise PlatformError(f"telegram HTTP {r.status_code}: {r.text[:200]}")
+
+    def send_with_buttons(self, message: str,
+                          inline_keyboard: List[List[Dict[str, str]]]
+                          ) -> Dict[str, Any]:
+        from .telegram_bot import TelegramBot
+        token = self.channel.get("bot_token")
+        chat = self.channel.get("chat_id")
+        if not token or not chat:
+            raise PlatformError("telegram: bot_token and chat_id required")
+        bot = TelegramBot(token)
+        msg = bot.send_with_buttons(int(chat), message, inline_keyboard)
+        return msg
+
+    def edit_message(self, chat_id: int, message_id: int,
+                     new_text: str) -> None:
+        from .telegram_bot import TelegramBot
+        token = self.channel.get("bot_token")
+        if not token:
+            raise PlatformError("telegram: bot_token required")
+        bot = TelegramBot(token)
+        bot.edit_message_text(chat_id, message_id, new_text)
 
 
 class WeChatBotNotifier(Notifier):
@@ -422,7 +473,51 @@ def _dispatch(ev: BoardEvent) -> None:
             continue
         try:
             notifier = build_notifier(ch)
-            notifier.send(msg)
+
+            # If this is an approval_requested on a telegram channel, send
+            # with inline_keyboard buttons.
+            if ev.kind == "approval_requested" and ch.get("type") == "telegram":
+                data = ev.data or {}
+                phase = data.get("phase", "?")
+                tool = data.get("tool", "?")
+                args = data.get("args") or {}
+                file_path = args.get("path", "?")
+                keyboard = build_approval_keyboard(ev.run_id, phase, file_path)
+
+                # Register pending approval
+                short_id = ev.run_id[-12:]
+                file_hash = hashlib.sha256(file_path.encode()).hexdigest()[:8]
+                store = _get_pending_store()
+                store.add(PendingApproval(
+                    short_run_id=short_id,
+                    full_run_id=ev.run_id,
+                    phase=phase,
+                    file_path=file_path,
+                    file_hash=file_hash,
+                    chat_id=int(ch.get("chat_id", 0)),
+                    message_id=0,  # filled in after send
+                    created_at=time.time(),
+                ))
+
+                sent = notifier.send_with_buttons(msg, keyboard)
+                # Update message_id from response
+                result_msg = sent if isinstance(sent, dict) else {}
+                mid = (result_msg.get("message_id")
+                       or result_msg.get("result", {}).get("message_id"))
+                if mid:
+                    store.add(PendingApproval(
+                        short_run_id=short_id,
+                        full_run_id=ev.run_id,
+                        phase=phase,
+                        file_path=file_path,
+                        file_hash=file_hash,
+                        chat_id=int(ch.get("chat_id", 0)),
+                        message_id=mid,
+                        created_at=time.time(),
+                    ))
+            else:
+                notifier.send(msg)
+
             record_notification(ch.get("type", "?"), ev.kind, True, "ok")
             log.debug("notifier[%s] delivered %s", ch.get("type"), ev.kind)
         except Exception as e:

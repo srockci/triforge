@@ -18,8 +18,11 @@ Endpoints:
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
-from contextlib import asynccontextmanager
+import secrets
+import sys
+import time as time_module
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -33,6 +36,24 @@ from .config import WORKSPACE_ROOT
 from .workflow import RunState, engine, run_pipeline_async
 from .board import router as board_router
 from .store import get_store
+
+log = logging.getLogger("triforge.server")
+
+
+def _poll_telegram_updates(bot_token: str, handler, channel: dict) -> None:
+    """Background thread: long-poll getUpdates loop for one channel."""
+    from .telegram_bot import TelegramBot
+    bot = TelegramBot(bot_token)
+    offset = 0
+    while True:
+        try:
+            updates = bot.get_updates(offset=offset, timeout=25)
+            for upd in updates:
+                handler.handle_update(upd, channel)
+                offset = upd.get("update_id", offset) + 1
+        except Exception as e:
+            log.warning("telegram polling error for %s: %s", bot_token[:8], e)
+            time_module.sleep(5)
 
 
 @asynccontextmanager
@@ -91,6 +112,55 @@ async def lifespan(app: FastAPI):
                   flush=True)
     except Exception as e:
         print(f"[startup] ilink gateway boot failed: {e}", flush=True)
+
+    # Boot Telegram bots (webhook or polling) for bidirectional approval.
+    # Each telegram notification channel gets a TelegramBot instance and
+    # either registers a webhook URL (production) or starts a long-poll
+    # getUpdates thread (development).
+    try:
+        from .telegram_bot import TelegramBot
+        from .telegram_webhook import TelegramWebhookHandler
+        import threading
+        channels = get_settings().get().get("notification_channels", [])
+        handler = TelegramWebhookHandler.instance()
+        handler.set_port(int(os.environ.get("PORT", "8000")))
+        _POLLING_STARTED: set = set()
+        tg_count = 0
+        for ch in channels:
+            if ch.get("type") != "telegram" or not ch.get("enabled", False):
+                continue
+            bot_token = ch.get("bot_token", "")
+            if not bot_token:
+                continue
+            handler.register_channel(ch)
+            webhook_url = ch.get("webhook_url", "")
+            use_polling = ch.get("polling_mode", True)
+            if webhook_url and not use_polling:
+                secret = ch.get("webhook_secret") or secrets.token_urlsafe(24)
+                bot = TelegramBot(bot_token)
+                try:
+                    bot.set_webhook(webhook_url, secret_token=secret)
+                    ch["webhook_secret"] = secret
+                    print(f"[startup] telegram webhook set for channel {ch.get('name', bot_token[:8])}",
+                          flush=True)
+                except Exception as e2:
+                    print(f"[startup] telegram webhook failed for {bot_token[:8]}: {e2}",
+                          flush=True)
+            elif use_polling and bot_token not in _POLLING_STARTED:
+                _POLLING_STARTED.add(bot_token)
+                threading.Thread(
+                    target=_poll_telegram_updates,
+                    args=(bot_token, handler, ch),
+                    daemon=True,
+                    name=f"tg-poll-{bot_token[:8]}",
+                ).start()
+                print(f"[startup] telegram polling started for {bot_token[:8]}",
+                      flush=True)
+            tg_count += 1
+        if tg_count:
+            print(f"[startup] {tg_count} telegram bot(s) active", flush=True)
+    except Exception as e:
+        print(f"[startup] telegram boot failed: {e}", flush=True)
 
     yield
 

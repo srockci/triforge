@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import secrets
 import shutil
 import time
 from pathlib import Path
@@ -1377,6 +1378,9 @@ class NotificationChannel(BaseModel):
     bot_token: Optional[str] = None
     chat_id: Optional[str] = None
     at_all_on_error: bool = False
+    webhook_secret: Optional[str] = None
+    polling_mode: bool = True
+    allowed_user_ids: str = ""  # comma-separated ints
 
 
 @router.get("/ilink/status")
@@ -1419,6 +1423,133 @@ async def recent_notifications(limit: int = 50) -> Dict[str, Any]:
     """Last `limit` notification deliveries (successes + failures)."""
     from .notifier import get_notification_history
     return {"history": get_notification_history(limit)}
+
+
+# -----------------------------------------------------------------------
+# Telegram webhook endpoints
+# -----------------------------------------------------------------------
+
+def _get_telegram_handler():
+    from .telegram_webhook import TelegramWebhookHandler
+    return TelegramWebhookHandler.instance()
+
+
+@router.post("/notifications/telegram/webhook")
+async def telegram_webhook(
+    body: Dict[str, Any],
+    request: Request,
+) -> Dict[str, Any]:
+    """Receive Telegram updates (callback_query + message).
+
+    Telegram expects a 200 OK within ~5 seconds. We run the handler
+    synchronously via run_in_executor to avoid blocking the event loop.
+    """
+    # Find the channel by secret token
+    secret_token = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
+    channels = get_settings().get().get("notification_channels", [])
+    matched = None
+    for ch in channels:
+        if ch.get("type") == "telegram" and ch.get("webhook_secret") == secret_token:
+            matched = ch
+            break
+    if not matched:
+        raise HTTPException(403, "Invalid or missing X-Telegram-Bot-Api-Secret-Token")
+
+    handler = _get_telegram_handler()
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(
+        None, handler.handle_update, body, matched,
+    )
+    return {"ok": True, "result": result}
+
+
+@router.post("/notifications/telegram/set-webhook")
+async def set_telegram_webhook(body: Dict[str, Any]) -> Dict[str, Any]:
+    """Register (or update) the webhook URL with Telegram API for a channel.
+
+    Body: { channel_idx: int }
+    """
+    channel_idx = body.get("channel_idx")
+    if channel_idx is None:
+        raise HTTPException(400, "channel_idx required")
+    channels = get_settings().get().get("notification_channels", [])
+    if channel_idx < 0 or channel_idx >= len(channels):
+        raise HTTPException(404, "channel not found")
+    ch = channels[channel_idx]
+    if ch.get("type") != "telegram":
+        raise HTTPException(400, "not a telegram channel")
+
+    webhook_url = ch.get("webhook_url")
+    if not webhook_url:
+        raise HTTPException(400, "webhook_url not configured in channel")
+    secret = ch.get("webhook_secret") or secrets.token_urlsafe(24)
+
+    from .telegram_bot import TelegramBot
+    bot = TelegramBot(ch["bot_token"])
+    try:
+        ok = bot.set_webhook(webhook_url, secret_token=secret)
+    except Exception as e:
+        raise HTTPException(502, f"Telegram setWebhook failed: {e}")
+
+    # Save secret back to settings
+    ch["webhook_secret"] = secret
+    mgr = get_settings()
+    cfg = mgr.get()
+    cfg["notification_channels"] = channels
+    mgr.save(cfg)
+
+    return {"ok": ok, "secret_token": secret}
+
+
+@router.post("/notifications/telegram/delete-webhook")
+async def delete_telegram_webhook(body: Dict[str, Any]) -> Dict[str, Any]:
+    """Remove webhook registration and switch back to polling.
+
+    Body: { channel_idx: int }
+    """
+    channel_idx = body.get("channel_idx")
+    if channel_idx is None:
+        raise HTTPException(400, "channel_idx required")
+    channels = get_settings().get().get("notification_channels", [])
+    if channel_idx < 0 or channel_idx >= len(channels):
+        raise HTTPException(404, "channel not found")
+    ch = channels[channel_idx]
+    if ch.get("type") != "telegram":
+        raise HTTPException(400, "not a telegram channel")
+
+    from .telegram_bot import TelegramBot
+    bot = TelegramBot(ch["bot_token"])
+    try:
+        ok = bot.delete_webhook()
+    except Exception as e:
+        raise HTTPException(502, f"Telegram deleteWebhook failed: {e}")
+
+    ch["webhook_url"] = ""
+    mgr = get_settings()
+    cfg = mgr.get()
+    cfg["notification_channels"] = channels
+    mgr.save(cfg)
+
+    return {"ok": ok}
+
+
+@router.post("/notifications/telegram/test-webhook")
+async def test_telegram_webhook(body: Dict[str, Any]) -> Dict[str, Any]:
+    """Dry-run a fake callback_query to verify handler routing.
+
+    Does NOT approve anything — just tests parsing and auth.
+    """
+    handler = _get_telegram_handler()
+    fake_update = {
+        "callback_query": {
+            "id": "test_cb_001",
+            "from": {"id": 0, "first_name": "test_user"},
+            "data": body.get("callback_data", "approve:test:phase:hash"),
+            "message": {"chat": {"id": 0}, "message_id": 0},
+        }
+    }
+    result = handler.handle_update_dry_run(fake_update)
+    return {"dry_run_result": result}
 
 
 # -----------------------------------------------------------------------

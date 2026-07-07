@@ -230,11 +230,14 @@ write a review report to `workspace/design/review_report.md`.
         #     "enabled": true | false,
         #     "mode": "simple" | "complex",   # simple=milestones only,
         #                                    # complex=every event
-        #     "webhook_url": "...",           # feishu / dingtalk / wechatwork
+        #     "webhook_url": "...",           # feishu / dingtalk / wechatwork / telegram
         #     "secret": "...",                # dingtalk optional HMAC
         #     "bot_token": "...",             # telegram
         #     "chat_id": "...",               # telegram
         #     "at_all_on_error": false,       # prefix @all on errors
+        #     "webhook_secret": "",           # telegram: X-Telegram-Bot-Api-Secret-Token
+        #     "polling_mode": true,           # telegram: false=webhook, true=polling
+        #     "allowed_user_ids": [],          # telegram: list of ints, empty=allow all
         #   }
         # Channels with enabled=false are kept in settings but ignored
         # at dispatch time, so users can toggle without re-entering URLs.
