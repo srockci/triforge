@@ -1187,7 +1187,7 @@ async def list_notification_platforms() -> Dict[str, Any]:
 #
 #   1. UI: user clicks "Connect Personal WeChat" → opens the wizard.
 #   2. TriForge calls iLink GET /ilink/bot/get_bot_qrcode?bot_type=3
-    #      → returns {qrcode, qrcode_img_content (URL pointing to liteapp.weixin.qq.com)}.
+    # → returns {qrcode, qrcode_img_content (URL pointing to liteapp.weixin.qq.com)}.
 #   3. TriForge stores the qrcode in memory under a 5-minute pair code
 #      and returns it to the UI. The wizard shows the QR image
 #      (rendered from qrcode_img_content) for the user to scan with
