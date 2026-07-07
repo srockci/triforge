@@ -1,0 +1,7 @@
+# Force CRLF line endings for Windows batch files
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Force LF for shell scripts (even on Windows)
+*.sh text eol=lf
