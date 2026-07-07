@@ -237,7 +237,7 @@ async def get_board_stats(period: str = "today", model: Optional[str] = None) ->
 
     # ---- SQL aggregation from events ----
     # Query: token_usage events in the time range, grouped by model
-    conn = store._conn
+    conn = store._db._conn
     cur = conn.execute("""
         SELECT
             json_extract(data, '$.model')                          AS model,
