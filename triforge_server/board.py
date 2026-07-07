@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import secrets
 import shutil
 import time
@@ -23,6 +24,8 @@ from typing import Any, AsyncIterator, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
+
+log = logging.getLogger("triforge.board")
 from pydantic import BaseModel
 
 from .config import WORKSPACE_ROOT
@@ -1043,6 +1046,13 @@ class ModelListRequest(BaseModel):
 @router.post("/models")
 async def list_models(request: ModelListRequest) -> Dict[str, Any]:
     """Fetch available models from a provider's /v1/models endpoint."""
+    log.info("list_models request: provider_key=%r, api_key=%s..., base_url=%r",
+             request.provider_key,
+             (request.api_key or "")[:8] + "***" if request.api_key else "(empty)",
+             request.base_url)
+    request.provider_key = request.provider_key.strip().lower()
+    if not request.provider_key:
+        raise HTTPException(400, "provider_key required")
     try:
         from openai import OpenAI
         
@@ -1093,8 +1103,16 @@ async def list_models(request: ModelListRequest) -> Dict[str, Any]:
                     request.provider_key,
                     [m["id"] for m in minimax_models]
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                log.exception(
+                    "set_provider_available_models(%r) unexpected error: %s",
+                    request.provider_key, e,
+                )
+                return {
+                    "status": "error",
+                    "error": f"persist failed: {type(e).__name__}: {e}",
+                    "message": "Models fetched but not saved to settings",
+                }
             return {
                 "status": "success",
                 "provider": request.provider_key,
@@ -1119,8 +1137,16 @@ async def list_models(request: ModelListRequest) -> Dict[str, Any]:
                     request.provider_key,
                     [m["id"] for m in models]
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                log.exception(
+                    "set_provider_available_models(%r) unexpected error: %s",
+                    request.provider_key, e,
+                )
+                return {
+                    "status": "error",
+                    "error": f"persist failed: {type(e).__name__}: {e}",
+                    "message": "Models fetched but not saved to settings",
+                }
             return {
                 "status": "success",
                 "provider": request.provider_key,
@@ -1151,8 +1177,16 @@ async def list_models(request: ModelListRequest) -> Dict[str, Any]:
                     request.provider_key,
                     [m["id"] for m in fallback_list]
                 )
-            except Exception:
-                pass
+            except Exception as e:
+                log.exception(
+                    "set_provider_available_models(%r) unexpected error: %s",
+                    request.provider_key, e,
+                )
+                return {
+                    "status": "error",
+                    "error": f"persist failed: {type(e).__name__}: {e}",
+                    "message": "Models fetched but not saved to settings",
+                }
             return {
                 "status": "fallback",
                 "provider": request.provider_key,

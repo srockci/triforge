@@ -13,9 +13,12 @@ NEXT run — in-flight pipelines continue with their original config.
 from __future__ import annotations
 
 import json
+import logging
 import os
 from pathlib import Path
 from typing import Any, Dict, Optional, List
+
+log = logging.getLogger("triforge.settings")
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _SETTINGS_PATH = _PROJECT_ROOT / "data" / "settings.json"
@@ -360,10 +363,25 @@ class SettingsManager:
         return self._data.get("providers", {}).get(key, {}).get("available_models", [])
 
     def set_provider_available_models(self, key: str, models: list) -> None:
-        """Persist an updated available_models list for a provider."""
-        if key not in self._data.get("providers", {}):
-            raise KeyError(f"unknown provider: {key}")
-        self._data["providers"][key]["available_models"] = list(models)
+        """Persist an updated available_models list for a provider.
+
+        Auto-creates a provider stub if the key doesn't exist (e.g. user
+        added a new provider but hasn't saved settings yet).
+        """
+        providers = self._data.setdefault("providers", {})
+        if key not in providers:
+            providers[key] = {
+                "name": key.capitalize(),
+                "base_url": "",
+                "api_key": "",
+                "api_key_env": key.upper() + "_API_KEY",
+                "token_plan_mode": "charge",
+                "available_models": [],
+            }
+            log.info("auto-created provider stub for %r", key)
+        providers[key]["available_models"] = list(models)
+        log.info("set_provider_available_models(%r) wrote %d models: %s",
+                 key, len(models), models[:5])
         self.save()
 
     def get_provider_token_plan_mode(self, key: str) -> str:

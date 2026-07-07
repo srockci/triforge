@@ -7008,9 +7008,22 @@ const App = {
         // Re-render only the providers view
         this.renderProviders(this.state.settings.providers || {});
         this.renderRoles(this.state.settings.roles || {}, this.state.settings.providers || {});
-        this.showToast(`✅ Loaded ${response.total} models from ${providerKey}`, 'success');
+        // Verify the save actually persisted
+        const persisted = (this.state.settings.providers[providerKey] || {}).available_models || [];
+        if (persisted.length === 0 && response.total > 0) {
+          this.showToast(
+            `⚠️ Fetched ${response.total} models but settings did not persist. Try saving the provider first, then click Get Models.`,
+            'error',
+          );
+        } else {
+          this.showToast(`✅ Loaded ${persisted.length} models from ${providerKey}`, 'success');
+        }
       } else {
-        this.showToast(response.message || 'Failed to fetch models', 'error');
+        this.showToast(
+          `❌ ${response.message || 'Failed to fetch models'}` +
+          (response.error ? `: ${response.error}` : ''),
+          'error',
+        );
       }
     } catch (e) {
       console.error('fetchModelsForProviderCard failed:', e);
