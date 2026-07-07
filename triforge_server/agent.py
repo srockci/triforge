@@ -208,6 +208,15 @@ class Agent:
             if p.is_dir():
                 return (f"[ERROR] read_file: '{rel}' is a directory, not a "
                         f"file. Pick a specific file inside it.")
+            _TEXT_EXTS = frozenset({
+                ".py", ".md", ".txt", ".json", ".toml", ".yaml", ".yml",
+                ".html", ".css", ".js", ".sh", ".bat", ".ps1", ".env",
+                ".cfg", ".ini", ".conf", ".gitignore", ".dockerfile",
+                ".sql", ".xml", ".rst",
+            })
+            if p.suffix.lower() not in _TEXT_EXTS:
+                return (f"[ERROR] Cannot read '{rel}' (this model does not "
+                        f"support image input). Inform the user.")
             return p.read_text(encoding="utf-8", errors="replace")[:50_000]
         if name == "write_file":
             rel = (args.get("path") or "").strip()
