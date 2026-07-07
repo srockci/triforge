@@ -7916,6 +7916,16 @@ const App = {
         settings.providers[key][field] = val;
       }
     });
+    // Preserve available_models from current state (not collected from DOM
+    // since the multi-select uses data-provider-field="available_models_display"
+    // which would only return the first selected value as a string).
+    for (const key of Object.keys(this.state.settings?.providers || {})) {
+      const am = this.state.settings.providers[key].available_models;
+      if (Array.isArray(am) && am.length > 0) {
+        if (!settings.providers[key]) settings.providers[key] = {};
+        settings.providers[key].available_models = am;
+      }
+    }
 
     // Collect roles
     document.querySelectorAll('[data-role-key]').forEach(el => {
