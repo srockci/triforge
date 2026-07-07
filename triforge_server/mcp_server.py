@@ -117,7 +117,7 @@ def _poll_until_pause_or_done(run_id: str) -> str:
 # ---------------------------------------------------------------------------
 @mcp.tool()
 def triforge_start(requirement: str) -> str:
-    """Start an TriForge dev pipeline (Architect-A designs, Coder-B implements, Architect-A reviews).
+    """Start an TriForge dev pipeline — Architect-A designs → module_detail/code/test loop → Architect-A reviews.
 
     Blocks until the first approval gate or completion. The user should then
     reply with `/triforge_approve <run_id> <decision>`.

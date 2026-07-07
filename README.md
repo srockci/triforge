@@ -32,7 +32,7 @@ natural-language requirement.
 - API keys for at least one LLM provider (MiniMax + DeepSeek for the
   default role layout):
   - `MINIMAX_CN_API_KEY` — Architect (design + review)
-  - `DEEPSEEK_API_KEY` — Coder (implement)
+  - `DEEPSEEK_API_KEY` — Coder (module_code)
 
 ### Install
 

@@ -602,6 +602,7 @@ async def run_pipeline_async(run: RunState, settings: Optional[Dict[str, Any]] =
                     _finish_phase(run, f"detail_{mid}", result, _emit, _snapshot_for_board)
                     return
 
+                run.completed_phases.add("module_detail")
                 run.completed_phases.add(f"module_detail_{mid}")
                 _emit("phase_end", phase=f"detail_{mid}", ok=True,
                       summary=result.get("summary", ""))
@@ -639,6 +640,7 @@ async def run_pipeline_async(run: RunState, settings: Optional[Dict[str, Any]] =
                     _finish_phase(run, f"code_{mid}", result, _emit, _snapshot_for_board)
                     return
 
+                run.completed_phases.add("module_code")
                 run.completed_phases.add(f"module_code_{mid}")
                 _emit("phase_end", phase=f"code_{mid}", ok=True,
                       summary=result.get("summary", ""))
@@ -678,6 +680,7 @@ async def run_pipeline_async(run: RunState, settings: Optional[Dict[str, Any]] =
                 test_passed = result.get("ok") and "PASS" in (result.get("summary", "").upper())
                 if test_passed:
                     mod["status"] = "passed"
+                    run.completed_phases.add("module_test")
                     run.completed_phases.add(f"module_test_{mid}")
                     _emit("phase_end", phase=f"test_{mid}", ok=True,
                           verdict="PASS", summary=result.get("summary", ""))
@@ -901,8 +904,8 @@ def _get_phase_max_steps(phase: str, settings: Dict[str, Any]) -> int:
 
 def _snapshot_for_board(run: RunState) -> Dict[str, Any]:
     """Board-friendly view of a run (what the kanban needs)."""
-    phase_to_idx = {"design": 0, "implement": 1, "review": 2, "done": 3,
-                    "detail": 4, "code": 5, "test": 6}
+    phase_to_idx = {"design": 0, "detail": 1, "code": 2, "test": 3,
+                    "review": 4, "done": 5}
     base_phase = run.current_phase_sub if run.current_phase_sub else run.phase
     return {
         "run_id": run.run_id,

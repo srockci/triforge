@@ -376,7 +376,7 @@ PLATFORM_LABELS = {
     "dingtalk":       "钉钉 (DingTalk)",
     "wechatwork":     "企业微信 (WeChat Work, Clawbot-style)",
     "telegram":       "Telegram",
-    "personal_wechat": "个人微信 (Personal WeChat via weixin-agent-bridge)",
+    "personal_wechat": "个人微信 (Personal WeChat via iLink Gateway)",
 }
 
 

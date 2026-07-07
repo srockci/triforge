@@ -2,7 +2,7 @@
 
 Strategy:
   1. Start mock + server
-  2. Create a run, drive it to phase=implement awaiting_approval
+   2. Create a run, drive it to phase=design sub=code awaiting_approval
   3. Kill server #1 (hard kill, simulating crash)
   4. Start server #2 with the same DB
   5. Verify:

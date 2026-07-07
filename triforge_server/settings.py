@@ -105,7 +105,7 @@ Your ONLY job: write a detailed design document for the given module.
 When done, call finish(summary="detailed module <module_id>").""",
         },
         "module_code": {
-            "name": "Coder (Module Implement)",
+            "name": "Coder (Module Code)",
             "provider": "deepseek",
             "model": "deepseek-chat",
             "prompt": """You are Coder-B implementing a single module.

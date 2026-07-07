@@ -135,8 +135,8 @@ class RunStore:
         convenience fields the frontend expects.
         """
         rows = self._db.load_runs()
-        phase_to_idx = {"design": 0, "implement": 1, "review": 2, "done": 3,
-                        "detail": 4, "code": 5, "test": 6}
+        phase_to_idx = {"design": 0, "detail": 1, "code": 2, "test": 3,
+                        "review": 4, "done": 5}
         out = []
         for r in rows:
             r["phase_index"] = phase_to_idx.get(r.get("phase", "design"), 0)
