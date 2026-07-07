@@ -55,8 +55,7 @@ set "LOGFILE=%~dp0logs\server.log"
 if not exist "%~dp0logs" mkdir "%~dp0logs"
 echo [%DATE% %TIME%] Starting server... >> "%LOGFILE%"
 
-:: ⚠️  Personal WeChat 通知强制 workers=1（ILinkGateway 长连线程）
-:: 多 worker 下多进程抢占同一 bot_token 的 getupdates，iLink 只保留一个。
+REM Personal WeChat requires workers=1 (ILinkGateway long-poll threads)
 "%TRIFORGE_VENV%\Scripts\python.exe" -X utf8 -m uvicorn triforge_server.server:app --host %TRIFORGE_HOST% --port %PORT% --log-level info >> "%LOGFILE%" 2>&1
 set EXIT_CODE=%ERRORLEVEL%
 
