@@ -1068,7 +1068,6 @@ async def list_models(request: ModelListRequest) -> Dict[str, Any]:
                 api_key = os.environ.get(f"{request.provider_key.upper()}_API_KEY", "")
             # Fall back to settings storage
             if not api_key:
-                from .settings import get_settings
                 provider_cfg = get_settings().get_provider(request.provider_key)
                 api_key = provider_cfg.get("api_key", "")
         
@@ -1081,7 +1080,6 @@ async def list_models(request: ModelListRequest) -> Dict[str, Any]:
         
         # Use default base URL if not provided
         if not base_url:
-            from .settings import get_settings
             provider_cfg = get_settings().get_provider(request.provider_key)
             base_url = provider_cfg.get("base_url", "")
         
@@ -1111,7 +1109,7 @@ async def list_models(request: ModelListRequest) -> Dict[str, Any]:
                 return {
                     "status": "error",
                     "error": f"persist failed: {type(e).__name__}: {e}",
-                    "message": "Models fetched but not saved to settings",
+                    "message": "Models fetched but not saved to settings. Check server logs for details.",
                 }
             return {
                 "status": "success",
@@ -1145,7 +1143,7 @@ async def list_models(request: ModelListRequest) -> Dict[str, Any]:
                 return {
                     "status": "error",
                     "error": f"persist failed: {type(e).__name__}: {e}",
-                    "message": "Models fetched but not saved to settings",
+                    "message": "Models fetched but not saved to settings. Check server logs for details.",
                 }
             return {
                 "status": "success",
@@ -1185,7 +1183,7 @@ async def list_models(request: ModelListRequest) -> Dict[str, Any]:
                 return {
                     "status": "error",
                     "error": f"persist failed: {type(e).__name__}: {e}",
-                    "message": "Models fetched but not saved to settings",
+                    "message": "Models fetched but not saved to settings. Check server logs for details.",
                 }
             return {
                 "status": "fallback",
