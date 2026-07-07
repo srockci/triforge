@@ -938,7 +938,6 @@ input:checked + .slider:before {
     letter-spacing: 0.02em;
   }
   .phase-tag.minimax { background: hsla(245 80% 65% / 0.08); border-color: var(--accent-line); color: hsl(245 80% 78%); }
-  .phase-tag.deepseek { background: hsla(280 70% 60% / 0.08); border-color: hsla(280 70% 70% / 0.3); color: hsl(280 70% 78%); }
 
   .phase-time {
     font-size: 11px;
@@ -5671,7 +5670,7 @@ const App = {
 
     // Phase progress mini bar
     const phaseIdx = r.phase_index || 0;
-    const totalPhases = 3;
+    const totalPhases = 5;
     let progressHTML = '';
     if (r.status === 'completed' || r.status === 'failed' || r.status === 'cancelled') {
       progressHTML = `<div class="mini-pipeline">` +
@@ -5763,7 +5762,7 @@ const App = {
 
   renderDetail(d) {
     const phaseIdx = d.phase_index || 0;
-    const totalPhases = 3;
+    const totalPhases = 5;
     const statusLabel = this.statusLabel(d.status);
     const statusClass = this.statusBadgeClass(d.status);
 
@@ -5771,11 +5770,27 @@ const App = {
     // phase_index derives from run.phase which only tracks the *current* one —
     // so on resume after a partial run, completed phases would otherwise look
     // "locked" again. completed_phases fixes that.
+    const PHASE_LABELS = {
+      design:         __('Architecture design'),
+      module_detail:   __('Module: detail'),
+      module_code:     __('Module: code'),
+      module_test:     __('Module: test'),
+      review:         __('Architecture review'),
+    };
+    const PHASE_ROLES = {
+      design:        'architect_design',
+      module_detail: 'module_detail',
+      module_code:   'module_code',
+      module_test:   'module_test',
+      review:        'architect_review',
+    };
+    const phaseOrder = ['design', 'module_detail', 'module_code', 'module_test', 'review'];
+
     const completedSet = new Set(d.completed_phases || []);
     const failedSet = d.status === 'failed'
       ? new Set([d.phase])  // the current phase failed
       : new Set();
-    const phaseNodes = ['design', 'implement', 'review'].map((phase, i) => {
+    const phaseNodes = phaseOrder.map((phase, i) => {
       const isDone = completedSet.has(phase) || d.status === 'completed';
       const isFailedPhase = failedSet.has(phase);
       const isActive = phase === d.phase && (d.status === 'running' || d.status === 'awaiting_approval');
@@ -5790,11 +5805,8 @@ const App = {
           ? '<svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" style="stroke-width: 2.5;"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9" stroke-dasharray="3 3"/></svg>'
           : '<svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>';
 
-      const phaseName = {
-        'design': 'architect_design',
-        'review': 'architect_review',
-      }[phase];
-      const model = (d.models && d.models[phase]) || (phase === 'implement' ? 'DeepSeek' : 'MiniMax');
+      const phaseName = PHASE_ROLES[phase];
+      const model = (d.models && d.models[phase]) || 'MiniMax';
       const filesHTML = phaseFiles.length === 0 ? '' :
         '<div class="phase-files">' + phaseFiles.map(f => `
           <div class="phase-file-row">
@@ -5816,9 +5828,9 @@ const App = {
           <div class="phase-body">
             <div class="phase-name-row ${nodeClass}">
               <span class="phase-name">${phaseName}</span>
-              <span class="phase-tag ${phase === 'implement' ? 'deepseek' : 'minimax'}">${model}</span>
+              <span class="phase-tag minimax">${model}</span>
             </div>
-            <div class="phase-desc">${phase === 'design' ? __('Design system architecture') : phase === 'implement' ? __('Implement code based on spec') : __('Review architecture compliance')}</div>
+            <div class="phase-desc">${PHASE_LABELS[phase]}</div>
             ${filesHTML}
           </div>
         </div>`;
@@ -6075,7 +6087,7 @@ const App = {
             <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             Phase Pipeline
           </div>
-          <span class="section-sub">3 phases · design → implement → review</span>
+          <span class="section-sub">${__('Phases: design → modules (detail/code/test) → review')}</span>
         </div>
         <div class="phase-timeline">${phaseNodes}</div>
       </div>
@@ -6180,13 +6192,18 @@ const App = {
 
   findPhaseFiles(files, phase) {
     const prefixes = {
-      'design': ['design/'],
-      'implement': ['src/', 'tests/'],
-      'review': ['design/'],  // review writes to design/review_report.md
+      'design':        ['design/'],
+      'module_detail': ['design/'],
+      'module_code':   ['src/'],
+      'module_test':   ['tests/'],
+      'review':        ['design/'],
     };
     const targets = prefixes[phase] || [];
-    return files.filter(f => targets.some(p => f.path.startsWith(p)) &&
-      !f.path.endsWith('review_report.md') === (phase !== 'review'));
+    const isReview = phase === 'review';
+    return files.filter(f =>
+      targets.some(p => f.path.startsWith(p)) &&
+      f.path.endsWith('review_report.md') === isReview
+    );
   },
 
   // ---- File Viewer ----
@@ -7624,8 +7641,9 @@ const App = {
     }
     this._pwState.code = r.code;
 
-    // iLink returns the QR as a base64 PNG data URL. Drop it straight
-    // into <img src=...> — no client-side QR generator needed.
+    // TriForge renders the QR server-side from iLink's qrcode_img_content
+    // (which is a liteapp.weixin.qq.com URL, not an image). The response is
+    // always a data:image/png;base64,... URL.
     document.getElementById('pw-qr-img').src = r.qrcode_img_content;
 
     // Long-poll iLink for the user pressing "确认登录" in WeChat.

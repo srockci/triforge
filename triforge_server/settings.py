@@ -189,7 +189,6 @@ write a review report to `workspace/design/review_report.md`.
     },
     "pipeline_params": {
         "design": {"max_steps": 12, "temperature": 0.2, "max_tokens": 4096},
-        "implement": {"max_steps": 25, "temperature": 0.2, "max_tokens": 4096},
         "review": {"max_steps": 12, "temperature": 0.2, "max_tokens": 4096},
         # Module-level pipeline (modular design mode)
         "module": {

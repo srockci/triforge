@@ -1216,16 +1216,43 @@ async def pw_pair_start() -> Dict[str, Any]:
             "status":     "pending",
             "qrcode":     qr["qrcode"],
         }
-    # iLink's qrcode_img_content is a URL (HTML page), not an image.
-    # Generate the QR code PNG locally from the qrcode string.
+    # iLink returns two fields:
+    #   - qrcode: 32-char hex ticket (used by poll_status to detect scan)
+    #   - qrcode_img_content: URL pointing to liteapp.weixin.qq.com confirm page
+    #
+    # The QR code we render MUST encode the URL — when WeChat scans a plain
+    # ticket string it has no idea what to do, so it just shows the text.
+    # Encoding the URL makes WeChat open the liteapp confirm page, where the
+    # user taps "确认登录" and iLink flips status -> confirmed.
     try:
         import io, base64
-        import qrcode
-        qr_img = qrcode.make(qr["qrcode"])
-        buf = io.BytesIO()
-        qr_img.save(buf, format="PNG")
-        b64 = base64.b64encode(buf.getvalue()).decode("ascii")
-        qrcode_data_url = f"data:image/png;base64,{b64}"
+        import qrcode as _qrcode
+        from qrcode.constants import ERROR_CORRECT_L
+
+        qr_payload = qr.get("qrcode_img_content") or qr["qrcode"]
+        # Defensive: if the field comes back as a base64 PNG (iLink legacy
+        # or fallback), pass it through unchanged.
+        if isinstance(qr_payload, str) and qr_payload.startswith("data:image/"):
+            qrcode_data_url = qr_payload
+        else:
+            qr_obj = _qrcode.QRCode(
+                version=None,
+                error_correction=ERROR_CORRECT_L,
+                box_size=8,
+                border=2,
+            )
+            qr_obj.add_data(qr_payload)
+            qr_obj.make(fit=True)
+            qr_img = qr_obj.make_image(fill_color="black", back_color="white")
+            buf = io.BytesIO()
+            qr_img.save(buf, format="PNG")
+            b64 = base64.b64encode(buf.getvalue()).decode("ascii")
+            qrcode_data_url = f"data:image/png;base64,{b64}"
+            import logging
+            logging.getLogger("triforge.pw").info(
+                "personal-wechat QR encoded payload (first 60 chars): %s",
+                qr_payload[:60],
+            )
     except Exception as e:
         raise HTTPException(502, f"QR generation failed: {e}")
     return {

@@ -41,21 +41,30 @@ def _backfill_completed_phases(run: RunState) -> bool:
 
     if "design_doc" in outputs and outputs["design_doc"]:
         run.completed_phases.add("design")
-    if "code_files" in outputs and outputs["code_files"]:
-        run.completed_phases.add("implement")
     if "review_report" in outputs and outputs["review_report"]:
         run.completed_phases.add("review")
 
-    # Disk fallback: when outputs are incomplete (e.g., max_steps failure
-    # before phase_end wrote the snapshot), check the filesystem directly.
     ws = run.workspace_root
     if ws is not None and "design" not in run.completed_phases:
         if (Path(ws) / "design" / "architecture.md").exists():
             run.completed_phases.add("design")
-    if ws is not None and "implement" not in run.completed_phases:
-        src = Path(ws) / "src"
-        if src.exists() and list(src.rglob("*.py")):
-            run.completed_phases.add("implement")
+    # Module-level backfill: scan disk for completed module sub-phases
+    if ws is not None:
+        design_dir = Path(ws) / "design" / "modules"
+        src_dir = Path(ws) / "src"
+        test_dir = Path(ws) / "tests"
+        if design_dir.exists():
+            for md in design_dir.glob("*.md"):
+                mid = md.stem
+                run.completed_phases.add(f"module_detail_{mid}")
+        if src_dir.exists():
+            for sd in src_dir.iterdir():
+                if sd.is_dir() and (sd / "__init__.py").exists():
+                    run.completed_phases.add(f"module_code_{sd.name}")
+        if test_dir.exists():
+            for tf in test_dir.glob("test_*.py"):
+                mid = tf.stem.replace("test_", "", 1)
+                run.completed_phases.add(f"module_test_{mid}")
     if ws is not None and "review" not in run.completed_phases:
         if (Path(ws) / "design" / "review_report.md").exists():
             run.completed_phases.add("review")
@@ -596,6 +605,7 @@ async def run_pipeline_async(run: RunState, settings: Optional[Dict[str, Any]] =
                     _finish_phase(run, f"detail_{mid}", result, _emit, _snapshot_for_board)
                     return
 
+                run.completed_phases.add(f"module_detail_{mid}")
                 _emit("phase_end", phase=f"detail_{mid}", ok=True,
                       summary=result.get("summary", ""))
 
@@ -632,6 +642,7 @@ async def run_pipeline_async(run: RunState, settings: Optional[Dict[str, Any]] =
                     _finish_phase(run, f"code_{mid}", result, _emit, _snapshot_for_board)
                     return
 
+                run.completed_phases.add(f"module_code_{mid}")
                 _emit("phase_end", phase=f"code_{mid}", ok=True,
                       summary=result.get("summary", ""))
 
@@ -670,6 +681,7 @@ async def run_pipeline_async(run: RunState, settings: Optional[Dict[str, Any]] =
                 test_passed = result.get("ok") and "PASS" in (result.get("summary", "").upper())
                 if test_passed:
                     mod["status"] = "passed"
+                    run.completed_phases.add(f"module_test_{mid}")
                     _emit("phase_end", phase=f"test_{mid}", ok=True,
                           verdict="PASS", summary=result.get("summary", ""))
                     break  # exit retry loop, move to next module
