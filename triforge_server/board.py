@@ -57,11 +57,6 @@ class TokenUsageRequest(BaseModel):
     end_date: Optional[str] = None
 
 
-class TokenPlanModelRequest(BaseModel):
-    model_name: str
-    is_token_plan: bool
-
-
 class TokenUsageResponse(BaseModel):
     tokens_in: int
     tokens_out: int
@@ -73,11 +68,8 @@ class TokenUsageResponse(BaseModel):
     is_token_plan: bool = False
 
 
-class TokenPlanModelResponse(BaseModel):
-    model_name: str
-    is_token_plan: bool
-    success: bool
-    message: str = ""
+class SetTokenPlanModeBody(BaseModel):
+    mode: str  # "charge" | "token_plan" | "free"
 
 
 # -----------------------------------------------------------------------
@@ -420,19 +412,22 @@ async def get_board_stats(period: str = "today", model: Optional[str] = None) ->
                     "message": f"Run {r.run_id[-12:]} long-running for {int(running_sec // 60)}m",
                     "run_id": r.run_id, "ts": now,
                 })
-    # token_plan_window (stub — would need per-model window tracking)
-    tp_models = settings.pipeline_params.token_plan.models
-    if tp_models:
+    # token_plan_window — count providers in token_plan mode
+    tp_providers = [
+        k for k, v in settings.get().get("providers", {}).items()
+        if v.get("token_plan_mode") == "token_plan"
+    ]
+    if tp_providers:
         alerts.append({
             "level": "info", "kind": "token_plan_window",
-            "message": f"{len(tp_models)} token-plan model(s) configured",
+            "message": f"{len(tp_providers)} provider(s) in token-plan mode: {', '.join(tp_providers)}",
             "run_id": "", "ts": now,
         })
     alerts.sort(key=lambda a: a["ts"], reverse=True)
 
     # ---- Token plan info ----
     token_plan = None
-    if tp_models:
+    if tp_providers:
         windows = settings.pipeline_params.token_plan.window_hours
         current_h = time.localtime(now).tm_hour
         current_label = "—"
@@ -460,7 +455,7 @@ async def get_board_stats(period: str = "today", model: Optional[str] = None) ->
         """, (window_start, now))
         row3 = cur3.fetchone()
         token_plan = {
-            "models": list(tp_models.keys()),
+            "providers": tp_providers,
             "window_hours": windows,
             "current_window": {
                 "label": current_label,
@@ -604,29 +599,35 @@ async def get_token_usage(req: TokenUsageRequest) -> Dict[str, Any]:
     raise HTTPException(410, "This endpoint is deprecated. Use GET /board/stats instead.")
 
 
-@router.post("/token-plan-model")
-async def set_token_plan_model(req: TokenPlanModelRequest) -> TokenPlanModelResponse:
-    """Set whether a model uses token-plan pricing."""
-    settings = get_settings()
-    token_plan_models = settings.pipeline_params.token_plan.models
-    
-    # Update the token plan models setting
-    token_plan_models[req.model_name] = req.is_token_plan
-    settings.save()
-    
-    return TokenPlanModelResponse(
-        model_name=req.model_name,
-        is_token_plan=req.is_token_plan,
-        success=True,
-        message=f"Model {req.model_name} token-plan setting updated"
-    )
+# ---------------------------------------------------------------------------
+# Provider-level token-plan mode (P3: replaces global token-plan-model endpoints)
+# ---------------------------------------------------------------------------
+@router.get("/provider/{key}/token-plan-mode")
+async def get_provider_token_plan_mode(key: str) -> Dict[str, Any]:
+    """Get the token-plan-mode for a provider: 'charge' | 'token_plan' | 'free'."""
+    from .settings import get_settings
+    mode = get_settings().get_provider_token_plan_mode(key)
+    available = get_settings().get_provider_available_models(key)
+    return {
+        "provider": key,
+        "token_plan_mode": mode,
+        "available_models": available,
+    }
 
 
-@router.get("/token-plan-models")
-async def get_token_plan_models() -> Dict[str, bool]:
-    """Get all token-plan model settings."""
-    settings = get_settings()
-    return settings.pipeline_params.token_plan.models
+@router.post("/provider/{key}/token-plan-mode")
+async def set_provider_token_plan_mode(key: str, body: SetTokenPlanModeBody) -> Dict[str, Any]:
+    """Set the token-plan-mode for a provider. Optionally resets window accumulators."""
+    from .settings import get_settings
+    mgr = get_settings()
+    old_mode = mgr.get_provider_token_plan_mode(key)
+    mgr.set_provider_token_plan_mode(key, body.mode)
+    return {
+        "provider": key,
+        "old_token_plan_mode": old_mode,
+        "token_plan_mode": body.mode,
+        "success": True,
+    }
 
 
 # -----------------------------------------------------------------------
@@ -1085,6 +1086,14 @@ async def list_models(request: ModelListRequest) -> Dict[str, Any]:
                 {"id": "MiniMax-abab6.5s", "name": "MiniMax-abab6.5s", "created": 0},
                 {"id": "MiniMax-abab6.5s-chat", "name": "MiniMax-abab6.5s-chat", "created": 0},
             ]
+            # Auto-save to provider settings
+            try:
+                get_settings().set_provider_available_models(
+                    request.provider_key,
+                    [m["id"] for m in minimax_models]
+                )
+            except Exception:
+                pass
             return {
                 "status": "success",
                 "provider": request.provider_key,
@@ -1103,7 +1112,14 @@ async def list_models(request: ModelListRequest) -> Dict[str, Any]:
                     "name": model.id,
                     "created": model.created,
                 })
-            
+            # Auto-save to provider settings
+            try:
+                get_settings().set_provider_available_models(
+                    request.provider_key,
+                    [m["id"] for m in models]
+                )
+            except Exception:
+                pass
             return {
                 "status": "success",
                 "provider": request.provider_key,
@@ -1127,10 +1143,19 @@ async def list_models(request: ModelListRequest) -> Dict[str, Any]:
         
         fallback = fallback_models.get(request.provider_key.lower(), [])
         if fallback:
+            fallback_list = [{"id": m, "name": m, "created": 0} for m in fallback]
+            # Auto-save fallback models too
+            try:
+                get_settings().set_provider_available_models(
+                    request.provider_key,
+                    [m["id"] for m in fallback_list]
+                )
+            except Exception:
+                pass
             return {
                 "status": "fallback",
                 "provider": request.provider_key,
-                "models": [{"id": m, "name": m, "created": 0} for m in fallback],
+                "models": fallback_list,
                 "total": len(fallback),
                 "message": f"API call failed. Please check your API key. Using {len(fallback)} common models for {request.provider_key} as fallback.",
                 "error": str(e)

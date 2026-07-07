@@ -131,6 +131,7 @@ class TokenUsageEvent:
     tokens_out: int
     cost: float
     model: str
+    provider_key: str = ""
 
 
 # ---------------------------------------------------------------------------
@@ -264,14 +265,17 @@ class Agent:
         t_in = getattr(usage, "prompt_tokens", 0) or 0
         t_out = getattr(usage, "completion_tokens", 0) or 0
         
-        # Check if this model uses token-plan pricing
-        is_token_plan = self.provider_config.get("token_plan", False)
+        # Read token_plan_mode from settings (P4: provider_models_refactor)
+        from .settings import get_settings
+        mode = get_settings().get_model_token_plan_mode(self.provider_key, self.model)
         
-        if is_token_plan:
+        if mode == "token_plan":
             # Token-plan models: no cost calculation, only track token usage
             cost = 0.0
+        elif mode == "free":
+            cost = 0.0
         else:
-            # Regular models: calculate cost based on rates
+            # Regular charge models: calculate cost based on rates
             rate_in, rate_out = COST_PER_1K.get(self.provider_key, (0.01, 0.01))
             cost = (t_in * rate_in + t_out * rate_out) / 1000.0
 
@@ -281,6 +285,7 @@ class Agent:
         return TokenUsageEvent(
             tokens_in=t_in, tokens_out=t_out,
             cost=cost, model=self.model,
+            provider_key=self.provider_key,
         )
 
     # ----- the main loop (generator) ---------------------------------------

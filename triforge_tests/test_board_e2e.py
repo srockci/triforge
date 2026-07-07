@@ -208,7 +208,7 @@ def main() -> int:
         print(f"  ✓ detail: pending preview={len(detail['pending']['preview'])} chars, "
               f"files={len(detail.get('files', []))}", flush=True)
 
-        # ---- 6. Approve 3 times (design -> implement -> review) ----
+        # ---- 6. Approve 3 times (design -> code -> review) ----
         for n in range(3):
             print(f"\n[6.{n+1}] approving ...", flush=True)
             result = http_json("POST", f"/board/runs/{run_id}/approve",

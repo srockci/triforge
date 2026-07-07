@@ -127,8 +127,6 @@ def _should_request_approval(phase: str, tool: str, args: Dict[str, Any],
     # Default approval rules — all paths already normalized
     if phase == "design":
         return path.endswith("architecture.md")
-    if phase == "implement":
-        return path.startswith("src/") and path.endswith(".py")
     if phase == "review":
         return path.endswith("review_report.md")
     return False
@@ -155,7 +153,6 @@ class RunState:
     tokens_out: int = 0
     cost_estimate: float = 0.0
     models: Dict[str, str] = field(default_factory=dict)
-    token_plan_models: Dict[str, bool] = field(default_factory=dict)
     window_tokens_in: int = 0
     window_tokens_out: int = 0
     window_start_time: float = 0.0
@@ -941,7 +938,6 @@ def _snapshot_for_board(run: RunState) -> Dict[str, Any]:
         "iteration": run.iteration,
         "requirement_addenda": list(run.requirement_addenda or []),
         "awaiting_iteration_input": run.awaiting_iteration_input,
-        "token_plan_models": dict(run.token_plan_models or {}),
         "window_tokens_in": run.window_tokens_in,
         "window_tokens_out": run.window_tokens_out,
         "project_tokens_in": run.project_tokens_in,
@@ -1006,8 +1002,9 @@ async def _drive_agent(
         run.tokens_out += ev.tokens_out
         run.cost_estimate += ev.cost
         
-        # Check if model is token-plan
-        is_token_plan = run.token_plan_models.get(ev.model, False)
+        # Read token_plan_mode from settings (P4: provider_models_refactor)
+        tp_mode = get_settings().get_model_token_plan_mode(ev.provider_key, ev.model)
+        is_token_plan = (tp_mode == "token_plan")
         
         if is_token_plan:
             # Token-plan models: track window and project usage
@@ -1030,6 +1027,7 @@ async def _drive_agent(
                                    "tokens_out": ev.tokens_out,
                                    "cost": ev.cost, 
                                    "model": ev.model,
+                                   "provider": ev.provider_key,
                                    "is_token_plan": is_token_plan,
                                    "window_tokens_in": run.window_tokens_in if is_token_plan else 0,
                                    "window_tokens_out": run.window_tokens_out if is_token_plan else 0,

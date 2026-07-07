@@ -176,13 +176,26 @@ USER (board UI / Telegram / curl)
 [architect_design]   finishes phase
    │
    ▼
-[coder_implement]    (DeepSeek)
-   │  yield ToolCallEvent(write_file src/*.py)
+[module_detail]      (MiniMax)
+   │  yield ToolCallEvent(write_file design/modules/<id>.md)
    │  ⏸  Awaiting Approval
    ▼ USER approves
-[coder_implement]    finishes → ...
+[module_detail]      finishes → ...
    │
    ▼
+[module_code]        (DeepSeek)
+   │  yield ToolCallEvent(write_file src/**/*.py)
+   │  ⏸  Awaiting Approval
+   ▼ USER approves
+[module_code]        finishes → ...
+   │
+   ▼
+[module_test]        (MiniMax)
+   │  yield ToolCallEvent(synthetic PASS/FAIL)
+   ▼ auto (diagnosis only, read-only)
+[module_test]        finishes → PASS, next module or ...
+   │
+   ▼ (loop for each module)
 [architect_review]   (MiniMax)
    │  yield ToolCallEvent(write_file design/review_report.md)
    │  ⏸  Awaiting Approval

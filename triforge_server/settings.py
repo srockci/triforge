@@ -32,12 +32,16 @@ DEFAULT_SETTINGS: Dict[str, Any] = {
             "base_url": "https://api.minimaxi.com/v1",
             "api_key": "",
             "api_key_env": "MINIMAX_CN_API_KEY",
+            "token_plan_mode": "charge",
+            "available_models": [],
         },
         "deepseek": {
             "name": "DeepSeek",
             "base_url": "https://api.deepseek.com/v1",
             "api_key": "",
             "api_key_env": "DEEPSEEK_API_KEY",
+            "token_plan_mode": "charge",
+            "available_models": [],
         },
     },
     "roles": {
@@ -208,7 +212,6 @@ write a review report to `workspace/design/review_report.md`.
         "token_plan": {
             "enabled": False,
             "window_hours": [0, 5, 10, 15, 20],  # 0:00, 5:00, 10:00, 15:00, 20:00
-            "models": {},  # model_name: is_token_plan
             "alert_threshold_pct": 0.8,
         },
     },
@@ -341,6 +344,41 @@ class SettingsManager:
     def get_role(self, role: str) -> Dict[str, Any]:
         """Return a single role's config."""
         return self._data.get("roles", {}).get(role, {})
+
+    # -----------------------------------------------------------------------
+    # Provider model & token-plan helpers (P1: provider_models_refactor)
+    # -----------------------------------------------------------------------
+    def get_provider_available_models(self, key: str) -> list:
+        """Return the list of available models for a provider."""
+        return self._data.get("providers", {}).get(key, {}).get("available_models", [])
+
+    def set_provider_available_models(self, key: str, models: list) -> None:
+        """Persist an updated available_models list for a provider."""
+        if key not in self._data.get("providers", {}):
+            raise KeyError(f"unknown provider: {key}")
+        self._data["providers"][key]["available_models"] = list(models)
+        self.save()
+
+    def get_provider_token_plan_mode(self, key: str) -> str:
+        """Return the token_plan_mode for a provider: 'charge' | 'token_plan' | 'free'."""
+        return self._data.get("providers", {}).get(key, {}).get("token_plan_mode", "charge")
+
+    def set_provider_token_plan_mode(self, key: str, mode: str) -> None:
+        """Set token_plan_mode for a provider."""
+        if mode not in ("charge", "token_plan", "free"):
+            raise ValueError(f"invalid token_plan_mode: {mode!r}, must be charge/token_plan/free")
+        if key not in self._data.get("providers", {}):
+            raise KeyError(f"unknown provider: {key}")
+        self._data["providers"][key]["token_plan_mode"] = mode
+        self.save()
+
+    def get_model_token_plan_mode(self, provider_key: str, model_name: str) -> str:
+        """Determine the effective token_plan_mode for a specific model.
+
+        Returns the provider-level mode. Individual models inherit their
+        provider's setting — there is no per-model override.
+        """
+        return self.get_provider_token_plan_mode(provider_key)
 
     def get_pipeline_params(self, phase: str) -> Dict[str, Any]:
         """Return pipeline params for a phase."""

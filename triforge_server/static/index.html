@@ -5397,12 +5397,13 @@ const App = {
 
   _computeModelStats(runs) {
     const stats = {};
+    const providerModes = this._getProviderTokenPlanModes();
     runs.forEach(run => {
       if (!run.models) return;
       Object.entries(run.models).forEach(([phase, modelName]) => {
         if (!modelName) return;
         if (!stats[modelName]) {
-          const isTokenPlan = run.token_plan_models && run.token_plan_models[modelName] === true;
+          const isTokenPlan = this._isModelTokenPlan(modelName, run.models, providerModes);
           stats[modelName] = {
             tokens_in: 0, tokens_out: 0, cost: 0, run_count: 0, is_token_plan: isTokenPlan
           };
@@ -5414,6 +5415,44 @@ const App = {
       });
     });
     return stats;
+  },
+
+  _getProviderTokenPlanModes() {
+    const modes = {};
+    if (this.state.settings && this.state.settings.providers) {
+      Object.entries(this.state.settings.providers).forEach(([key, prov]) => {
+        modes[key] = prov.token_plan_mode || 'charge';
+      });
+    }
+    return modes;
+  },
+
+  _anyModelInSettingsTokenPlan(models) {
+    // Check if any model name in `models` dict belongs to a token-plan provider
+    if (!models || !this.state.settings || !this.state.settings.providers || !this.state.settings.roles) return false;
+    const modelNames = Object.values(models).filter(Boolean);
+    for (const [, role] of Object.entries(this.state.settings.roles)) {
+      if (role.model && modelNames.includes(role.model) && role.provider) {
+        const provider = this.state.settings.providers[role.provider];
+        if (provider && provider.token_plan_mode === 'token_plan') return true;
+      }
+    }
+    return false;
+  },
+
+  _isModelTokenPlan(modelName, runModels, providerModes) {
+    // Check provider-level token_plan_mode
+    if (this.state.settings && this.state.settings.providers) {
+      // Determine which provider this model belongs to by checking roles
+      if (this.state.settings.roles) {
+        for (const [, role] of Object.entries(this.state.settings.roles)) {
+          if (role.model === modelName && role.provider && providerModes[role.provider] === 'token_plan') {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
   },
 
   _renderModelStatsTable(modelStats, filteredRunCount, serverStats) {
@@ -5495,7 +5534,7 @@ const App = {
         ? this._formatDurationShort(Math.max(0, (r.updated_at || 0) - (r.created_at || 0)))
         : '—';
       const cost = r.cost_estimate || 0;
-      const isTokenPlanRun = r.token_plan_models && Object.values(r.token_plan_models).some(v => v === true);
+      const isTokenPlanRun = this._anyModelInSettingsTokenPlan(r.models);
       const statusLabel = this.statusLabel(r.status);
       const statusColors = {running:'var(--blue)',waiting:'var(--yellow)',done:'var(--green)',failed:'var(--red)',other:'var(--text-faint)'};
       const barColor = statusColors[statusClass] || 'var(--text-faint)';
@@ -6911,23 +6950,23 @@ const App = {
 
   _buildModelOptions(selectedModel, providerKey) {
     if (!providerKey) return '<option value="">Select a provider first</option>';
+    if (!this.state.settings || !this.state.settings.providers) {
+      return '<option value="">Settings not loaded</option>';
+    }
+    const provider = this.state.settings.providers[providerKey];
+    if (!provider) return '<option value="">Provider not found</option>';
     
-    // For now, return some common models as fallback
-    // In real implementation, these would be fetched from the API
-    const commonModels = {
-      'minimax': ['MiniMax-Text-01', 'MiniMax-M2.7', 'MiniMax-M2.5', 'MiniMax-abab6.5s'],
-      'deepseek': ['deepseek-chat', 'deepseek-reasoner']
-    };
-    
-    const models = commonModels[providerKey] || [];
+    const models = provider.available_models || [];
+    if (models.length === 0) {
+      return '<option value="">No models — click "Get Models"</option>';
+    }
     return models.map(model => 
       `<option value="${this.escape(model)}" ${model === selectedModel ? 'selected' : ''}>${this.escape(model)}</option>`
     ).join('');
   },
 
-  async fetchModelsForProvider(roleKey, providerKey) {
+  async fetchModelsForProviderCard(providerKey) {
     try {
-      // Get provider credentials from the settings form
       const providerCard = document.querySelector(`[data-provider-key="${this.escape(providerKey)}"]`);
       if (!providerCard) {
         this.showToast('Provider configuration not found', 'error');
@@ -6937,7 +6976,7 @@ const App = {
       const apiKey = providerCard.querySelector('[data-provider-field="api_key"]').value;
       const baseUrl = providerCard.querySelector('[data-provider-field="base_url"]').value;
 
-      const btn = document.querySelector(`[data-role-key="${this.escape(roleKey)}"] .get-models-btn`);
+      const btn = providerCard.querySelector('.fetch-models-btn');
       if (btn) {
         btn.disabled = true;
         btn.innerHTML = '<svg class="icon-sm animate-spin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" opacity="0.25"/><path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg> Loading...';
@@ -6949,32 +6988,21 @@ const App = {
         base_url: baseUrl
       });
 
-      if (response.status === 'success') {
-        const select = document.querySelector(`[data-role-key="${this.escape(roleKey)}"] [data-role-field="model"]`);
-        if (select) {
-          select.innerHTML = '<option value="">Select a model...</option>' + 
-            response.models.map(model => 
-              `<option value="${this.escape(model.id)}" ${model.id === (this.state.settings.roles[roleKey]?.model || '') ? 'selected' : ''}>${this.escape(model.id)}</option>`
-            ).join('');
-        }
+      if (response.status === 'success' || response.status === 'fallback') {
+        // Reload settings to get the updated available_models
+        await this.loadSettings();
+        // Re-render only the providers view
+        this.renderProviders(this.state.settings.providers || {});
+        this.renderRoles(this.state.settings.roles || {}, this.state.settings.providers || {});
         this.showToast(`✅ Loaded ${response.total} models from ${providerKey}`, 'success');
-      } else if (response.status === 'fallback') {
-        const select = document.querySelector(`[data-role-key="${this.escape(roleKey)}"] [data-role-field="model"]`);
-        if (select) {
-          select.innerHTML = '<option value="">Select a model...</option>' + 
-            response.models.map(model => 
-              `<option value="${this.escape(model.id)}" ${model.id === (this.state.settings.roles[roleKey]?.model || '') ? 'selected' : ''}>${this.escape(model.id)}</option>`
-            ).join('');
-        }
-        this.showToast(`⚠️ Using ${response.total} common models for ${providerKey} (API key may be invalid)`, 'warning');
       } else {
         this.showToast(response.message || 'Failed to fetch models', 'error');
       }
     } catch (e) {
-      console.error('fetchModelsForProvider failed:', e);
+      console.error('fetchModelsForProviderCard failed:', e);
       this.showToast('Failed to fetch models: ' + e.message, 'error');
     } finally {
-      const btn = document.querySelector(`[data-role-key="${this.escape(roleKey)}"] .get-models-btn`);
+      const btn = document.querySelector(`[data-provider-key="${this.escape(providerKey)}"] .fetch-models-btn`);
       if (btn) {
         btn.disabled = false;
         btn.innerHTML = '<svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Get Models';
@@ -6982,57 +7010,16 @@ const App = {
     }
   },
 
-  async fetchTokenPlanModels() {
-    try {
-      const response = await fetch('/board/token-plan-models', {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      const data = await response.json();
-      this.state.tokenPlanModels = data;
-      return data;
-    } catch (e) {
-      console.error('fetchTokenPlanModels failed:', e);
-      this.state.tokenPlanModels = {};
-      return {};
-    }
-  },
+  // REMOVED: fetchModelsForProvider — replaced by fetchModelsForProviderCard (provider-level)
 
-  async updateTokenPlanModel(modelName, isTokenPlan) {
-    try {
-      const response = await fetch('/board/token-plan-model', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model_name: modelName, is_token_plan: isTokenPlan }),
-      });
-      const data = await response.json();
-      if (data.success) {
-        this.state.tokenPlanModels[modelName] = isTokenPlan;
-        this.showToast(data.message, 'success');
-      } else {
-        this.showToast(data.message, 'error');
-      }
-      return data;
-    } catch (e) {
-      console.error('updateTokenPlanModel failed:', e);
-      this.showToast('Failed to update token plan model: ' + e.message, 'error');
-      return { success: false, message: e.message };
-    }
-  },
+  // REMOVED: fetchTokenPlanModels / updateTokenPlanModel — replaced by provider-level token_plan_mode
 
   isTokenPlanRun(run) {
-    // Check if any model used in this run is a token-plan model
     if (!run || !run.models) return false;
-    
-    // Check the token_plan_models field in the run data
-    if (run.token_plan_models) {
-      return Object.values(run.token_plan_models).some(isTokenPlan => isTokenPlan === true);
-    }
-    
-    // Fallback: check against settings
     const modelNames = Object.values(run.models);
+    const providerModes = this._getProviderTokenPlanModes();
     return modelNames.some(modelName => {
-      return this.state.tokenPlanModels && this.state.tokenPlanModels[modelName] === true;
+      return this._isModelTokenPlan(modelName, run.models, providerModes);
     });
   },
 
@@ -7070,6 +7057,7 @@ const App = {
       // Group runs by model and calculate statistics
       const runs = this.state.runs || [];
       const modelStats = {};
+      const providerModes = this._getProviderTokenPlanModes();
       
       runs.forEach(run => {
         if (!run.models) return;
@@ -7084,7 +7072,7 @@ const App = {
               window_tokens_out: 0,
               project_tokens_in: 0,
               project_tokens_out: 0,
-              is_token_plan: run.token_plan_models && run.token_plan_models[modelName] === true,
+              is_token_plan: this._isModelTokenPlan(modelName, run.models, providerModes),
               run_count: 0
             };
           }
@@ -7175,6 +7163,8 @@ const App = {
     const keys = Object.keys(providers);
     container.innerHTML = keys.map(key => {
       const p = providers[key];
+      const tpMode = p.token_plan_mode || 'charge';
+      const availableModels = p.available_models || [];
       return `
         <div class="settings-card" data-provider-key="${this.escape(key)}">
           <div class="settings-card-head">
@@ -7206,6 +7196,28 @@ const App = {
               <label>${__('Base URL')}</label>
               <input type="text" data-provider-field="base_url" data-provider-key="${this.escape(key)}" value="${this.escape(p.base_url || '')}" placeholder="${__('https://api.example.com/v1')}">
             </div>
+            <div class="settings-field">
+              <label>${__('Token Plan Mode')}</label>
+              <select data-provider-field="token_plan_mode" data-provider-key="${this.escape(key)}" class="provider-mode-select">
+                <option value="charge" ${tpMode === 'charge' ? 'selected' : ''}>${__('Charge (per-token)')}</option>
+                <option value="token_plan" ${tpMode === 'token_plan' ? 'selected' : ''}>${__('Token Plan (window-based)')}</option>
+                <option value="free" ${tpMode === 'free' ? 'selected' : ''}>${__('Free (no cost)')}</option>
+              </select>
+            </div>
+            <div class="settings-field full">
+              <label>${__('Available Models')} <span class="text-sm text-muted">(${availableModels.length})</span></label>
+              <div class="model-select-wrap">
+                <select data-provider-field="available_models_display" data-provider-key="${this.escape(key)}" multiple size="4" class="settings-multiselect">
+                  ${availableModels.map(m => `<option value="${this.escape(m)}">${this.escape(m)}</option>`).join('')}
+                </select>
+                <button type="button" class="btn btn-secondary btn-sm fetch-models-btn" 
+                        data-provider-key="${this.escape(key)}"
+                        title="${__('Fetch available models from provider API')}">
+                  <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                  ${__('Get Models')}
+                </button>
+              </div>
+            </div>
           </div>
         </div>`;
     }).join('');
@@ -7218,6 +7230,29 @@ const App = {
           delete this.state.settings.providers[key];
           this.renderProviders(this.state.settings.providers);
           this.renderRoles(this.state.settings.roles || {}, this.state.settings.providers);
+        }
+      });
+    });
+
+    // Bind token_plan_mode change
+    container.querySelectorAll('[data-provider-field="token_plan_mode"]').forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        const key = e.target.dataset.providerKey;
+        const mode = e.target.value;
+        if (key && this.state.settings && this.state.settings.providers[key]) {
+          this.state.settings.providers[key].token_plan_mode = mode;
+          this.saveSettings();
+          this.showToast(`Token plan mode for ${key} set to ${mode}`, 'success');
+        }
+      });
+    });
+
+    // Bind fetch-models buttons
+    container.querySelectorAll('.fetch-models-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const providerKey = btn.dataset.providerKey;
+        if (providerKey) {
+          await this.fetchModelsForProviderCard(providerKey);
         }
       });
     });
@@ -7253,25 +7288,8 @@ const App = {
                   <option value="">${__('Select a model...')}</option>
                   ${this._buildModelOptions(r.model || '', (r.provider || ''))}
                 </select>
-                <button type="button" class="btn btn-secondary btn-sm get-models-btn" 
-                        data-role-key="${this.escape(key)}" data-provider="${this.escape(r.provider || '')}"
-                        title="${__('Get available models from provider')}">
-                  <svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-                  ${__('Get Models')}
-                </button>
               </div>
-            </div>
-            <div class="settings-field full">
-              <label class="switch-label">
-                <span>${__('Token Plan')}</span>
-                <label class="switch">
-                  <input type="checkbox" data-role-field="token_plan" data-role-key="${this.escape(key)}" ${r.token_plan ? 'checked' : ''}>
-                  <span class="slider round"></span>
-                </label>
-              </label>
-              <div class="settings-help">
-                <p class="text-sm text-muted">${__('Enable for models with token-plan pricing (no per-token cost, only usage tracking)')}</p>
-              </div>
+              <p class="text-sm text-muted" style="margin-top:4px;">${__('Manage models in the Provider tab via "Get Models" button')}</p>
             </div>
             <div class="settings-field full">
               <label>${__('System Prompt')}</label>
@@ -7281,42 +7299,19 @@ const App = {
         </div>`;
     }).join('');
 
-    // Bind "Get Models" buttons
-    container.querySelectorAll('.get-models-btn').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const roleKey = btn.dataset.roleKey;
-        const providerKey = btn.dataset.provider;
-        if (roleKey && providerKey) {
-          await this.fetchModelsForProvider(roleKey, providerKey);
-        }
-      });
-    });
-
-    // Bind token plan switches
-    container.querySelectorAll('[data-role-field="token_plan"]').forEach(switchEl => {
-      switchEl.addEventListener('change', (e) => {
+    // Bind provider change → update model dropdown
+    container.querySelectorAll('[data-role-field="provider"]').forEach(sel => {
+      sel.addEventListener('change', (e) => {
         const roleKey = e.target.dataset.roleKey;
-        if (roleKey && this.state.settings && this.state.settings.roles) {
-          // Update the role's token_plan setting
-          if (!this.state.settings.roles[roleKey]) {
-            this.state.settings.roles[roleKey] = {};
-          }
-          this.state.settings.roles[roleKey].token_plan = e.target.checked;
-          
-          // Save settings
+        const newProvider = e.target.value;
+        if (roleKey && this.state.settings && this.state.settings.roles[roleKey]) {
+          this.state.settings.roles[roleKey].provider = newProvider;
+          this.state.settings.roles[roleKey].model = '';
+          this.renderRoles(this.state.settings.roles, this.state.settings.providers);
           this.saveSettings();
-          
-          // Show feedback
-          this.showToast(
-            `Token plan for ${roleKey} ${e.target.checked ? 'enabled' : 'disabled'}`,
-            'success'
-          );
         }
       });
     });
-
-    // Fetch token plan models on load
-    this.fetchTokenPlanModels();
   },
 
   renderPipeline(pipelineParams) {

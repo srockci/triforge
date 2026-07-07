@@ -57,7 +57,6 @@ LLM_PROVIDERS = {
         "model": os.environ.get("TRIFORGE_ARCHITECT_MODEL", "MiniMax-Text-01"),
         "rate_in": 0.0,
         "rate_out": 0.0,
-        "token_plan": True,
     },
     "deepseek": {
         "base_url": os.environ.get(
@@ -68,14 +67,16 @@ LLM_PROVIDERS = {
         "model": os.environ.get("TRIFORGE_CODER_MODEL", "deepseek-chat"),
         "rate_in": 0.5,
         "rate_out": 1.5,
-        "token_plan": False,
     },
 }
 
-# Token plan models - models that use token-plan pricing instead of per-token cost
-TOKEN_PLAN_MODELS = {
-    "minimax": ["MiniMax-Text-01", "MiniMax-M3", "MiniMax-M2.7", "MiniMax-M2.5", "abab6.5s-chat", "abab6.5s"],
-    "other": []  # Add other token-plan providers here
+# ---------------------------------------------------------------------------
+# Default token plan modes per provider (used as fallback defaults).
+# The canonical config lives in settings.json / settings.py DEFAULT_SETTINGS.
+# ---------------------------------------------------------------------------
+DEFAULT_TOKEN_PLAN_MODES = {
+    "minimax": "charge",
+    "deepseek": "charge",
 }
 
 # Version Control Configuration

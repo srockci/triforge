@@ -220,8 +220,9 @@ def main() -> int:
         if d["status"] != "awaiting_approval":
             print(f"  ! run ended early: {d['status']}", flush=True)
             return 1
-        assert d["phase"] == "implement"
-        print(f"  ✓ phase=implement awaiting", flush=True)
+        assert d["phase"] == "design"
+        assert d.get("current_phase_sub") == "code"
+        print(f"  ✓ phase=design sub=code awaiting", flush=True)
 
         print("\n[A] killing server #1 (hard kill) ...", flush=True)
         server1.kill()
@@ -239,7 +240,7 @@ def main() -> int:
         print(f"  ✓ DB has {n_events} event(s) persisted", flush=True)
         assert n_events > 0
         assert snap[0] == "awaiting_approval"
-        assert snap[1] == "implement"
+        assert snap[1] == "design"
 
         # ===== Phase B =====
         print("\n[B] starting server #2 (fresh process, same DB) ...", flush=True)
@@ -260,7 +261,7 @@ def main() -> int:
               f"phase={target['phase']}", flush=True)
         assert target["status"] == "interrupted", \
             f"expected 'interrupted', got {target['status']!r}"
-        assert target["phase"] == "implement"
+        assert target["phase"] == "design"
 
         # 2. Detail endpoint shows error message
         detail = http_json("GET", f"/board/runs/{run_id}")
