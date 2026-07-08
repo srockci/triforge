@@ -432,7 +432,7 @@ async def get_board_stats(period: str = "today", model: Optional[str] = None) ->
     # ---- Token plan info ----
     token_plan = None
     if tp_providers:
-        windows = settings.pipeline_params.token_plan.window_hours
+        windows = settings.pipeline_params["token_plan"]["window_hours"]
         current_h = time.localtime(now).tm_hour
         current_label = "—"
         remaining = 0

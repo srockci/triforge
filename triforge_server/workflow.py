@@ -1019,7 +1019,7 @@ async def _drive_agent(
             
             # Check if we need to reset window usage (at specified hours)
             current_hour = time.localtime().tm_hour
-            window_hours = get_settings().pipeline_params.token_plan.window_hours
+            window_hours = get_settings().pipeline_params["token_plan"]["window_hours"]
             if current_hour in window_hours and run.window_start_time < time.time() - 3600:  # Reset if more than an hour has passed
                 run.window_tokens_in = ev.tokens_in
                 run.window_tokens_out = ev.tokens_out
