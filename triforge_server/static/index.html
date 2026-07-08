@@ -822,9 +822,7 @@ input:checked + .slider:before {
     position: absolute; inset: 0;
     border-radius: 3px;
   }
-  .seg-bar .seg.arch .fill { background: linear-gradient(90deg, var(--green), hsla(150 65% 55% / 0.6)); width: 100%; }
-  .seg-bar .seg.code .fill { background: linear-gradient(90deg, var(--yellow), hsla(40 95% 60% / 0.4)); width: 22%; }
-  .seg-bar .seg.review .fill { background: linear-gradient(90deg, var(--border-strong), var(--bg-elev-3)); width: 0%; }
+
   .seg-bar-labels {
     display: flex; gap: 14px;
     font-size: 11px;
@@ -5865,6 +5863,20 @@ const App = {
       review:        'architect_review',
     };
     const phaseOrder = ['design', 'module_detail', 'module_code', 'module_test', 'review'];
+    const PHASES_5 = [
+      {key: 'design',        label: __('Architecture'),     color: 'var(--green)'},
+      {key: 'module_detail', label: __('Module detail'),    color: 'var(--yellow)'},
+      {key: 'module_code',   label: __('Module code'),      color: 'var(--orange)'},
+      {key: 'module_test',   label: __('Module test'),      color: 'var(--accent-2)'},
+      {key: 'review',        label: __('Architecture review'), color: 'var(--green)'},
+    ];
+    function phasePercent(phaseKey, d, phaseIdx) {
+      if (d.status === 'completed') return 100;
+      const myIdx = PHASES_5.findIndex(p => p.key === phaseKey);
+      if (phaseIdx > myIdx)  return 100;
+      if (phaseIdx < myIdx)  return 0;
+      return d.status === 'awaiting_approval' ? 90 : 60;
+    }
 
     const completedSet = new Set(d.completed_phases || []);
     const failedSet = d.status === 'failed'
@@ -6149,14 +6161,19 @@ const App = {
         </div>
         <div class="seg-bar">
           <div class="bar">
-            <div class="seg arch"><div class="fill" style="width: ${d.status === 'completed' || phaseIdx > 0 ? '100%' : (d.status === 'awaiting_approval' && d.phase === 'design' ? '90%' : '0%')};"></div></div>
-            <div class="seg code"><div class="fill" style="width: ${d.status === 'completed' || phaseIdx > 1 ? '100%' : (phaseIdx === 1 ? '60%' : '0%')};"></div></div>
-            <div class="seg review"><div class="fill" style="width: ${d.status === 'completed' && phaseIdx >= 2 ? '100%' : '0%'};"></div></div>
+            ${PHASES_5.map(p => {
+              const pct = phasePercent(p.key, d, phaseIdx);
+              const fillStyle = pct === 0
+                ? 'width: 0%;'
+                : `width: ${pct}%; background: ${p.color};`;
+              return `<div class="seg" style="flex: 1;"><div class="fill" style="${fillStyle}"></div></div>`;
+            }).join('')}
           </div>
           <div class="seg-bar-labels">
-            <span>Architecture <strong>${d.status === 'completed' || phaseIdx > 0 ? '100%' : (d.status === 'awaiting_approval' && d.phase === 'design' ? '90%' : '0%')}</strong></span>
-            <span>Coding <strong>${d.status === 'completed' || phaseIdx > 1 ? '100%' : (phaseIdx === 1 ? '60%' : '0%')}</strong></span>
-            <span>Review <strong>${d.status === 'completed' && phaseIdx >= 2 ? '100%' : '0%'}</strong></span>
+            ${PHASES_5.map(p => {
+              const pct = phasePercent(p.key, d, phaseIdx);
+              return `<span>${p.label} <strong>${pct}%</strong></span>`;
+            }).join('')}
           </div>
         </div>
       </div>
