@@ -5803,8 +5803,8 @@ const App = {
     document.getElementById('sse-sub').textContent = `${__('Run')} ${runId}`;
     const bcEl = document.getElementById('detail-bc-runid');
     if (bcEl) bcEl.textContent = runId;
-    this.connectSSE(runId);
     await this.refreshDetail();
+    this.connectSSE(runId);
   },
 
   deselectRun() {
@@ -6361,7 +6361,8 @@ const App = {
   // ---- SSE ----
   connectSSE(runId) {
     if (this.state.sse) this.state.sse.close();
-    const url = `/board/runs/${runId}/events`;
+    const token = (this.state.selectedDetail || {}).access_token || '';
+    const url = `/board/runs/${runId}/events?token=${encodeURIComponent(token)}`;
     const es = new EventSource(url);
     this.state.sse = es;
     this.setSSEStatus(false, 'connecting');

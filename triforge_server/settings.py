@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import stat
 from pathlib import Path
 from typing import Any, Dict, Optional, List
 
@@ -22,6 +23,65 @@ log = logging.getLogger("triforge.settings")
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 _SETTINGS_PATH = _PROJECT_ROOT / "data" / "settings.json"
+_SETTINGS_KEY_PATH = _PROJECT_ROOT / "data" / ".settings_key"
+
+# Fields that contain sensitive credentials and must be encrypted at rest.
+_SENSITIVE_FIELDS: frozenset = frozenset({
+    "api_key", "auth_token", "bot_token", "secret", "ilink_bot_id",
+    "app_secret", "client_secret", "webhook_secret",
+})
+
+
+def _load_or_create_cipher() -> Any:
+    """Return a Fernet cipher, loading or creating the key from
+    TRIFORGE_MASTER_KEY env var or a local key file."""
+    from cryptography.fernet import Fernet
+    env_key = os.environ.get("TRIFORGE_MASTER_KEY")
+    if env_key:
+        try:
+            return Fernet(env_key.encode("utf-8"))
+        except Exception:
+            log.warning("TRIFORGE_MASTER_KEY is invalid; falling back to file-based key")
+    _SETTINGS_KEY_PATH.parent.mkdir(parents=True, exist_ok=True)
+    if _SETTINGS_KEY_PATH.exists():
+        key = _SETTINGS_KEY_PATH.read_bytes()
+    else:
+        key = Fernet.generate_key()
+        _SETTINGS_KEY_PATH.write_bytes(key)
+        os.chmod(str(_SETTINGS_KEY_PATH), stat.S_IRUSR | stat.S_IWUSR)
+    return Fernet(key)
+
+
+def _encrypt_sensitive(data: Dict[str, Any], cipher: Any) -> Dict[str, Any]:
+    """Recursively encrypt sensitive fields in a dict tree."""
+    result = {}
+    for k, v in data.items():
+        if isinstance(v, dict):
+            result[k] = _encrypt_sensitive(v, cipher)
+        elif k in _SENSITIVE_FIELDS and v and isinstance(v, str):
+            try:
+                result[k] = cipher.encrypt(v.encode("utf-8")).decode("utf-8")
+            except Exception:
+                result[k] = v
+        else:
+            result[k] = v
+    return result
+
+
+def _decrypt_sensitive(data: Dict[str, Any], cipher: Any) -> Dict[str, Any]:
+    """Recursively decrypt sensitive fields in a dict tree."""
+    result = {}
+    for k, v in data.items():
+        if isinstance(v, dict):
+            result[k] = _decrypt_sensitive(v, cipher)
+        elif k in _SENSITIVE_FIELDS and v and isinstance(v, str):
+            try:
+                result[k] = cipher.decrypt(v.encode("utf-8")).decode("utf-8")
+            except Exception:
+                result[k] = v
+        else:
+            result[k] = v
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -300,6 +360,7 @@ class SettingsManager:
     def __init__(self, path: Path = _SETTINGS_PATH):
         self.path = path
         self._data: Dict[str, Any] = {}
+        self._cipher: Any = None
         self.load()
 
     def load(self) -> Dict[str, Any]:
@@ -312,6 +373,8 @@ class SettingsManager:
                 self._data = {}
         else:
             self._data = {}
+        self._cipher = _load_or_create_cipher()
+        self._data = _decrypt_sensitive(self._data, self._cipher)
         # Merge with defaults (fill in any missing keys)
         self._data = _deep_merge(DEFAULT_SETTINGS, self._data)
         return self._data
@@ -321,8 +384,13 @@ class SettingsManager:
         if data is not None:
             self._data = _deep_merge(DEFAULT_SETTINGS, data)
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        to_write = _encrypt_sensitive(self._data, self._cipher)
         with open(self.path, "w", encoding="utf-8") as f:
-            json.dump(self._data, f, indent=2, ensure_ascii=False)
+            json.dump(to_write, f, indent=2, ensure_ascii=False)
+        try:
+            os.chmod(str(self.path), stat.S_IRUSR | stat.S_IWUSR)
+        except Exception:
+            pass
 
     def get_public_url(self) -> str:
         return self._data.get("public_url", "http://localhost:8800")

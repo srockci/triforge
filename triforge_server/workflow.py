@@ -140,6 +140,7 @@ class RunState:
     requirement: str
     phase: str = "design"
     status: str = "running"
+    access_token: str = ""
     created_at: float = field(default_factory=time.time)
     updated_at: float = field(default_factory=time.time)
     pending_tool: Optional[str] = None
@@ -213,6 +214,7 @@ class WorkflowEngine:
             workspace_root=ws,
             working_paths=list(working_paths or []),
             project_path=pp,
+            access_token=secrets.token_urlsafe(32),
         )
         self.runs[run.run_id] = run
         return run
@@ -948,6 +950,7 @@ def _snapshot_for_board(run: RunState) -> Dict[str, Any]:
         "project_tokens_in": run.project_tokens_in,
         "project_tokens_out": run.project_tokens_out,
         "project_path": run.project_path or "",
+        "access_token": run.access_token or "",
         "phase_steps_used": 0,
         "phase_steps_max": 0,
         "phase_steps_remaining": 0,

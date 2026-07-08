@@ -14,6 +14,7 @@ All endpoints bind to 127.0.0.1 only — do not expose externally.
 from __future__ import annotations
 
 import asyncio
+import collections
 import json
 import logging
 import secrets
@@ -36,6 +37,25 @@ from .workflow import RunState, engine, _snapshot_for_board, run_pipeline_async
 from openai import OpenAI
 
 router = APIRouter(prefix="/board", tags=["board"])
+
+# -----------------------------------------------------------------------
+# Simple per-IP rate limiter (in-process, no external deps)
+# -----------------------------------------------------------------------
+_RATE_LIMITS: Dict[str, collections.deque] = {}
+_RATE_LIMIT_WINDOW = 60.0  # seconds
+_RATE_LIMIT_MAX = 30       # max requests per window
+
+
+def _check_rate_limit(request: Request) -> None:
+    ip = request.client.host if request.client else "unknown"
+    now = time.time()
+    dq = _RATE_LIMITS.setdefault(ip, collections.deque(maxlen=_RATE_LIMIT_MAX))
+    # Prune entries outside the window
+    while dq and now - dq[0] > _RATE_LIMIT_WINDOW:
+        dq.popleft()
+    if len(dq) >= _RATE_LIMIT_MAX:
+        raise HTTPException(429, "rate limit exceeded — try again later")
+    dq.append(now)
 
 
 # -----------------------------------------------------------------------
@@ -556,6 +576,7 @@ async def create_run(req: StartRequest) -> Dict[str, Any]:
         "phase": run.phase,
         "working_paths": clean_wp,
         "project_path": req.project_path or "",
+        "access_token": run.access_token,
     }
 
 
@@ -672,6 +693,16 @@ async def force_stop(run_id: str) -> Dict[str, Any]:
 # -----------------------------------------------------------------------
 # Resume an interrupted or failed run
 # -----------------------------------------------------------------------
+@router.post("/runs/{run_id}/rotate-token")
+async def rotate_token(run_id: str, request: Request) -> Dict[str, Any]:
+    _check_rate_limit(request)
+    run = engine.get(run_id)
+    if not run:
+        raise HTTPException(404, f"unknown run_id: {run_id}")
+    run.access_token = secrets.token_urlsafe(32)
+    return {"run_id": run_id, "access_token": run.access_token}
+
+
 @router.post("/runs/{run_id}/resume")
 async def resume(run_id: str) -> Dict[str, Any]:
     """Resume an interrupted, failed, or cancelled run from its current phase.
@@ -920,11 +951,23 @@ async def read_run_file(run_id: str, path: str) -> Dict[str, Any]:
 # -----------------------------------------------------------------------
 @router.get("/runs/{run_id}/events")
 async def stream_events(run_id: str, request: Request,
-                        since: float = 0.0) -> StreamingResponse:
+                        since: float = 0.0,
+                        token: str = "") -> StreamingResponse:
     """SSE: replay past events, then stream live."""
+    _check_rate_limit(request)
     if not engine.get(run_id) and not get_store().snapshot(run_id) \
             and not get_store().replay(run_id):
         raise HTTPException(404, f"unknown run_id: {run_id}")
+    # Token auth: the caller must provide the run's access_token.
+    # Try in-memory first, then the persisted snapshot.
+    run = engine.get(run_id)
+    if run:
+        expected = run.access_token
+    else:
+        snap = get_store().snapshot(run_id)
+        expected = (snap or {}).get("access_token", "")
+    if not expected or not secrets.compare_digest(token, expected):
+        raise HTTPException(401, "invalid or missing access token")
 
     async def event_gen() -> AsyncIterator[bytes]:
         for ev in get_store().replay(run_id, since_ts=since):
