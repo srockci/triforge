@@ -6271,19 +6271,17 @@ const App = {
   },
 
   findPhaseFiles(files, phase) {
-    const prefixes = {
-      'design':        ['design/'],
-      'module_detail': ['design/'],
+    const prefixByPhase = {
+      'design':        ['design/architecture.md', 'design/modules.json'],
+      'module_detail': ['design/modules/'],
       'module_code':   ['src/'],
       'module_test':   ['tests/'],
-      'review':        ['design/'],
+      'review':        ['design/review_report.md'],
     };
-    const targets = prefixes[phase] || [];
-    const isReview = phase === 'review';
-    return files.filter(f =>
-      targets.some(p => f.path.startsWith(p)) &&
-      f.path.endsWith('review_report.md') === isReview
-    );
+    const targets = prefixByPhase[phase] || [];
+    return files.filter(f => targets.some(p =>
+      f.path === p || f.path.startsWith(p.endsWith('/') ? p : p + '/')
+    ));
   },
 
   // ---- File Viewer ----
