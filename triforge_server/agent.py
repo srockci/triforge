@@ -371,6 +371,31 @@ class Agent:
                     continue
                 continue
 
+            # Filter out malformed tool_calls before they enter history.
+            # When the assistant message with tool_calls is appended first
+            # and THEN the malformed check adds a tool result, the LLM sees
+            # its own empty-args call in history and gets confused — causing
+            # it to repeat the same empty-args write_file indefinitely.
+            valid_tcs: list[Any] = []
+            for tc in tool_calls_raw:
+                name = tc.function.name
+                args = _safe_json(tc.function.arguments)
+                if not name or not isinstance(args, dict) or not args:
+                    log.warning("skipping malformed tool_call name=%r args=%r",
+                                name, args)
+                    self.history.append({
+                        "role": "tool",
+                        "tool_call_id": f"call_{tool_calls_raw.index(tc)}",
+                        "content": ("[system] Your tool call was malformed "
+                                    "(empty or missing arguments). Please "
+                                    "re-issue with the required fields."),
+                    })
+                else:
+                    valid_tcs.append(tc)
+            if not valid_tcs:
+                continue
+            tool_calls_raw = valid_tcs
+
             tc_dicts = [
                 {"name": tc.function.name, "arguments": _safe_json(tc.function.arguments)}
                 for tc in tool_calls_raw
@@ -400,25 +425,6 @@ class Agent:
             for tc in tool_calls_raw:
                 name = tc.function.name
                 args = _safe_json(tc.function.arguments)
-
-                # Defensive: skip malformed tool calls. Some models (or
-                # truncation cases) emit a placeholder tool_call with empty
-                # arguments. Executing it would crash on args["path"] /
-                # log a useless failure event. Better to inject a synthetic
-                # tool result telling the model "your last call had no
-                # arguments — try again with the actual fields" and let
-                # the next loop iteration re-prompt.
-                if not name or not isinstance(args, dict) or not args:
-                    log.warning("skipping malformed tool_call name=%r args=%r",
-                                name, args)
-                    self.history.append({
-                        "role": "tool",
-                        "tool_call_id": f"call_{tool_calls_raw.index(tc)}",
-                        "content": ("[system] Your tool call was malformed "
-                                    "(empty or missing arguments). Please "
-                                    "re-issue with the required fields."),
-                    })
-                    continue
 
                 if name == "finish":
                     # Record finish tool result for cleanliness, then signal done.
