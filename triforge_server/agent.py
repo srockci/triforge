@@ -191,7 +191,9 @@ class Agent:
         """Resolve a workspace-relative path and confirm it stays under workspace_root."""
         rel_path = self._normalize_rel_path(rel_path)
         p = (self.workspace_root / rel_path).resolve()
-        if os.path.commonpath([str(p), str(self.workspace_root)]) != str(self.workspace_root):
+        try:
+            p.relative_to(self.workspace_root)
+        except ValueError:
             raise ValueError(f"path escapes workspace: {rel_path}")
         return p
 
@@ -255,6 +257,9 @@ class Agent:
                 break
         # Drop leading "/"
         p = p.lstrip("/")
+        # Reject any .. path components (path traversal)
+        if ".." in p.split("/"):
+            raise ValueError(f"path component '..' not allowed in: {rel_path}")
         return p
 
     def _track_usage(self, resp) -> Optional[TokenUsageEvent]:
