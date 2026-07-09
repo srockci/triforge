@@ -6415,17 +6415,22 @@ const App = {
 
   handleSSEEvent(kind, payload) {
     this.state.events.push({ kind, payload, ts: payload.ts || Date.now()/1000 });
-    this.renderEvents();
+    this._scheduleEventRender(kind);
+  },
 
-    // On phase change / approval / run end / token usage, refresh detail
-    if (['approval_requested', 'approval_resolved', 'phase_start',
+  _scheduleEventRender(kind) {
+    const needsRefresh = ['approval_requested', 'approval_resolved', 'phase_start',
          'phase_end', 'run_end', 'tool_call', 'token_usage',
          'iteration_started', 'iteration_pending', 'iteration_completed',
-         'run_resumed'].includes(kind)) {
-      if (!this._replayBatching) {
+         'run_resumed'].includes(kind);
+    if (this._eventRenderTimer) clearTimeout(this._eventRenderTimer);
+    this._eventRenderTimer = setTimeout(() => {
+      this._eventRenderTimer = null;
+      this.renderEvents();
+      if (needsRefresh && !this._replayBatching) {
         this._scheduleRefresh();
       }
-    }
+    }, 200);
   },
 
   _scheduleRefresh() {
