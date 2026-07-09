@@ -960,13 +960,14 @@ async def stream_events(run_id: str, request: Request,
         raise HTTPException(404, f"unknown run_id: {run_id}")
     # Token auth: the caller must provide the run's access_token.
     # Try in-memory first, then the persisted snapshot.
+    # Legacy runs (pre-token-auth) have no token — allow access without one.
     run = engine.get(run_id)
     if run:
         expected = run.access_token
     else:
         snap = get_store().snapshot(run_id)
         expected = (snap or {}).get("access_token", "")
-    if not expected or not secrets.compare_digest(token, expected):
+    if expected and not secrets.compare_digest(token, expected):
         raise HTTPException(401, "invalid or missing access token")
 
     async def event_gen() -> AsyncIterator[bytes]:

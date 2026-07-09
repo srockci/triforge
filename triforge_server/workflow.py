@@ -372,10 +372,12 @@ def _validate_modules_json(data: Any) -> List[Dict[str, Any]]:
         m.setdefault("status", "pending")
         m.setdefault("retry_count", 0)
         m.setdefault("notes", "")
-        # Validate depends_on references known modules
-        for dep in m.get("depends_on", []):
-            if dep not in ids and dep != m["id"]:
-                raise ValueError(f"module {mid!r} depends on unknown module {dep!r}")
+        # Validate depends_on references known modules;
+        # silently strip any that reference unknown modules.
+        deps = m.get("depends_on", [])
+        valid = [d for d in deps if d == m["id"] or d in ids]
+        if len(valid) != len(deps):
+            m["depends_on"] = valid
     # Topological sort validates the DAG
     return _topological_sort(modules)
 
@@ -505,28 +507,14 @@ async def run_pipeline_async(run: RunState, settings: Optional[Dict[str, Any]] =
                 _finish_phase(run, "design", result, _emit, _snapshot_for_board)
                 return
 
-            # Parse modules.json, with one retry on validation error
+            # Parse modules.json
             modules_path = Path(ws) / "design" / "modules.json"
-            for _ in range(2):
-                try:
-                    raw = json.loads(modules_path.read_text(encoding="utf-8"))
-                    run.modules = _validate_modules_json(raw)
-                    break
-                except (FileNotFoundError, json.JSONDecodeError, ValueError) as e:
-                    if run.status == "failed":
-                        break
-                    err = f"modules.json validation failed: {e}"
-                    retry = await _drive_agent(
-                        run, architect,
-                        f"{err}\n\nFix the modules.json file with write_file before calling finish.",
-                        max_steps=remaining, working_paths=working_paths,
-                        remember_approved=remember_approved)
-                    if run.cancelled or not retry.get("ok"):
-                        break
-                    continue
-            else:
+            try:
+                raw = json.loads(modules_path.read_text(encoding="utf-8"))
+                run.modules = _validate_modules_json(raw)
+            except (FileNotFoundError, json.JSONDecodeError, ValueError) as e:
                 run.status = "failed"
-                run.error = err
+                run.error = f"modules.json validation failed: {e}"
                 _emit("run_end", status="failed", error=run.error)
                 get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
                 return
