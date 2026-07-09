@@ -340,6 +340,11 @@ class Agent:
             try:
                 resp = self.client.chat.completions.create(**call_kwargs)
             except Exception as e:
+                import logging as _log
+                _log.error("LLM call failed for %s model=%s: %s\nlast_msg=%s",
+                           self.name, self.model, e,
+                           json.dumps(self.history[-3:] if len(self.history) >= 3 else self.history,
+                                      ensure_ascii=False, default=str))
                 yield FailedEvent(error=f"LLM call failed: {type(e).__name__}: {e}", steps=steps_used)
                 return
 
@@ -404,14 +409,14 @@ class Agent:
                 "content": msg.content or "",
                 "tool_calls": [
                     {
-                        "id": tc.id,
+                        "id": str(tc.id) if tc.id else f"call_{i}",
                         "type": "function",
                         "function": {
                             "name": tc.function.name,
-                            "arguments": tc.function.arguments,
+                            "arguments": _ensure_str(tc.function.arguments),
                         },
                     }
-                    for tc in tool_calls_raw
+                    for i, tc in enumerate(tool_calls_raw)
                 ],
             }
             if reasoning_content:
@@ -467,6 +472,13 @@ class Agent:
                 })
 
         yield FailedEvent(error=f"max_steps={max_steps} exceeded", steps=steps_used)
+
+
+def _ensure_str(v: Any) -> str:
+    """Return a JSON string. Accepts str or dict."""
+    if isinstance(v, str):
+        return v
+    return json.dumps(v, ensure_ascii=False)
 
 
 def _safe_json(s: str) -> Dict[str, Any]:
