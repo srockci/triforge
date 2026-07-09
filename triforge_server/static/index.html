@@ -6402,10 +6402,11 @@ const App = {
       return;
     }
 
-    // Group by day/hour for header
+    // Group by day/hour for header, newest first
     let lastDay = '';
     let html = '';
-    events.forEach((e, idx) => {
+    const reversed = [...events].reverse();
+    reversed.forEach((e) => {
       const ts = new Date(e.ts * 1000);
       const day = ts.toLocaleDateString([], { month: 'short', day: 'numeric' });
       const time = ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
@@ -6422,9 +6423,9 @@ const App = {
     });
     container.innerHTML = html;
 
-    // Auto-scroll to bottom if user is at bottom
-    const isAtBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 50;
-    if (isAtBottom) container.scrollTop = container.scrollHeight;
+    // Auto-scroll to top if user is at top
+    const isAtTop = container.scrollTop <= 50;
+    if (isAtTop) container.scrollTop = 0;
   },
 
   renderEventRow(kind, data, time) {

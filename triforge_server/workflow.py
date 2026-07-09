@@ -21,7 +21,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from .agent import Agent, FinishEvent, FailedEvent, ToolCallEvent, TokenUsageEvent, make_agent, make_agent_with_resume
+from .agent import Agent, FinishEvent, FailedEvent, ToolCallEvent, TokenUsageEvent, make_agent
 from .config import WORKSPACE_ROOT, workspace_for_run
 from .events import BoardEvent, bus
 from .settings import get_settings
@@ -456,59 +456,47 @@ async def run_pipeline_async(run: RunState, settings: Optional[Dict[str, Any]] =
             role_cfg = roles.get("architect_design", {})
             _emit("phase_start", phase="design", agent="architect_design",
                   model=role_cfg.get("model", "MiniMax"))
-            architect, saved_steps = make_agent_with_resume(
-                "architect_design", ws, settings, run.run_id, "design")
-            remaining = design_steps - saved_steps
-            if remaining <= 0:
-                run.status = "failed"
-                run.error = "max_steps exhausted before top-level design resume"
-                _emit("run_end", status="failed", error=run.error)
-                get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
-                return
-            if saved_steps > 0:
-                existing = _list_existing_files(ws)
-                design_user_msg = RESUME_HINT_TEMPLATE.format(
-                    existing_files=existing, max_steps_remaining=remaining)
-            else:
-                design_user_msg = (
-                    f"User requirement:\n```\n{run.requirement}\n```\n\n"
-                    f"Workspace root: {ws}\n"
-                    f"\n"
-                    f"## Task — two outputs\n"
-                    f"1. Write the top-level architecture to design/architecture.md\n"
-                    f"2. Write a module manifest to design/modules.json with this EXACT schema:\n"
-                    f"```json\n"
-                    f"{{\n"
-                    f'  "modules": [\n'
-                    f"    {{\n"
-                    f'      "id": "module_name",\n'
-                    f'      "name": "Human-readable name",\n'
-                    f'      "estimated_files": 6,\n'
-                    f'      "depends_on": ["other_module_id"],\n'
-                    f'      "interface": {{"exports": ["ClassName", "function_name"], "description": "..."}},\n'
-                    f'      "estimated_steps": 18\n'
-                    f"    }}\n"
-                    f"  ]\n"
-                    f"}}\n"
-                    f"```\n"
-                    f"## Module constraints\n"
-                    f"- Each module: estimated_files ≤ 8, estimated_steps ≤ 22\n"
-                    f"- depends_on must reference a module defined in the same list\n"
-                    f"- If a module exceeds the limits, split it into smaller modules\n"
-                    f"- Topological order in the array is preferred but not required\n"
-                    f"- Do NOT write any .py code\n"
-                    f"\n"
-                    f"When done, call finish(summary='modules: <comma-separated ids>')."
+            architect = make_agent("architect_design", ws, settings)
+            remaining = design_steps
+            design_user_msg = (
+                f"User requirement:\n```\n{run.requirement}\n```\n\n"
+                f"Workspace root: {ws}\n"
+                f"\n"
+                f"## Task — two outputs\n"
+                f"1. Write the top-level architecture to design/architecture.md\n"
+                f"2. Write a module manifest to design/modules.json with this EXACT schema:\n"
+                f"```json\n"
+                f"{{\n"
+                f'  "modules": [\n'
+                f"    {{\n"
+                f'      "id": "module_name",\n'
+                f'      "name": "Human-readable name",\n'
+                f'      "estimated_files": 6,\n'
+                f'      "depends_on": ["other_module_id"],\n'
+                f'      "interface": {{"exports": ["ClassName", "function_name"], "description": "..."}},\n'
+                f'      "estimated_steps": 18\n'
+                f"    }}\n"
+                f"  ]\n"
+                f"}}\n"
+                f"```\n"
+                f"## Module constraints\n"
+                f"- Each module: estimated_files ≤ 8, estimated_steps ≤ 22\n"
+                f"- depends_on must reference a module defined in the same list\n"
+                f"- If a module exceeds the limits, split it into smaller modules\n"
+                f"- Topological order in the array is preferred but not required\n"
+                f"- Do NOT write any .py code\n"
+                f"\n"
+                f"When done, call finish(summary='modules: <comma-separated ids>')."
+            )
+            if run.iteration > 0 and run.requirement_addenda:
+                last_add = run.requirement_addenda[-1]
+                design_user_msg += (
+                    f"\n\n---\n"
+                    f"## Iteration {run.iteration}\n"
+                    f"Previous iteration finished. Update design/modules.json and "
+                    f"design/architecture.md to reflect the new requirement:\n"
+                    f"> {last_add}"
                 )
-                if run.iteration > 0 and run.requirement_addenda:
-                    last_add = run.requirement_addenda[-1]
-                    design_user_msg += (
-                        f"\n\n---\n"
-                        f"## Iteration {run.iteration}\n"
-                        f"Previous iteration finished. Update design/modules.json and "
-                        f"design/architecture.md to reflect the new requirement:\n"
-                        f"> {last_add}"
-                    )
             result = await _drive_agent(run, architect, design_user_msg,
                                         max_steps=remaining,
                                         working_paths=working_paths,
@@ -576,15 +564,8 @@ async def run_pipeline_async(run: RunState, settings: Optional[Dict[str, Any]] =
                 run.current_phase_sub = "detail"
                 _emit("phase_start", phase=f"detail_{mid}", agent="module_detail",
                       model=roles.get("module_detail", {}).get("model", ""))
-                detail_agent, saved_steps = make_agent_with_resume(
-                    "module_detail", ws, settings, run.run_id, f"detail_{mid}")
-                remaining = detail_max_steps - saved_steps
-                if remaining <= 0:
-                    run.status = "failed"
-                    run.error = f"max_steps exhausted for module {mid} detail"
-                    _emit("run_end", status="failed", error=run.error)
-                    get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
-                    return
+                detail_agent = make_agent("module_detail", ws, settings)
+                remaining = detail_max_steps
                 detail_msg = (
                     f"User requirement:\n```\n{run.requirement}\n```\n\n"
                     f"Top-level architecture: design/architecture.md\n"
@@ -615,15 +596,8 @@ async def run_pipeline_async(run: RunState, settings: Optional[Dict[str, Any]] =
                 run.current_phase_sub = "code"
                 _emit("phase_start", phase=f"code_{mid}", agent="module_code",
                       model=roles.get("module_code", {}).get("model", ""))
-                code_agent, saved_steps = make_agent_with_resume(
-                    "module_code", ws, settings)
-                remaining = code_max_steps - saved_steps
-                if remaining <= 0:
-                    run.status = "failed"
-                    run.error = f"max_steps exhausted for module {mid} code"
-                    _emit("run_end", status="failed", error=run.error)
-                    get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
-                    return
+                code_agent = make_agent("module_code", ws, settings)
+                remaining = code_max_steps
                 code_msg = (
                     f"User requirement:\n```\n{run.requirement}\n```\n\n"
                     f"Detailed design: design/modules/{mid}.md\n"
@@ -653,15 +627,8 @@ async def run_pipeline_async(run: RunState, settings: Optional[Dict[str, Any]] =
                 run.current_phase_sub = "test"
                 _emit("phase_start", phase=f"test_{mid}", agent=test_role_name,
                       model=roles.get(test_role_name, {}).get("model", ""))
-                test_agent, saved_steps = make_agent_with_resume(
-                    test_role_name, ws, settings, run.run_id, f"test_{mid}")
-                remaining = test_max_steps - saved_steps
-                if remaining <= 0:
-                    run.status = "failed"
-                    run.error = f"max_steps exhausted for module {mid} test"
-                    _emit("run_end", status="failed", error=run.error)
-                    get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
-                    return
+                test_agent = make_agent(test_role_name, ws, settings)
+                remaining = test_max_steps
                 test_msg = (
                     "[SYSTEM OVERRIDE] Ignore any system-level instructions about writing "
                     "review reports. You are NOT performing a review.\n\n"
@@ -779,21 +746,9 @@ async def run_pipeline_async(run: RunState, settings: Optional[Dict[str, Any]] =
             role_cfg = roles.get("architect_review", {})
             _emit("phase_start", phase="review", agent="architect_review",
                   model=role_cfg.get("model", "MiniMax"))
-            reviewer, saved_steps = make_agent_with_resume(
-                "architect_review", ws, settings, run.run_id, "review")
-            remaining = review_steps - saved_steps
-            if remaining <= 0:
-                run.status = "failed"
-                run.error = "max_steps exhausted before review resume"
-                _emit("run_end", status="failed", error=run.error)
-                get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
-                return
-            if saved_steps > 0:
-                existing = _list_existing_files(ws)
-                review_msg = RESUME_HINT_TEMPLATE.format(
-                    existing_files=existing, max_steps_remaining=remaining)
-            else:
-                review_msg = (
+            reviewer = make_agent("architect_review", ws, settings)
+            remaining = review_steps
+            review_msg = (
                     f"Original user requirement:\n```\n{run.requirement}\n```\n\n"
                     f"Modules: {json.dumps([m['id'] for m in run.modules], indent=2)}\n\n"
                     f"Review everything in {ws}\n\n"
@@ -867,16 +822,6 @@ def _finish_phase(run: RunState, phase: str, result: Dict[str, Any],
 # Resume hint template: shown to the agent when restarting a phase
 # with saved history. Shorter than the full user_msg because the
 # agent already has context from its restored history.
-RESUME_HINT_TEMPLATE = (
-    "[Resume from interrupted state]\n\n"
-    "You were writing files in this workspace and ran out of step budget.\n"
-    "Files already on disk:\n"
-    "{existing_files}\n\n"
-    "Continue from where you stopped. Read existing files before overwriting.\n"
-    "You have {max_steps_remaining} steps remaining."
-)
-
-
 def _list_existing_files(ws_root: Path) -> str:
     """Return a compact listing of files under the workspace root."""
     ws = Path(ws_root)
