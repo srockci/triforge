@@ -481,7 +481,7 @@ async def run_pipeline_async(run: RunState, settings: Optional[Dict[str, Any]] =
                 f"```\n"
                 f"## Module constraints\n"
                 f"- Each module: estimated_files ≤ 8, estimated_steps ≤ 22\n"
-                f"- depends_on must reference a module defined in the same list\n"
+                f"- depends_on must ONLY reference other module ids that EXIST in this same modules array\n"
                 f"- If a module exceeds the limits, split it into smaller modules\n"
                 f"- Topological order in the array is preferred but not required\n"
                 f"- Do NOT write any .py code\n"
@@ -505,14 +505,28 @@ async def run_pipeline_async(run: RunState, settings: Optional[Dict[str, Any]] =
                 _finish_phase(run, "design", result, _emit, _snapshot_for_board)
                 return
 
-            # Parse modules.json
+            # Parse modules.json, with one retry on validation error
             modules_path = Path(ws) / "design" / "modules.json"
-            try:
-                raw = json.loads(modules_path.read_text(encoding="utf-8"))
-                run.modules = _validate_modules_json(raw)
-            except (FileNotFoundError, json.JSONDecodeError, ValueError) as e:
+            for _ in range(2):
+                try:
+                    raw = json.loads(modules_path.read_text(encoding="utf-8"))
+                    run.modules = _validate_modules_json(raw)
+                    break
+                except (FileNotFoundError, json.JSONDecodeError, ValueError) as e:
+                    if run.status == "failed":
+                        break
+                    err = f"modules.json validation failed: {e}"
+                    retry = await _drive_agent(
+                        run, architect,
+                        f"{err}\n\nFix the modules.json file with write_file before calling finish.",
+                        max_steps=remaining, working_paths=working_paths,
+                        remember_approved=remember_approved)
+                    if run.cancelled or not retry.get("ok"):
+                        break
+                    continue
+            else:
                 run.status = "failed"
-                run.error = f"modules.json validation failed: {e}"
+                run.error = err
                 _emit("run_end", status="failed", error=run.error)
                 get_store().update_snapshot(run.run_id, _snapshot_for_board(run))
                 return
