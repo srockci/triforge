@@ -384,20 +384,12 @@ class Agent:
             # Preserve original tool_call IDs from the API so DeepSeek can
             # match tool results to their corresponding tool calls.
             valid_tcs: list[Any] = []
-            malformed_results: list[dict] = []
             for tc in tool_calls_raw:
                 name = tc.function.name
                 args = _safe_json(tc.function.arguments)
                 if not name or not isinstance(args, dict) or not args:
                     log.warning("skipping malformed tool_call id=%s name=%r args=%r",
                                 tc.id, name, args)
-                    malformed_results.append({
-                        "role": "tool",
-                        "tool_call_id": tc.id,
-                        "content": ("[system] Your tool call was malformed "
-                                    "(empty or missing arguments). Please "
-                                    "re-issue with the required fields."),
-                    })
                 else:
                     valid_tcs.append(tc)
             if not valid_tcs:
@@ -422,9 +414,11 @@ class Agent:
             if reasoning_content:
                 assistant_msg["reasoning_content"] = reasoning_content
             self.history.append(assistant_msg)
-            # Append malformed results after the assistant message so the
-            # API receives a valid assistant->tool-results sequence.
-            self.history.extend(malformed_results)
+            # Malformed tool calls are skipped silently — their IDs are not
+            # present in assistant_msg["tool_calls"], so adding tool results
+            # for them would violate the assistant→tool message chain required
+            # by strict APIs (e.g. DeepSeek). The LLM can re-issue on the next
+            # turn if needed.
 
             # Process each tool call. Special handling: finish short-circuits,
             # other tools yield ToolCallEvent and wait for next iteration to

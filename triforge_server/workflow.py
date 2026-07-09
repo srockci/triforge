@@ -1160,14 +1160,19 @@ async def _drive_agent(
                 if decision == "rejected":
                     return {"ok": False, "error": f"user rejected: {comment}"}
                 if decision == "modify":
-                    agent.history.append({
-                        "role": "user",
-                        "content": f"[user feedback]\n{comment}\n\nAdjust your approach and continue.",
-                    })
+                    # Resume the generator FIRST to let the pending tool
+                    # execute and its result be appended to history.
+                    # Then inject user feedback AFTER the tool results so
+                    # the tool_calls→tool message chain is not broken
+                    # (required by DeepSeek API validation).
                     ev = await loop.run_in_executor(None, _send, None)
                     if ev is None:
                         return {"ok": True, "summary": ""}
                     gen_state["ev"] = ev
+                    agent.history.append({
+                        "role": "user",
+                        "content": f"[user feedback]\n{comment}\n\nAdjust your approach and continue.",
+                    })
                     _steps_used += 1
                     _save_agent_state()
                     run.status = "running"
