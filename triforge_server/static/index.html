@@ -4799,12 +4799,10 @@ const App = {
       const data = await this.api('GET', '/board/runs');
       this.state.runs = data.runs;
       this.renderKanban();
-      // Refresh selected detail if any
+      // Deselect if run no longer exists, but skip detail refresh to avoid request storm
       if (this.state.selectedRunId) {
         const exists = this.state.runs.find(r => r.run_id === this.state.selectedRunId);
-        if (exists) {
-          await this.refreshDetail();
-        } else {
+        if (!exists) {
           this.deselectRun();
         }
       }
@@ -6373,11 +6371,19 @@ const App = {
   // ---- SSE ----
   connectSSE(runId) {
     if (this.state.sse) this.state.sse.close();
+    if (this._replayTimer) clearTimeout(this._replayTimer);
+    this._replayBatching = false;
     const token = (this.state.selectedDetail || {}).access_token || '';
     const url = `/board/runs/${runId}/events?token=${encodeURIComponent(token)}`;
     const es = new EventSource(url);
     this.state.sse = es;
     this.setSSEStatus(false, 'connecting');
+    // Suppress per-event refresh during initial replay burst
+    this._replayBatching = true;
+    this._replayTimer = setTimeout(() => {
+      this._replayBatching = false;
+      this._scheduleRefresh();  // do one final refresh after replay burst settles
+    }, 1500);
 
     es.onopen = () => this.setSSEStatus(true, 'streaming');
     es.onerror = () => {
@@ -6404,9 +6410,19 @@ const App = {
          'phase_end', 'run_end', 'tool_call', 'token_usage',
          'iteration_started', 'iteration_pending', 'iteration_completed',
          'run_resumed'].includes(kind)) {
+      if (!this._replayBatching) {
+        this._scheduleRefresh();
+      }
+    }
+  },
+
+  _scheduleRefresh() {
+    if (this._refreshTimer) clearTimeout(this._refreshTimer);
+    this._refreshTimer = setTimeout(() => {
+      this._refreshTimer = null;
       this.refreshDetail();
       this.refreshRuns();
-    }
+    }, 400);
   },
 
   renderEvents() {
