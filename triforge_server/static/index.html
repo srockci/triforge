@@ -5833,6 +5833,12 @@ const App = {
       const detail = await this.api('GET', `/board/runs/${this.state.selectedRunId}`);
       this.state.selectedDetail = detail;
       this.renderDetail(detail);
+      // Reconnect SSE if the EventSource was closed or never created.
+      // The browser's native EventSource retries transient errors on its
+      // own, so we only act when the connection is fully gone (sse is null).
+      if (!this.state.sse && this.state.selectedRunId) {
+        this.connectSSE(this.state.selectedRunId);
+      }
     } catch (e) {
       console.error('refreshDetail failed:', e);
     }
@@ -6368,7 +6374,10 @@ const App = {
     this.setSSEStatus(false, 'connecting');
 
     es.onopen = () => this.setSSEStatus(true, 'streaming');
-    es.onerror = () => this.setSSEStatus(false, 'retrying');
+    es.onerror = () => {
+      this.state.sseConnected = false;
+      this.setSSEStatus(false, 'retrying');
+    };
     es.onmessage = (e) => this.handleSSEEvent('message', JSON.parse(e.data));
 
     // Listen to specific event types

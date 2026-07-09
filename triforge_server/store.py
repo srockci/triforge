@@ -258,6 +258,7 @@ class RunStore:
                 completed_phases=set(snap.get("completed_phases") or []),
                 project_path=project_path,
                 modules=modules,
+                access_token=snap.get("access_token") or "",
             )
             # Backfill any phases the outputs prove finished. If backfill
             # actually changed the set, persist so future restarts don't
