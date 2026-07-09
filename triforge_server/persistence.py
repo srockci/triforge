@@ -122,6 +122,7 @@ class BoardDB:
             "ALTER TABLE runs ADD COLUMN completed_phases TEXT",
             "ALTER TABLE runs ADD COLUMN project_path TEXT",
             "ALTER TABLE runs ADD COLUMN access_token TEXT",
+            "ALTER TABLE runs ADD COLUMN modules TEXT",
             "ALTER TABLE agent_history ADD COLUMN module_id TEXT NOT NULL DEFAULT ''",
         ):
             try:
@@ -145,8 +146,8 @@ class BoardDB:
                     pending_tool, pending_args, pending_preview,
                     outputs, error, created_at, updated_at,
                     working_paths, completed_phases, project_path,
-                    access_token
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    access_token, modules
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(run_id) DO UPDATE SET
                     status=excluded.status,
                     phase=excluded.phase,
@@ -161,7 +162,8 @@ class BoardDB:
                     working_paths=excluded.working_paths,
                     completed_phases=excluded.completed_phases,
                     project_path=excluded.project_path,
-                    access_token=excluded.access_token
+                    access_token=excluded.access_token,
+                    modules=excluded.modules
             """, (
                 run["run_id"],
                 run.get("status", "running"),
@@ -178,6 +180,7 @@ class BoardDB:
                 json.dumps(run.get("completed_phases") or []),
                 run.get("project_path") or None,
                 run.get("access_token") or None,
+                json.dumps(run.get("modules") or []),
             ))
 
     def load_runs(self) -> List[Dict[str, Any]]:
@@ -188,7 +191,7 @@ class BoardDB:
                        pending_tool, pending_args, pending_preview,
                        outputs, error, created_at, updated_at,
                        working_paths, completed_phases, project_path,
-                       access_token
+                       access_token, modules
                 FROM runs
                 ORDER BY updated_at DESC
             """)
@@ -199,6 +202,7 @@ class BoardDB:
             outputs = json.loads(r[7]) if r[7] else {}
             wp = json.loads(r[11]) if r[11] else []
             cp = json.loads(r[12]) if r[12] else []
+            modules = json.loads(r[15]) if r[15] else []
             out.append({
                 "run_id": r[0],
                 "status": r[1],
@@ -215,6 +219,7 @@ class BoardDB:
                 "completed_phases": cp,
                 "project_path": r[13] or "",
                 "access_token": r[14] or "",
+                "modules": modules,
             })
         return out
 
@@ -225,7 +230,7 @@ class BoardDB:
                        pending_tool, pending_args, pending_preview,
                        outputs, error, created_at, updated_at,
                        working_paths, completed_phases, project_path,
-                       access_token
+                       access_token, modules
                 FROM runs WHERE run_id = ?
             """, (run_id,))
             row = cur.fetchone()
@@ -235,6 +240,7 @@ class BoardDB:
         outputs = json.loads(row[7]) if row[7] else {}
         wp = json.loads(row[11]) if row[11] else []
         cp = json.loads(row[12]) if row[12] else []
+        modules = json.loads(row[15]) if row[15] else []
         return {
             "run_id": row[0],
             "status": row[1],
@@ -251,6 +257,7 @@ class BoardDB:
             "completed_phases": cp,
             "project_path": row[13] or "",
             "access_token": row[14] or "",
+            "modules": modules,
         }
 
     # ----- events -----

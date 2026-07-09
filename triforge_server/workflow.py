@@ -59,16 +59,25 @@ def _backfill_completed_phases(run: RunState) -> bool:
             for md in design_dir.glob("*.md"):
                 mid = md.stem
                 run.completed_phases.add(f"module_detail_{mid}")
-        if src_dir.exists():
+        # Only backfill module_code_<id> if the module's entry in run.modules
+        # reports passed/manually_approved status.  Otherwise a failed code
+        # phase that left source files behind would be incorrectly treated
+        # as completed after a server restart.
+        if src_dir.exists() and run.modules:
+            known_module_ids = {m["id"] for m in run.modules
+                                if m.get("status") in ("passed", "manually_approved")}
             for sd in src_dir.iterdir():
-                if sd.is_dir() and (sd / "__init__.py").exists():
+                if sd.is_dir() and (sd / "__init__.py").exists() and sd.name in known_module_ids:
                     run.completed_phases.add(f"module_code_{sd.name}")
         if test_dir.exists():
             for tf in test_dir.glob("test_*.py"):
                 mid = tf.stem.replace("test_", "", 1)
                 run.completed_phases.add(f"module_test_{mid}")
+    # Only backfill review if the report exists AND the run's outputs
+    # prove it was written by a successful review phase.
     if ws is not None and "review" not in run.completed_phases:
-        if (Path(ws) / "design" / "review_report.md").exists():
+        report_path = Path(ws) / "design" / "review_report.md"
+        if report_path.exists() and run.outputs.get("review_report") == str(report_path):
             run.completed_phases.add("review")
 
     return run.completed_phases != before

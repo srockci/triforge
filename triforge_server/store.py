@@ -89,6 +89,7 @@ class RunStore:
                 "working_paths": snapshot.get("working_paths") or [],
                 "completed_phases": list(snapshot.get("completed_phases") or []),
                 "project_path": snapshot.get("project_path") or "",
+                "modules": snapshot.get("modules") or [],
             }
             self._db.upsert_run(row)
         except Exception:
@@ -229,6 +230,17 @@ class RunStore:
                 workspace_root = workspace_from_path(project_path)
             else:
                 workspace_root = workspace_for_run(run_id)
+            # Restore modules from DB, falling back to re-loading from disk
+            # so that a server restart doesn't lose the module list.
+            modules = snap.get("modules") or []
+            if not modules and workspace_root is not None:
+                modules_path = Path(workspace_root) / "design" / "modules.json"
+                if modules_path.exists():
+                    try:
+                        raw = json.loads(modules_path.read_text(encoding="utf-8"))
+                        modules = raw.get("modules", [])
+                    except Exception:
+                        pass
             run = RunState(
                 run_id=run_id,
                 requirement=snap.get("requirement", ""),
@@ -245,6 +257,7 @@ class RunStore:
                 working_paths=list(snap.get("working_paths") or []),
                 completed_phases=set(snap.get("completed_phases") or []),
                 project_path=project_path,
+                modules=modules,
             )
             # Backfill any phases the outputs prove finished. If backfill
             # actually changed the set, persist so future restarts don't
