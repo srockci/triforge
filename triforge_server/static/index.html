@@ -4688,7 +4688,7 @@ const App = {
         } else {
           next = idx <= 0 ? 0 : idx - 1;
         }
-        this.selectRun(runs[next].run_id);
+        this.selectRun(runs[next].run_id).catch(e => console.error('selectRun failed:', e));
         return;
       }
 
@@ -5095,7 +5095,7 @@ const App = {
         if (!runId) return;
         const runsTab = document.querySelector('[data-nav="runs"]');
         if (runsTab) runsTab.click();
-        setTimeout(() => this.selectRun(runId), 50);
+        setTimeout(() => this.selectRun(runId).catch(e => console.error('selectRun failed:', e)), 50);
       });
       card.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -5289,7 +5289,7 @@ const App = {
         e.preventDefault();
         const runId = a.dataset.runId;
         document.querySelector('[data-nav="runs"]')?.click();
-        setTimeout(() => this.selectRun(runId), 50);
+        setTimeout(() => this.selectRun(runId).catch(e => console.error('selectRun failed:', e)), 50);
       });
     });
 
@@ -5585,7 +5585,7 @@ const App = {
     container.querySelectorAll('.dash-project-card').forEach(card => {
       card.addEventListener('click', () => {
         const runId = card.dataset.runId;
-        if (runId) this.selectRun(runId);
+        if (runId) this.selectRun(runId).catch(e => console.error('selectRun failed:', e));
       });
     });
   },
@@ -5718,7 +5718,7 @@ const App = {
     document.querySelectorAll(selector).forEach(el => {
       el.addEventListener('click', () => {
         const rid = el.dataset.runId;
-        this.selectRun(rid);
+        this.selectRun(rid).catch(e => console.error('selectRun failed:', e));
       });
     });
   },
@@ -5792,19 +5792,24 @@ const App = {
 
   // ---- Run detail ----
   async selectRun(runId) {
-    this.state.selectedRunId = runId;
-    this.state.events = [];
-    document.querySelector('.main').classList.remove('dashboard-mode');
-    document.getElementById('dashboard-root').style.display = 'none';
-    document.getElementById('empty-detail').style.display = 'none';
-    document.getElementById('detail-root').style.display = 'block';
-    document.getElementById('detail-root').innerHTML = `<div style="padding: 40px; text-align: center; color: var(--text-faint);">${__('Loading...')}</div>`;
-    document.getElementById('live-stream').innerHTML = `<div style="padding: 20px; color: var(--text-faint); font-size: 12px; text-align: center;">${__('Connecting...')}</div>`;
-    document.getElementById('sse-sub').textContent = `${__('Run')} ${runId}`;
-    const bcEl = document.getElementById('detail-bc-runid');
-    if (bcEl) bcEl.textContent = runId;
-    await this.refreshDetail();
-    this.connectSSE(runId);
+    try {
+      this.state.selectedRunId = runId;
+      this.state.events = [];
+      document.querySelector('.main').classList.remove('dashboard-mode');
+      document.getElementById('dashboard-root').style.display = 'none';
+      document.getElementById('empty-detail').style.display = 'none';
+      document.getElementById('detail-root').style.display = 'block';
+      document.getElementById('detail-root').innerHTML = `<div style="padding: 40px; text-align: center; color: var(--text-faint);">${__('Loading...')}</div>`;
+      document.getElementById('live-stream').innerHTML = `<div style="padding: 20px; color: var(--text-faint); font-size: 12px; text-align: center;">${__('Connecting...')}</div>`;
+      document.getElementById('sse-sub').textContent = `${__('Run')} ${runId}`;
+      const bcEl = document.getElementById('detail-bc-runid');
+      if (bcEl) bcEl.textContent = runId;
+      await this.refreshDetail();
+      this.connectSSE(runId);
+    } catch (e) {
+      console.error('selectRun failed:', e);
+      document.getElementById('detail-root').innerHTML = `<div class="select-error"><h3>Failed to load run ${this.escape(runId)}</h3><pre>${this.escape(String(e))}</pre></div>`;
+    }
   },
 
   deselectRun() {
@@ -5833,18 +5838,14 @@ const App = {
       const detail = await this.api('GET', `/board/runs/${this.state.selectedRunId}`);
       this.state.selectedDetail = detail;
       this.renderDetail(detail);
-      // Reconnect SSE if the EventSource was closed or never created.
-      // The browser's native EventSource retries transient errors on its
-      // own, so we only act when the connection is fully gone (sse is null).
-      if (!this.state.sse && this.state.selectedRunId) {
-        this.connectSSE(this.state.selectedRunId);
-      }
+
     } catch (e) {
       console.error('refreshDetail failed:', e);
     }
   },
 
   renderDetail(d) {
+    try {
     const phaseIdx = d.phase_index || 0;
     const totalPhases = 5;
     const statusLabel = this.statusLabel(d.status);
@@ -6250,12 +6251,17 @@ const App = {
         this.downloadFile(btn.dataset.downloadPath);
       });
     });
+    } catch (e) {
+      console.error('renderDetail failed:', e);
+      document.getElementById('detail-root').innerHTML = `<div class="detail-error"><h3>Failed to render run detail</h3><pre>${this.escape(String(e))}</pre></div>`;
+    }
   },
 
   renderFileTree(files) {
     // Build tree
     const tree = {};
     files.forEach(f => {
+      if (!f || typeof f.path !== 'string') return;
       const parts = f.path.split('/');
       let cur = tree;
       parts.forEach((part, i) => {
