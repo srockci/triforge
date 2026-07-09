@@ -730,7 +730,39 @@ async def resume(run_id: str) -> Dict[str, Any]:
     """
     run = engine.get(run_id)
     if not run:
-        raise HTTPException(404, f"unknown run_id: {run_id}")
+        snap = get_store().snapshot(run_id)
+        if not snap:
+            raise HTTPException(404, f"unknown run_id: {run_id}")
+        from .config import workspace_for_run
+        from pathlib import Path
+        ws_root = None
+        pp = (snap.get("project_path") or "").strip()
+        if pp:
+            from .config import workspace_from_path
+            ws_root = workspace_from_path(pp)
+        else:
+            ws_root = workspace_for_run(run_id)
+        run = RunState(
+            run_id=run_id,
+            requirement=snap.get("requirement", ""),
+            phase=snap.get("phase", "design"),
+            status=snap.get("status", "interrupted"),
+            pending_tool=snap.get("pending_tool"),
+            pending_args=snap.get("pending_args"),
+            pending_preview=snap.get("pending_preview") or "",
+            outputs=snap.get("outputs") or {},
+            error=snap.get("error"),
+            created_at=snap.get("created_at") or time.time(),
+            updated_at=time.time(),
+            workspace_root=ws_root,
+            working_paths=list(snap.get("working_paths") or []),
+            completed_phases=set(snap.get("completed_phases") or []),
+            project_path=pp,
+            modules=snap.get("modules") or [],
+            access_token=snap.get("access_token") or "",
+            resume_event=asyncio.Event(),
+        )
+        engine.runs[run.run_id] = run
     if run.status not in ("interrupted", "failed", "cancelled"):
         raise HTTPException(409,
             f"can only resume interrupted / failed / cancelled runs (status={run.status})")
