@@ -5791,6 +5791,8 @@ const App = {
   // ---- Run detail ----
   async selectRun(runId) {
     try {
+      console.log('[DIAG] selectRun start:', runId);
+      console.time('selectRun');
       this.state.selectedRunId = runId;
       this.state.events = [];
       document.querySelector('.main').classList.remove('dashboard-mode');
@@ -5803,7 +5805,10 @@ const App = {
       const bcEl = document.getElementById('detail-bc-runid');
       if (bcEl) bcEl.textContent = runId;
       await this.refreshDetail();
+      console.time('connectSSE');
       this.connectSSE(runId);
+      console.timeEnd('connectSSE');
+      console.timeEnd('selectRun');
     } catch (e) {
       console.error('selectRun failed:', e);
       document.getElementById('detail-root').innerHTML = `<div class="select-error"><h3>Failed to load run ${this.escape(runId)}</h3><pre>${this.escape(String(e))}</pre></div>`;
@@ -5833,12 +5838,19 @@ const App = {
   async refreshDetail() {
     if (!this.state.selectedRunId) return;
     try {
+      console.time('api_get_run');
       const detail = await this.api('GET', `/board/runs/${this.state.selectedRunId}`);
+      console.timeEnd('api_get_run');
+      console.log('[DIAG] API response keys:', Object.keys(detail).join(','));
+      console.log('[DIAG] files count:', (detail.files || []).length);
+      console.log('[DIAG] events count:', (detail.events || []).length);
       this.state.selectedDetail = detail;
+      console.time('renderDetail');
       this.renderDetail(detail);
-
+      console.timeEnd('renderDetail');
     } catch (e) {
       console.error('refreshDetail failed:', e);
+      document.getElementById('detail-root').innerHTML = `<div class="select-error"><h3>API Error</h3><pre>${this.escape(String(e))}</pre></div>`;
     }
   },
 

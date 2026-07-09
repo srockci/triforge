@@ -139,11 +139,17 @@ def _is_hidden(rel_path: str) -> bool:
 
 def _list_workspace_files(run_id: str) -> List[Dict[str, Any]]:
     """List files under the per-run workspace for the file tree panel."""
+    import time
+    t0 = time.time()
     ws = _run_workspace(run_id)
     out: List[Dict[str, Any]] = []
     if not ws.exists():
         return out
-    for p in sorted(ws.rglob("*")):
+    it = sorted(ws.rglob("*"))
+    total_items = 0
+    file_count = 0
+    for p in it:
+        total_items += 1
         if p.is_file():
             rel = str(p.relative_to(ws)).replace("\\", "/")
             if _is_hidden(rel):
@@ -157,6 +163,9 @@ def _list_workspace_files(run_id: str) -> List[Dict[str, Any]]:
                 "size": size,
                 "modified": p.stat().st_mtime,
             })
+            file_count += 1
+    t1 = time.time()
+    print(f"[DIAG] _list_workspace_files {run_id}: ws={ws} items={total_items} files={file_count} elapsed={t1-t0:.3f}s")
     return out
 
 
@@ -521,6 +530,8 @@ def _estimate_progress(run: Any) -> float:
 # -----------------------------------------------------------------------
 @router.get("/runs/{run_id}")
 async def get_run(run_id: str) -> Dict[str, Any]:
+    import time
+    t0 = time.time()
     run = engine.get(run_id)
     if run:
         snap = _snapshot_for_board(run)
@@ -529,7 +540,9 @@ async def get_run(run_id: str) -> Dict[str, Any]:
     if not snap:
         raise HTTPException(404, f"unknown run_id: {run_id}")
 
+    t1 = time.time()
     files = _list_workspace_files(run_id)
+    t2 = time.time()
 
     pending = None
     if run and run.status == "awaiting_approval":
@@ -539,11 +552,12 @@ async def get_run(run_id: str) -> Dict[str, Any]:
             "preview": run.pending_preview,
         }
 
-    return {
-        **snap,
-        "files": files,
-        "pending": pending,
-    }
+    resp = {**snap, "files": files, "pending": pending}
+    import json
+    resp_size = len(json.dumps(resp))
+    print(f"[DIAG] get_run {run_id}: snap={t1-t0:.3f}s list_files={t2-t1:.3f}s files={len(files)} resp_size={resp_size}")
+
+    return resp
 
 
 # -----------------------------------------------------------------------
