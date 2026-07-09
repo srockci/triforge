@@ -616,7 +616,7 @@ async def run_pipeline_async(run: RunState, settings: Optional[Dict[str, Any]] =
                 _emit("phase_start", phase=f"code_{mid}", agent="module_code",
                       model=roles.get("module_code", {}).get("model", ""))
                 code_agent, saved_steps = make_agent_with_resume(
-                    "module_code", ws, settings, run.run_id, f"code_{mid}")
+                    "module_code", ws, settings)
                 remaining = code_max_steps - saved_steps
                 if remaining <= 0:
                     run.status = "failed"
