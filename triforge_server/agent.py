@@ -376,21 +376,19 @@ class Agent:
                     continue
                 continue
 
-            # Filter out malformed tool_calls before they enter history.
-            # When the assistant message with tool_calls is appended first
-            # and THEN the malformed check adds a tool result, the LLM sees
-            # its own empty-args call in history and gets confused — causing
-            # it to repeat the same empty-args write_file indefinitely.
+            # Preserve original tool_call IDs from the API so DeepSeek can
+            # match tool results to their corresponding tool calls.
             valid_tcs: list[Any] = []
+            malformed_results: list[dict] = []
             for tc in tool_calls_raw:
                 name = tc.function.name
                 args = _safe_json(tc.function.arguments)
                 if not name or not isinstance(args, dict) or not args:
-                    log.warning("skipping malformed tool_call name=%r args=%r",
-                                name, args)
-                    self.history.append({
+                    log.warning("skipping malformed tool_call id=%s name=%r args=%r",
+                                tc.id, name, args)
+                    malformed_results.append({
                         "role": "tool",
-                        "tool_call_id": f"call_{tool_calls_raw.index(tc)}",
+                        "tool_call_id": tc.id,
                         "content": ("[system] Your tool call was malformed "
                                     "(empty or missing arguments). Please "
                                     "re-issue with the required fields."),
@@ -401,28 +399,27 @@ class Agent:
                 continue
             tool_calls_raw = valid_tcs
 
-            tc_dicts = [
-                {"name": tc.function.name, "arguments": _safe_json(tc.function.arguments)}
-                for tc in tool_calls_raw
-            ]
             assistant_msg = {
                 "role": "assistant",
                 "content": msg.content or "",
                 "tool_calls": [
                     {
-                        "id": f"call_{i}",
+                        "id": tc.id,
                         "type": "function",
                         "function": {
-                            "name": tc["name"],
-                            "arguments": json.dumps(tc["arguments"], ensure_ascii=False),
+                            "name": tc.function.name,
+                            "arguments": tc.function.arguments,
                         },
                     }
-                    for i, tc in enumerate(tc_dicts)
+                    for tc in tool_calls_raw
                 ],
             }
             if reasoning_content:
                 assistant_msg["reasoning_content"] = reasoning_content
             self.history.append(assistant_msg)
+            # Append malformed results after the assistant message so the
+            # API receives a valid assistant->tool-results sequence.
+            self.history.extend(malformed_results)
 
             # Process each tool call. Special handling: finish short-circuits,
             # other tools yield ToolCallEvent and wait for next iteration to
@@ -435,7 +432,7 @@ class Agent:
                     # Record finish tool result for cleanliness, then signal done.
                     self.history.append({
                         "role": "tool",
-                        "tool_call_id": f"call_{tool_calls_raw.index(tc)}",
+                        "tool_call_id": tc.id,
                         "content": self._exec_tool(name, args),
                     })
                     yield FinishEvent(summary=args.get("summary", ""), steps=steps_used)
@@ -449,7 +446,7 @@ class Agent:
                     result = self._exec_tool(name, args)
                     self.history.append({
                         "role": "tool",
-                        "tool_call_id": f"call_{tool_calls_raw.index(tc)}",
+                        "tool_call_id": tc.id,
                         "content": result,
                     })
                     continue
@@ -465,7 +462,7 @@ class Agent:
                 result = self._exec_tool(name, args)
                 self.history.append({
                     "role": "tool",
-                    "tool_call_id": f"call_{tool_calls_raw.index(tc)}",
+                    "tool_call_id": tc.id,
                     "content": result,
                 })
 
