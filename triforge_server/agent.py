@@ -330,25 +330,13 @@ class Agent:
             # extra_body so the OpenAI SDK passes them through verbatim
             # without complaining about unknown standard params.
             messages = list(self.history)
-            # Inject step-awareness so the agent knows its budget
-            # and can wrap up before the hard stop. Messages are
-            # transient (not persisted to history) to avoid confusing
-            # the agent on resume.
-            if remaining <= 3 and step_idx > 0:
-                if remaining == 1:
-                    messages.append({
-                        "role": "user",
-                        "content": "[system] CRITICAL: LAST STEP. Write ALL remaining files immediately. "
-                                   "Only call finish() after every required file has been written. "
-                                   "Incomplete work will be treated as a failure."
-                    })
-                else:
-                    messages.append({
-                        "role": "user",
-                        "content": f"[system] {remaining} steps left. STOP reading files and START writing. "
-                                   f"You must write all required files NOW. "
-                                   f"Call finish() only after all files are written — not before."
-                    })
+            # On the very last step, inject a short critical nudge.
+            # Skip intermediate reminders to avoid context bloat.
+            if remaining == 1 and step_idx > 0:
+                messages.append({
+                    "role": "user",
+                    "content": "[system] LAST STEP. Write all remaining files NOW, then call finish()."
+                })
             call_kwargs = dict(
                 model=self.model,
                 messages=messages,
