@@ -334,14 +334,16 @@ class Agent:
                 if remaining == 1:
                     messages.append({
                         "role": "user",
-                        "content": "[system] CRITICAL: You have 1 step remaining. You MUST call finish() this step. "
-                                   "Call finish() now even if your work is partial or incomplete."
+                        "content": "[system] CRITICAL: This is your LAST step. You MUST complete your remaining "
+                                   "work and write all required files NOW, then call finish(). "
+                                   "Do NOT call finish() without completing the task — incomplete work will be treated as a failure."
                     })
                 else:
                     messages.append({
                         "role": "user",
-                        "content": f"[system] You have {remaining} steps remaining in your budget. "
-                                   f"Please wrap up your current work and call finish() soon."
+                        "content": f"[system] You have {remaining} steps remaining. Speed up and finish the "
+                                   f"required work — write all remaining files first, then call finish(). "
+                                   f"Do NOT call finish() before the work is complete."
                     })
             call_kwargs = dict(
                 model=self.model,

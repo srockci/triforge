@@ -521,7 +521,11 @@ async def run_pipeline_async(run: RunState, settings: Optional[Dict[str, Any]] =
             try:
                 raw = json.loads(modules_path.read_text(encoding="utf-8"))
                 run.modules = _validate_modules_json(raw)
-            except (FileNotFoundError, json.JSONDecodeError, ValueError) as e:
+            except FileNotFoundError:
+                run.status = "failed"
+                run.error = (f"Design phase finished without writing design/modules.json. "
+                             f"The agent called finish() before completing the required output.")
+            except (json.JSONDecodeError, ValueError) as e:
                 run.status = "failed"
                 run.error = f"modules.json validation failed: {e}"
                 _emit("run_end", status="failed", error=run.error)
