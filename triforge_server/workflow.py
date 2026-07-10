@@ -1082,6 +1082,17 @@ async def _drive_agent(
                 pass  # fall through to tool call handling
 
         if isinstance(ev, FailedEvent):
+            # Auto-extend once when agent exhausts steps without finishing
+            if "max_steps" in (ev.error or "") and not gen_state.get("_extended"):
+                extend = max(max_steps // 2, 4)
+                agent.history.append({
+                    "role": "user",
+                    "content": f"[system] Used all {max_steps} steps without finishing. "
+                               f"Auto-extending by {extend} steps — complete the work NOW.",
+                })
+                gen_state["_extended"] = True
+                gen_state["gen"] = agent.step(None, extend)
+                continue
             try:
                 ev_obj = BoardEvent(run_id=run.run_id, kind="agent_error",
                                     data={"error": ev.error, "phase": run.phase})
