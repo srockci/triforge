@@ -1075,15 +1075,8 @@ async def _drive_agent(
                 gen_state["ev"] = ev
 
             # Fall through to handle the non-usage event
-            if isinstance(ev, FailedEvent):
-                try:
-                    ev_obj = BoardEvent(run_id=run.run_id, kind="agent_error",
-                                        data={"error": ev.error, "phase": run.phase})
-                    get_store().append(ev_obj); bus.emit(ev_obj)
-                except Exception:
-                    pass
-                return {"ok": False, "error": ev.error}
-
+            # NOTE: FailedEvent is NOT handled here — it falls through to the
+            # standalone FailedEvent handler below which includes auto-extension.
             if isinstance(ev, FinishEvent):
                 try:
                     ev_obj = BoardEvent(run_id=run.run_id, kind="agent_finish",
