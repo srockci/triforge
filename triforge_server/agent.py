@@ -316,8 +316,9 @@ class Agent:
             # Inform the agent of its step budget at session start
             self.history.append({
                 "role": "user",
-                "content": f"[system] You have a budget of {max_steps} steps for this session. "
-                           f"Plan your work accordingly and call finish() before exhausting this budget."
+                "content": f"[system] Step budget: {max_steps} steps. Be efficient — batch read_file calls "
+                           f"in a single response, and start writing output files early. "
+                           f"Do NOT call finish() until all required output files are written."
             })
 
         steps_used = 0
@@ -337,16 +338,16 @@ class Agent:
                 if remaining == 1:
                     messages.append({
                         "role": "user",
-                        "content": "[system] CRITICAL: This is your LAST step. You MUST complete your remaining "
-                                   "work and write all required files NOW, then call finish(). "
-                                   "Do NOT call finish() without completing the task — incomplete work will be treated as a failure."
+                        "content": "[system] CRITICAL: LAST STEP. Write ALL remaining files immediately. "
+                                   "Only call finish() after every required file has been written. "
+                                   "Incomplete work will be treated as a failure."
                     })
                 else:
                     messages.append({
                         "role": "user",
-                        "content": f"[system] You have {remaining} steps remaining. Speed up and finish the "
-                                   f"required work — write all remaining files first, then call finish(). "
-                                   f"Do NOT call finish() before the work is complete."
+                        "content": f"[system] {remaining} steps left. STOP reading files and START writing. "
+                                   f"You must write all required files NOW. "
+                                   f"Call finish() only after all files are written — not before."
                     })
             call_kwargs = dict(
                 model=self.model,
