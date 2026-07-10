@@ -233,8 +233,11 @@ class Agent:
                         f"directory. write_file must target a file, not a "
                         f"directory.")
             p.parent.mkdir(parents=True, exist_ok=True)
-            p.write_text(args.get("content", ""), encoding="utf-8")
-            return f"[OK] wrote {len(args.get('content', ''))} bytes to {rel}"
+            content_val = args.get("content", "") or ""
+            if not isinstance(content_val, str):
+                content_val = json.dumps(content_val, ensure_ascii=False)
+            p.write_text(content_val, encoding="utf-8")
+            return f"[OK] wrote {len(content_val)} bytes to {rel}"
         if name == "finish":
             return f"[FINISH] {args.get('summary', '')}"
         return f"[ERROR] unknown tool: {name}"
@@ -478,7 +481,10 @@ class Agent:
                     continue
 
                 # write_file: yield for approval, then resume
-                preview = f"write_file: {args.get('path', '?')}\n\n{(args.get('content', '') or '')[:600]}"
+                content_preview = args.get('content', '') or ''
+                if not isinstance(content_preview, str):
+                    content_preview = json.dumps(content_preview, ensure_ascii=False)
+                preview = f"write_file: {args.get('path', '?')}\n\n{content_preview[:600]}"
                 yielded = yield ToolCallEvent(tool=name, args=args, preview=preview)
                 # After caller decides: append tool result and continue.
                 # 'yielded' will be the value sent via gen.send(decision) —
