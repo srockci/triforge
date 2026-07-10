@@ -181,6 +181,8 @@ class Agent:
         self.total_tokens_in: int = 0
         self.total_tokens_out: int = 0
         self.total_cost: float = 0.0
+        # File write events (drained by workflow.py and emitted as BoardEvents)
+        self.file_write_events: List[Dict[str, Any]] = []
 
     def save_state_to(self, run_id: str, phase: str, store: Any, steps_used: int) -> None:
         """Persist current history + step count for resume."""
@@ -236,7 +238,22 @@ class Agent:
             content_val = args.get("content", "") or ""
             if not isinstance(content_val, str):
                 content_val = json.dumps(content_val, ensure_ascii=False)
+            # Compute diff stats before writing
+            old_lines = []
+            if p.exists():
+                try:
+                    old_lines = p.read_text(encoding="utf-8", errors="replace").splitlines(keepends=True)
+                except Exception:
+                    old_lines = []
+            new_lines = content_val.splitlines(keepends=True)
+            added = sum(1 for l in new_lines if l not in old_lines)
+            removed = sum(1 for l in old_lines if l not in new_lines)
             p.write_text(content_val, encoding="utf-8")
+            self.file_write_events.append({
+                "path": rel,
+                "added_lines": added,
+                "removed_lines": removed,
+            })
             return f"[OK] wrote {len(content_val)} bytes to {rel}"
         if name == "finish":
             return f"[FINISH] {args.get('summary', '')}"

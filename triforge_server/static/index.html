@@ -1146,6 +1146,38 @@ input:checked + .slider:before {
   .file-row .fsize { color: var(--text-faint); font-size: 11px; }
   .file-row .ftag-sm { font-size: 10px; padding: 1px 6px; border-radius: 3px; font-weight: 500; }
 
+  /* ============== Right column stats bar ============== */
+  .right-stats {
+    display: flex;
+    gap: 0;
+    padding: 0 12px;
+    margin: 6px 0 2px;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+  .right-stats .rs-item {
+    flex: 1;
+    text-align: center;
+    border-right: 1px solid var(--divider);
+    padding: 4px 2px;
+  }
+  .right-stats .rs-item:last-child { border-right: none; }
+  .right-stats .rs-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-mute);
+  }
+  .right-stats .rs-value {
+    font-weight: 600;
+    color: var(--text);
+    font-size: 12px;
+  }
+  .right-stats .rs-sub {
+    font-size: 10px;
+    color: var(--text-faint);
+  }
+
   /* ============== Event Stream (improved) ============== */
   .live-stream { padding: 4px 0; }
   .live-day {
@@ -3169,6 +3201,8 @@ input:checked + .slider:before {
       </div>
       <div class="col-subtitle" id="sse-sub" data-i18n="No run selected">No run selected</div>
     </div>
+
+    <div class="right-stats" id="right-stats" style="display:none;"></div>
 
     <div class="live-stream" id="live-stream">
       <div style="padding: 32px; text-align: center; color: var(--text-faint); font-size: 12px;" data-i18n="Live events will stream here when a run is selected.">
@@ -5795,6 +5829,7 @@ const App = {
       console.time('selectRun');
       this.state.selectedRunId = runId;
       this.state.events = [];
+      this.state._stats = null;
       document.querySelector('.main').classList.remove('dashboard-mode');
       document.getElementById('dashboard-root').style.display = 'none';
       document.getElementById('empty-detail').style.display = 'none';
@@ -5819,6 +5854,7 @@ const App = {
     this.state.selectedRunId = null;
     this.state.selectedDetail = null;
     this.state.events = [];
+    this.state._stats = null;
     if (this.state.sse) {
       this.state.sse.close();
       this.state.sse = null;
@@ -5828,6 +5864,7 @@ const App = {
     document.getElementById('empty-detail').style.display = 'none';
     document.getElementById('detail-root').style.display = 'none';
     document.getElementById('detail-root').innerHTML = '';
+    document.getElementById('right-stats') && (document.getElementById('right-stats').style.display = 'none');
     document.getElementById('live-stream').innerHTML = `<div style="padding: 32px; text-align: center; color: var(--text-faint); font-size: 12px;">${__('Live events will stream here when a run is selected.')}</div>`;
     document.getElementById('sse-sub').textContent = __('No run selected');
     // Re-render dashboard when coming back
@@ -5848,6 +5885,7 @@ const App = {
       console.time('renderDetail');
       this.renderDetail(detail);
       console.timeEnd('renderDetail');
+      this._renderStats();
     } catch (e) {
       console.error('refreshDetail failed:', e);
       document.getElementById('detail-root').innerHTML = `<div class="select-error"><h3>API Error</h3><pre>${this.escape(String(e))}</pre></div>`;
@@ -6024,13 +6062,6 @@ const App = {
     const filesHTML = allFiles.length === 0 ? `<div style="color: var(--text-faint); font-size: 12px; padding: 8px;">${__('No files yet')}</div>` :
       '<div class="files-card">' + this.renderFileTree(allFiles) + '</div>';
 
-    // Stat tiles — real token usage from API
-    const cost = d.cost_estimate ?? 0;
-    const tokensIn = d.tokens_in || 0;
-    const tokensOut = d.tokens_out || 0;
-    const totalTokens = tokensIn + tokensOut;
-    const elapsed = this.formatElapsed(d.updated_at, d.created_at);
-
     // Action buttons based on run status
     const isTerminal = d.status === 'completed' || d.status === 'failed' || d.status === 'cancelled';
     const isActive = d.status === 'running' || d.status === 'awaiting_approval';
@@ -6141,40 +6172,6 @@ const App = {
                 </span>
               </span>`
             : ''}
-        </div>
-        <div class="stat-grid">
-          <div class="stat-tile">
-            <div class="label">Cost</div>
-            <div class="value num">&yen;${cost.toFixed(4)}</div>
-            <div class="sub">${totalTokens > 0 ? 'actual' : 'estimate'}</div>
-          </div>
-          <div class="stat-tile">
-            <div class="label">Tokens</div>
-            <div class="value num">${totalTokens > 0 ? totalTokens.toLocaleString() : '—'}</div>
-            <div class="sub">${tokensIn.toLocaleString()} in / ${tokensOut.toLocaleString()} out</div>
-          </div>
-          ${this.isTokenPlanRun(d) ? `
-          <div class="stat-tile">
-            <div class="label">Window Tokens</div>
-            <div class="value num">${(d.window_tokens_in || 0) + (d.window_tokens_out || 0) > 0 ? ((d.window_tokens_in || 0) + (d.window_tokens_out || 0)).toLocaleString() : '—'}</div>
-            <div class="sub">${(d.window_tokens_in || 0).toLocaleString()} in / ${(d.window_tokens_out || 0).toLocaleString()} out (current window)</div>
-          </div>
-          <div class="stat-tile">
-            <div class="label">Project Tokens</div>
-            <div class="value num">${(d.project_tokens_in || 0) + (d.project_tokens_out || 0) > 0 ? ((d.project_tokens_in || 0) + (d.project_tokens_out || 0)).toLocaleString() : '—'}</div>
-            <div class="sub">${(d.project_tokens_in || 0).toLocaleString()} in / ${(d.project_tokens_out || 0).toLocaleString()} out (project total)</div>
-          </div>
-          ` : ''}
-          <div class="stat-tile">
-            <div class="label">Files</div>
-            <div class="value num">${allFiles.length}</div>
-            <div class="sub">in workspace</div>
-          </div>
-          <div class="stat-tile">
-            <div class="label">Elapsed</div>
-            <div class="value">${elapsed || '—'}</div>
-            <div class="sub">${d.status === 'completed' ? 'total' : 'so far'}</div>
-          </div>
         </div>
         <div class="seg-bar">
           <div class="bar">
@@ -6404,13 +6401,15 @@ const App = {
     };
     es.onmessage = (e) => this.handleSSEEvent('message', JSON.parse(e.data));
 
-    // Listen to specific event types
+    // Listen to specific event types (no token_usage — handled via separate listener)
     ['run_start', 'phase_start', 'phase_end', 'tool_call', 'agent_finish',
      'agent_error', 'approval_requested', 'approval_resolved', 'run_end',
-     'token_usage', 'run_resumed']
+     'file_change', 'run_resumed']
     .forEach(kind => {
       es.addEventListener(kind, (e) => this.handleSSEEvent(kind, JSON.parse(e.data)));
     });
+    // token_usage updates the stats bar only, not the live stream
+    es.addEventListener('token_usage', (e) => this._updateStats(JSON.parse(e.data)));
   },
 
   handleSSEEvent(kind, payload) {
@@ -6420,7 +6419,7 @@ const App = {
 
   _scheduleEventRender(kind) {
     const needsRefresh = ['approval_requested', 'approval_resolved', 'phase_start',
-         'phase_end', 'run_end', 'tool_call', 'token_usage',
+         'phase_end', 'run_end', 'tool_call', 'file_change',
          'iteration_started', 'iteration_pending', 'iteration_completed',
          'run_resumed'].includes(kind);
     if (this._eventRenderTimer) clearTimeout(this._eventRenderTimer);
@@ -6505,9 +6504,10 @@ const App = {
     if (kind === 'run_end') {
       return `<div class="evt"><span class="ts">${time}</span><div class="evt-icon ${data.status === 'completed' ? 'ei-agent' : 'ei-error'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="20 6 9 17 4 12"/></svg></div><div class="body"><span class="who">workflow</span> <span class="verb">${this.escape(data.status)}</span> ${data.error ? `<span class="preview">${this.escape(data.error)}</span>` : ''}</div></div>`;
     }
-    if (kind === 'token_usage') {
-      const total = (data.tokens_in || 0) + (data.tokens_out || 0);
-      return `<div class="evt stats"><span class="ts">${time}</span><div class="evt-icon ei-stats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="color:var(--text-mute);"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg></div><div class="body"><span class="who">tokens</span> <span class="verb">+${total.toLocaleString()}</span> <span class="preview">${(data.tokens_in||0).toLocaleString()} in / ${(data.tokens_out||0).toLocaleString()} out · ¥${(data.cost||0).toFixed(3)}</span></div></div>`;
+    if (kind === 'file_change') {
+      const plus = data.added_lines || 0;
+      const minus = data.removed_lines || 0;
+      return `<div class="evt"><span class="ts">${time}</span><div class="evt-icon ei-write"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div><div class="body"><span class="who">file</span> <span class="verb">${this.escape(data.path || '?')}</span> <span class="preview"><span style="color:var(--green)">+${plus}</span> <span style="color:var(--red)">-${minus}</span> lines</span></div></div>`;
     }
     if (kind === 'agent_error') {
       return `<div class="evt error"><span class="ts">${time}</span><div class="evt-icon ei-error"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div><div class="body"><span class="who">${this.escape(data.phase || 'agent')}</span> <span class="verb">error</span> <span class="preview">${this.escape(data.error || '')}</span></div></div>`;
@@ -6517,6 +6517,48 @@ const App = {
     }
     // fallback
     return `<div class="evt"><span class="ts">${time}</span><div class="evt-icon ei-system"></div><div class="body"><span class="who">${this.escape(kind)}</span> <span class="verb">event</span></div></div>`;
+  },
+
+  _updateStats(data) {
+    if (!this.state._stats) {
+      const d = this.state.selectedDetail;
+      this.state._stats = {
+        tokens_in: (d && d.tokens_in) || 0,
+        tokens_out: (d && d.tokens_out) || 0,
+        cost: (d && d.cost_estimate) || 0,
+      };
+    }
+    const s = this.state._stats;
+    s.tokens_in += data.tokens_in || 0;
+    s.tokens_out += data.tokens_out || 0;
+    s.cost += data.cost || 0;
+    this._renderStats();
+  },
+
+  _renderStats() {
+    const el = document.getElementById('right-stats');
+    if (!el) return;
+    const d = this.state.selectedDetail;
+    if (!d) { el.style.display = 'none'; return; }
+    if (!this.state._stats) {
+      this.state._stats = {
+        tokens_in: (d && d.tokens_in) || 0,
+        tokens_out: (d && d.tokens_out) || 0,
+        cost: (d && d.cost_estimate) || 0,
+      };
+    }
+    const s = this.state._stats;
+    const total = s.tokens_in + s.tokens_out;
+    const allFiles = (d.files || []).length;
+    const elapsed = this.formatElapsed(d.updated_at, d.created_at) || '\u2014';
+    const costStr = total > 0 ? `\u00a5${s.cost.toFixed(4)}` : '\u2014';
+    el.style.display = 'flex';
+    el.innerHTML = `
+      <div class="rs-item"><div class="rs-label">Cost</div><div class="rs-value">${costStr}</div></div>
+      <div class="rs-item"><div class="rs-label">Tokens</div><div class="rs-value">${total > 0 ? total.toLocaleString() : '\u2014'}</div><div class="rs-sub">${s.tokens_in.toLocaleString()} in / ${s.tokens_out.toLocaleString()} out</div></div>
+      <div class="rs-item"><div class="rs-label">Files</div><div class="rs-value">${allFiles}</div></div>
+      <div class="rs-item"><div class="rs-label">Elapsed</div><div class="rs-value">${elapsed}</div></div>
+    `;
   },
 
   setSSEStatus(connected, label) {

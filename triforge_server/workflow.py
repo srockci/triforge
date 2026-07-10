@@ -1019,8 +1019,24 @@ async def _drive_agent(
         except Exception:
             pass  # best-effort — don't let DB failure break the LLM flow
 
+    def _drain_file_events():
+        """Emit file_change BoardEvents accumulated by the agent."""
+        if not agent.file_write_events:
+            return
+        events = agent.file_write_events[:]
+        agent.file_write_events.clear()
+        for fwe in events:
+            try:
+                bev = BoardEvent(run_id=run.run_id, kind="file_change", data=fwe)
+                get_store().append(bev); bus.emit(bev)
+            except Exception:
+                pass
+
     # Main async loop
     while True:
+        # Drain file write events from the agent
+        _drain_file_events()
+
         # Check cancellation
         if run.cancelled:
             return {"ok": False, "error": "cancelled by user"}
