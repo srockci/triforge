@@ -310,17 +310,42 @@ class Agent:
         """
         if user_message is not None:
             self.history.append({"role": "user", "content": user_message})
+            # Inform the agent of its step budget at session start
+            self.history.append({
+                "role": "user",
+                "content": f"[system] You have a budget of {max_steps} steps for this session. "
+                           f"Plan your work accordingly and call finish() before exhausting this budget."
+            })
 
         steps_used = 0
         for step_idx in range(max_steps):
             steps_used = step_idx + 1
+            remaining = max_steps - step_idx
 
             # Build per-call kwargs. Provider-specific knobs go in
             # extra_body so the OpenAI SDK passes them through verbatim
             # without complaining about unknown standard params.
+            messages = list(self.history)
+            # Inject step-awareness so the agent knows its budget
+            # and can wrap up before the hard stop. Messages are
+            # transient (not persisted to history) to avoid confusing
+            # the agent on resume.
+            if remaining <= 3 and step_idx > 0:
+                if remaining == 1:
+                    messages.append({
+                        "role": "user",
+                        "content": "[system] CRITICAL: You have 1 step remaining. You MUST call finish() this step. "
+                                   "Call finish() now even if your work is partial or incomplete."
+                    })
+                else:
+                    messages.append({
+                        "role": "user",
+                        "content": f"[system] You have {remaining} steps remaining in your budget. "
+                                   f"Please wrap up your current work and call finish() soon."
+                    })
             call_kwargs = dict(
                 model=self.model,
-                messages=list(self.history),
+                messages=messages,
                 tools=TOOL_SCHEMAS,
                 tool_choice="auto",
                 max_tokens=self.max_tokens,
