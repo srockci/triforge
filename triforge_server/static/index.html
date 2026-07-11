@@ -6523,7 +6523,8 @@ const App = {
     return `<div class="evt"><span class="ts">${time}</span><div class="evt-icon ei-system"></div><div class="body"><span class="who">${this.escape(kind)}</span> <span class="verb">event</span></div></div>`;
   },
 
-  _updateStats(data) {
+  _updateStats(payload) {
+    const inner = payload.data || {};
     if (!this.state._stats) {
       const d = this.state.selectedDetail;
       this.state._stats = {
@@ -6533,9 +6534,9 @@ const App = {
       };
     }
     const s = this.state._stats;
-    s.tokens_in += data.tokens_in || 0;
-    s.tokens_out += data.tokens_out || 0;
-    s.cost += data.cost || 0;
+    s.tokens_in += inner.tokens_in || 0;
+    s.tokens_out += inner.tokens_out || 0;
+    s.cost += inner.cost || 0;
     this._renderStats();
   },
 
