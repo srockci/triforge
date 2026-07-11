@@ -6403,8 +6403,8 @@ const App = {
 
     // Listen to specific event types (no token_usage — handled via separate listener)
     ['run_start', 'phase_start', 'phase_end', 'tool_call', 'agent_finish',
-     'agent_error', 'approval_requested', 'approval_resolved', 'run_end',
-     'file_change', 'run_resumed']
+     'agent_error', 'agent_exhausted', 'approval_requested', 'approval_resolved',
+     'run_end', 'file_change', 'run_resumed']
     .forEach(kind => {
       es.addEventListener(kind, (e) => this.handleSSEEvent(kind, JSON.parse(e.data)));
     });
@@ -6420,6 +6420,7 @@ const App = {
   _scheduleEventRender(kind) {
     const needsRefresh = ['approval_requested', 'approval_resolved', 'phase_start',
          'phase_end', 'run_end', 'tool_call', 'file_change',
+         'agent_exhausted',
          'iteration_started', 'iteration_pending', 'iteration_completed',
          'run_resumed'].includes(kind);
     if (this._eventRenderTimer) clearTimeout(this._eventRenderTimer);
@@ -6511,6 +6512,9 @@ const App = {
     }
     if (kind === 'agent_error') {
       return `<div class="evt error"><span class="ts">${time}</span><div class="evt-icon ei-error"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div><div class="body"><span class="who">${this.escape(data.phase || 'agent')}</span> <span class="verb">error</span> <span class="preview">${this.escape(data.error || '')}</span></div></div>`;
+    }
+    if (kind === 'agent_exhausted') {
+      return `<div class="evt error"><span class="ts">${time}</span><div class="evt-icon ei-error"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div><div class="body"><span class="who">${this.escape(data.phase || 'agent')}</span> <span class="verb">exhausted</span> <span class="preview">${this.escape(data.error || '')} (extended ${data.extended_count}x, used ${(data.total_steps_used||0).toLocaleString()} total steps)</span></div></div>`;
     }
     if (kind === 'run_resumed') {
       return `<div class="evt system"><span class="ts">${time}</span><div class="evt-icon ei-system"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></div><div class="body"><span class="who">system</span> <span class="verb">pipeline restarted</span> <span class="preview">${this.escape(data.reason || '')} · phase ${this.escape(data.phase || '')}</span></div></div>`;

@@ -1091,17 +1091,36 @@ async def _drive_agent(
                 pass  # fall through to tool call handling
 
         if isinstance(ev, FailedEvent):
-            # Auto-extend once when agent exhausts steps without finishing
-            if "max_steps" in (ev.error or "") and not gen_state.get("_extended"):
-                extend = max(max_steps // 2, 4)
-                agent.history.append({
-                    "role": "user",
-                    "content": f"[system] Used all {max_steps} steps without finishing. "
-                               f"Auto-extending by {extend} steps — complete the work NOW.",
-                })
-                gen_state["_extended"] = True
-                gen_state["gen"] = agent.step(None, extend)
-                continue
+            if "max_steps" in (ev.error or ""):
+                extended = gen_state.get("_extended", 0)
+                max_auto = get_settings().pipeline_params.get("module", {}).get("max_auto_extends", 2)
+                if extended < max_auto:
+                    if extended == 0:
+                        ratio, min_steps = 0.5, 4
+                        msg = (f"[system] Used all {max_steps} steps without finishing. "
+                               f"Auto-extending by {int(max_steps*ratio)} steps — complete the work NOW.")
+                    else:
+                        ratio, min_steps = 0.25, 2
+                        prev = int(max_steps * (0.5 if extended == 1 else 0.75))
+                        msg = (f"[system] CRITICAL: You've used {max_steps}+{prev} steps and still "
+                               f"haven't finished. Final extension: {int(max_steps*ratio)} more steps. "
+                               f"You MUST call finish() NOW.")
+                    extend = max(int(max_steps * ratio), min_steps)
+                    agent.history.append({"role": "user", "content": msg})
+                    gen_state["_extended"] = extended + 1
+                    gen_state["gen"] = agent.step(None, extend)
+                    continue
+                else:
+                    try:
+                        ev_obj = BoardEvent(run_id=run.run_id, kind="agent_exhausted",
+                                            data={"phase": run.phase,
+                                                  "original_steps": max_steps,
+                                                  "total_steps_used": int(max_steps * (1 + 0.5 * extended)),
+                                                  "extended_count": extended,
+                                                  "error": ev.error})
+                        get_store().append(ev_obj); bus.emit(ev_obj)
+                    except Exception:
+                        pass
             try:
                 ev_obj = BoardEvent(run_id=run.run_id, kind="agent_error",
                                     data={"error": ev.error, "phase": run.phase})
