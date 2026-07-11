@@ -429,6 +429,35 @@ class Agent:
                 else:
                     valid_tcs.append(tc)
             if not valid_tcs:
+                # All tool calls were malformed — record the assistant message
+                # with proper tool call IDs, then append error tool results so
+                # the tool call chain stays valid (required by DeepSeek).
+                assistant_msg = {
+                    "role": "assistant",
+                    "content": msg.content or "",
+                    "tool_calls": [
+                        {
+                            "id": str(tc.id) if tc.id else f"call_{i}",
+                            "type": "function",
+                            "function": {
+                                "name": tc.function.name,
+                                "arguments": _ensure_str(tc.function.arguments),
+                            },
+                        }
+                        for i, tc in enumerate(tool_calls_raw)
+                    ],
+                }
+                if reasoning_content:
+                    assistant_msg["reasoning_content"] = reasoning_content
+                self.history.append(assistant_msg)
+                for i, tc in enumerate(tool_calls_raw):
+                    err = ("[ERROR] write_file requires non-empty 'path' and "
+                           "'content' arguments. Got empty args.")
+                    self.history.append({
+                        "role": "tool",
+                        "tool_call_id": str(tc.id) if tc.id else f"call_{i}",
+                        "content": err,
+                    })
                 continue
             tool_calls_raw = valid_tcs
 
