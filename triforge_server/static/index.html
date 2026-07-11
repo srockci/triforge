@@ -7495,6 +7495,10 @@ const App = {
               <input type="checkbox" id="reuse-designer-for-test" data-pipeline-field="reuse_designer_for_test" data-pipeline-key="module" ${mod.reuse_designer_for_test !== false ? 'checked' : ''}>
               <label for="reuse-designer-for-test">${__('Reuse architect_review for test agent (off = use independent module_test role)')}</label>
             </div>
+            <div class="settings-toggle-row" style="margin-top:6px;display:flex;align-items:center;gap:8px;">
+              <input type="checkbox" id="disable-max-steps" data-pipeline-field="disable_max_steps" data-pipeline-key="module" ${mod.disable_max_steps ? 'checked' : ''}>
+              <label for="disable-max-steps" style="color:var(--orange);">${__('Disable max_steps limit (agent runs until work is done)')}</label>
+            </div>
           </div>`;
       }
       return `

@@ -10,7 +10,7 @@ REM
 REM Env vars:
 REM   PORT             bind port        (default 8000)
 REM   TRIFORGE_VENV    path to venv     (default %~dp0.venv)
-REM   TRIFORGE_HOST    bind host        (default 127.0.0.1)
+REM TRIFORGE_HOST    bind host        (default 0.0.0.0)
 REM ============================================================
 
 setlocal
@@ -18,7 +18,7 @@ set "PORT=%1"
 if "%PORT%"=="" set "PORT=%PORT%"
 if "%PORT%"=="" set "PORT=8000"
 if not defined TRIFORGE_VENV set "TRIFORGE_VENV=%~dp0.venv"
-if not defined TRIFORGE_HOST set "TRIFORGE_HOST=127.0.0.1"
+if not defined TRIFORGE_HOST set "TRIFORGE_HOST=0.0.0.0"
 
 set "PYTHONUTF8=1"
 set "PYTHONIOENCODING=utf-8"

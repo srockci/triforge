@@ -427,12 +427,14 @@ async def run_pipeline_async(run: RunState, settings: Optional[Dict[str, Any]] =
     run.workspace_root = ws
 
     pp = settings.get("pipeline_params", {})
-    design_steps = pp.get("design", {}).get("max_steps", 12)
-    review_steps = pp.get("review", {}).get("max_steps", 12)
+    disable_global = pp.get("module", {}).get("disable_max_steps", False)
+    _unlimited = 999999
+    design_steps = _unlimited if disable_global else pp.get("design", {}).get("max_steps", 12)
+    review_steps = _unlimited if disable_global else pp.get("review", {}).get("max_steps", 12)
     mp = pp.get("module", {})
-    detail_max_steps = mp.get("detail_max_steps", 8)
-    code_max_steps = mp.get("code_max_steps", 20)
-    test_max_steps = mp.get("test_max_steps", 6)
+    detail_max_steps = _unlimited if disable_global else mp.get("detail_max_steps", 8)
+    code_max_steps = _unlimited if disable_global else mp.get("code_max_steps", 20)
+    test_max_steps = _unlimited if disable_global else mp.get("test_max_steps", 6)
     max_retry = mp.get("max_retry_per_module", 3)
 
     reuse_designer_for_test = bool(mp.get("reuse_designer_for_test", True))
